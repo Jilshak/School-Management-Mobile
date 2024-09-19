@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Card, WingBlank, WhiteSpace, Icon, Text } from '@ant-design/react-native';
+import { View, StyleSheet, ScrollView, Image, SafeAreaView, TouchableOpacity, StatusBar } from 'react-native';
+import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type HomeScreenProps = {
@@ -8,45 +8,72 @@ type HomeScreenProps = {
 };
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const menuItems = [
-    { title: 'Staff', icon: 'team', route: 'Staff', color: '#FF6B6B' },
-    { title: 'Students', icon: 'user', route: 'Students', color: '#4ECDC4' },
-    { title: 'Classes', icon: 'book', route: 'Classes', color: '#45B7D1' },
-    { title: 'Timetable', icon: 'calendar', route: 'Timetable', color: '#FFA07A' },
-    { title: 'Attendance', icon: 'check-circle', route: 'Attendance', color: '#98D8C8' },
-  ];
-
   return (
     <View style={styles.container}>
-      <ScrollView>
-        <WingBlank size="lg">
-          <WhiteSpace size="lg" />
-          <Card style={styles.card}>
-            <Card.Header
-              title="School Management System"
-              thumbStyle={{ width: 40, height: 40, borderRadius: 20 }}
-              thumb="https://gw.alipayobjects.com/zos/rmsportal/MRhHctKOineMbKAZslML.jpg"
-            />
-            <Card.Body>
-              <View style={styles.cardContainer}>
-                {menuItems.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.menuItem, { backgroundColor: item.color }]}
-                    onPress={() => navigation.navigate(item.route)}
-                    activeOpacity={0.8}
-                  >
-                    <Icon name={item.icon as any} size="lg" color="#fff" />
-                    <WhiteSpace size="sm" />
-                    <Text style={styles.menuItemText}>{item.title}</Text>
-                  </TouchableOpacity>
-                ))}
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.greeting}>Welcome back,</Text>
+              <Text style={styles.userName}>MUHAMMED AYAAN P P</Text>
+              <View style={styles.gradeBadge}>
+                <Text style={styles.gradeText}>UKG</Text>
               </View>
-            </Card.Body>
-          </Card>
-          <WhiteSpace size="lg" />
-        </WingBlank>
-      </ScrollView>
+            </View>
+            <Image
+              source={{ uri: 'https://example.com/profile-pic.jpg' }}
+              style={styles.profilePic}
+            />
+          </View>
+
+          <View style={styles.cardContainer}>
+            <TouchableOpacity style={[styles.card, styles.videosCard]}>
+              <AntIcon name="play-circle" size={40} color="#ffffff" />
+              <Text style={styles.cardText}>Videos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.card, styles.materialsCard]}>
+              <AntIcon name="book" size={40} color="#ffffff" />
+              <Text style={styles.cardText}>Materials</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.academicsSection}>
+            <Text style={styles.sectionTitle}>Academics</Text>
+            <View style={styles.academicsCards}>
+              <TouchableOpacity style={styles.academicCard}>
+                <AntIcon name="file-text" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Marksheet</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.academicCard}>
+                <AntIcon name="schedule" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Time Table</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.academicCard}>
+                <AntIcon name="mail" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Mailbox</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.attendanceButton}>
+              <AntIcon name="check-circle" size={24} color="#ffffff" />
+              <Text style={styles.attendanceButtonText}>View Attendance Details</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+        <View style={styles.bottomNav}>
+          <TouchableOpacity style={styles.navItem}>
+            <AntIcon name="home" size={24} color="#001529" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <AntIcon name="calendar" size={24} color="#808080" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <AntIcon name="notification" size={24} color="#808080" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <AntIcon name="user" size={24} color="#808080" />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </View>
   );
 };
@@ -54,39 +81,133 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5', // Use a solid color instead of gradient
+    backgroundColor: '#001529', // Set the background color for the status bar area
   },
-  card: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
+    backgroundColor: '#001529',
+    padding: 20,
     borderRadius: 15,
-    overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  },
+  greeting: {
+    color: '#ffffff',
+    fontSize: 16,
+    opacity: 0.8,
+  },
+  userName: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: 5,
+  },
+  gradeBadge: {
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  gradeText: {
+    color: '#001529',
+    fontWeight: 'bold',
+  },
+  profilePic: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 3,
+    borderColor: '#ffffff',
   },
   cardContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    padding: 10,
+    marginBottom: 30,
   },
-  menuItem: {
+  card: {
     width: '48%',
+    height: 150,
+    borderRadius: 15,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
   },
-  menuItemText: {
-    color: '#fff',
+  videosCard: {
+    backgroundColor: '#001529',
+  },
+  materialsCard: {
+    backgroundColor: '#002140',
+  },
+  cardText: {
+    color: '#ffffff',
+    fontSize: 18,
     fontWeight: 'bold',
+    marginTop: 10,
+  },
+  academicsSection: {
+    backgroundColor: '#f0f2f5',
+    borderRadius: 15,
+    padding: 20,
+  },
+  sectionTitle: {
+    color: '#001529',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  academicsCards: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  academicCard: {
+    width: '30%',
+    height: 100,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  academicCardText: {
+    color: '#001529',
     marginTop: 5,
+    fontWeight: 'bold',
+  },
+  attendanceButton: {
+    backgroundColor: '#001529',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 10,
+  },
+  attendanceButtonText: {
+    color: '#ffffff',
+    marginLeft: 10,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  navItem: {
+    alignItems: 'center',
   },
 });
 
