@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
-import { Text, Button, List } from 'react-native-paper';
+import { View, StyleSheet, FlatList, Text } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Button, List } from '@ant-design/react-native';
 
 type StaffScreenProps = {
   navigation: StackNavigationProp<any, 'Staff'>;
@@ -18,7 +18,6 @@ const StaffScreen: React.FC<StaffScreenProps> = ({ navigation }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Staff Management</Text>
       <Button
-        mode="contained"
         onPress={() => navigation.navigate('AddStaff')}
         style={styles.button}
       >
@@ -29,8 +28,6 @@ const StaffScreen: React.FC<StaffScreenProps> = ({ navigation }) => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <List.Item
-            title={item.name}
-            description={item.role}
             onPress={() => navigation.navigate('EditStaff', { staffId: item.id })}
           />
         )}

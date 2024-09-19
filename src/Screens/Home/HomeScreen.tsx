@@ -43,7 +43,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Progress percent={85} />
               <Text style={styles.attendanceText}>85% Present</Text>
             </View>
-            <TouchableOpacity style={styles.attendanceButton}>
+            <TouchableOpacity style={styles.attendanceButton} onPress={()=>navigation.navigate("Staff")}>
               <AntIcon name="check-circle" size={24} color="#ffffff" />
               <Text style={styles.attendanceButtonText}>View Attendance Details</Text>
             </TouchableOpacity>
@@ -52,17 +52,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.academicsSection}>
             <Text style={styles.sectionTitle}>Academics</Text>
             <View style={styles.academicsCards}>
-              <TouchableOpacity style={styles.academicCard}>
+              <TouchableOpacity 
+                style={styles.academicCard} 
+                onPress={() => navigation.navigate("Marksheet")}
+              >
                 <AntIcon name="file-text" size={30} color="#001529" />
                 <Text style={styles.academicCardText}>Marksheet</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.academicCard}>
+              <TouchableOpacity style={styles.academicCard} 
+                onPress={() => navigation.navigate("Timetable")}
+              >
                 <AntIcon name="schedule" size={30} color="#001529" />
                 <Text style={styles.academicCardText}>Time Table</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.academicCard}>
-                <AntIcon name="mail" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Mailbox</Text>
+              <TouchableOpacity style={styles.academicCard}
+                onPress={() => navigation.navigate("TeacherTimetable")}
+              >
+                <AntIcon name="schedule" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Teacher Table</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -116,7 +123,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#001529', // Set the background color for the status bar area
+    backgroundColor: '#001529', 
   },
   safeArea: {
     flex: 1,
