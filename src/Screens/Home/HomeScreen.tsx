@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Image, SafeAreaView, TouchableOpacity, StatusBar } from 'react-native';
-import { Text, Icon as AntIcon } from '@ant-design/react-native';
+import { View, StyleSheet, ScrollView, Image, SafeAreaView, TouchableOpacity } from 'react-native';
+import { Text, Icon as AntIcon, Progress } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type HomeScreenProps = {
@@ -37,6 +37,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          <View style={styles.attendanceSection}>
+            <Text style={styles.sectionTitle}>Attendance</Text>
+            <View style={styles.attendanceProgress}>
+              <Progress percent={85} />
+              <Text style={styles.attendanceText}>85% Present</Text>
+            </View>
+            <TouchableOpacity style={styles.attendanceButton}>
+              <AntIcon name="check-circle" size={24} color="#ffffff" />
+              <Text style={styles.attendanceButtonText}>View Attendance Details</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.academicsSection}>
             <Text style={styles.sectionTitle}>Academics</Text>
             <View style={styles.academicsCards}>
@@ -53,9 +65,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <Text style={styles.academicCardText}>Mailbox</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.attendanceButton}>
-              <AntIcon name="check-circle" size={24} color="#ffffff" />
-              <Text style={styles.attendanceButtonText}>View Attendance Details</Text>
+          </View>
+
+          <View style={styles.eventsSection}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <View style={styles.eventItem}>
+              <View style={styles.eventDate}>
+                <Text style={styles.eventDay}>15</Text>
+                <Text style={styles.eventMonth}>MAY</Text>
+              </View>
+              <View style={styles.eventDetails}>
+                <Text style={styles.eventTitle}>Annual Sports Day</Text>
+                <Text style={styles.eventTime}>9:00 AM - 4:00 PM</Text>
+              </View>
+            </View>
+            <View style={styles.eventItem}>
+              <View style={styles.eventDate}>
+                <Text style={styles.eventDay}>20</Text>
+                <Text style={styles.eventMonth}>MAY</Text>
+              </View>
+              <View style={styles.eventDetails}>
+                <Text style={styles.eventTitle}>Parent-Teacher Meeting</Text>
+                <Text style={styles.eventTime}>2:00 PM - 5:00 PM</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.viewAllButton}>
+              <Text style={styles.viewAllButtonText}>View All Events</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -152,10 +187,40 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
   },
+  attendanceSection: {
+    backgroundColor: '#f0f2f5',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+  },
+  attendanceProgress: {
+    marginBottom: 15,
+  },
+  attendanceText: {
+    color: '#001529',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+  attendanceButton: {
+    backgroundColor: '#001529',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 10,
+  },
+  attendanceButtonText: {
+    color: '#ffffff',
+    marginLeft: 10,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
   academicsSection: {
     backgroundColor: '#f0f2f5',
     borderRadius: 15,
     padding: 20,
+    marginBottom: 20,
   },
   sectionTitle: {
     color: '#001529',
@@ -183,17 +248,58 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontWeight: 'bold',
   },
-  attendanceButton: {
-    backgroundColor: '#001529',
+  eventsSection: {
+    backgroundColor: '#f0f2f5',
+    borderRadius: 15,
+    padding: 20,
+    marginTop: 30,
+  },
+  eventItem: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+  },
+  eventDate: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#001529',
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 15,
+  },
+  eventDay: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  eventMonth: {
+    color: '#ffffff',
+    fontSize: 12,
+  },
+  eventDetails: {
+    flex: 1,
+  },
+  eventTitle: {
+    color: '#001529',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  eventTime: {
+    color: '#808080',
+    fontSize: 14,
+  },
+  viewAllButton: {
+    backgroundColor: '#001529',
     padding: 15,
     borderRadius: 10,
+    alignItems: 'center',
   },
-  attendanceButtonText: {
+  viewAllButtonText: {
     color: '#ffffff',
-    marginLeft: 10,
     fontWeight: 'bold',
     fontSize: 16,
   },
