@@ -43,7 +43,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Progress percent={85} />
               <Text style={styles.attendanceText}>85% Present</Text>
             </View>
-            <TouchableOpacity style={styles.attendanceButton} onPress={()=>navigation.navigate("Staff")}>
+            <TouchableOpacity style={styles.attendanceButton} onPress={()=>navigation.navigate("Attendance")}>
               <AntIcon name="check-circle" size={24} color="#ffffff" />
               <Text style={styles.attendanceButtonText}>View Attendance Details</Text>
             </TouchableOpacity>

@@ -49,42 +49,44 @@ const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntIcon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Timetable</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        <View style={styles.studentInfo}>
-          <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
-          <Text style={styles.studentClass}>Class: UKG</Text>
-          <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
-        </View>
-
-        {weekDays.map((day, index) => (
-          <View key={index} style={styles.dayContainer}>
-            <Text style={styles.dayTitle}>{day}</Text>
-            {timetable[day]?.map((period, periodIndex) => (
-              <View key={periodIndex} style={styles.periodItem}>
-                <View style={styles.timeContainer}>
-                  <Text style={styles.timeText}>{period.time}</Text>
-                </View>
-                <View style={styles.subjectContainer}>
-                  <Text style={styles.subjectText}>{period.subject}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        ))}
-
-        <TouchableOpacity style={styles.downloadButton}>
-          <AntIcon name="download" size={24} color="#ffffff" />
-          <Text style={styles.downloadButtonText}>Download Timetable</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <AntIcon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-      </ScrollView>
+        <Text style={styles.headerTitle}>Timetable</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.contentContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.studentInfo}>
+            <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
+            <Text style={styles.studentClass}>Class: UKG</Text>
+            <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
+          </View>
+
+          {weekDays.map((day, index) => (
+            <View key={index} style={styles.dayContainer}>
+              <Text style={styles.dayTitle}>{day}</Text>
+              {timetable[day as keyof typeof timetable]?.map((period, periodIndex) => (
+                <View key={periodIndex} style={styles.periodItem}>
+                  <View style={styles.timeContainer}>
+                    <Text style={styles.timeText}>{period.time}</Text>
+                  </View>
+                  <View style={styles.subjectContainer}>
+                    <Text style={styles.subjectText}>{period.subject}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.downloadButton}>
+            <AntIcon name="download" size={24} color="#ffffff" />
+            <Text style={styles.downloadButtonText}>Download Timetable</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -94,6 +96,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0f2f5',
   },
+  contentContainer: {
+    flex: 1,
+    marginTop: 80, // Height of the header plus top margin
+  },
   scrollContent: {
     padding: 20,
   },
@@ -101,10 +107,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
     backgroundColor: '#001529',
     padding: 15,
     borderRadius: 10,
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+    height: 60, // Specify a fixed height for the header
   },
   headerTitle: {
     color: '#ffffff',

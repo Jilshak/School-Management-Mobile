@@ -3,13 +3,25 @@ import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 're
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+type WeekDay = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
+
+type Period = {
+  time: string;
+  subject: string;
+  class: string;
+};
+
+type TeacherTimetable = {
+  [key in WeekDay]: Period[];
+};
+
 type TeacherTimetableScreenProps = {
   navigation: StackNavigationProp<any, 'TeacherTimetable'>;
 };
 
 const TeacherTimetableScreen: React.FC<TeacherTimetableScreenProps> = ({ navigation }) => {
-  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const teacherTimetable = {
+  const weekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const teacherTimetable: TeacherTimetable = {
     Monday: [
       { time: '09:00 - 10:00', subject: 'Mathematics', class: 'UKG-A' },
       { time: '10:00 - 11:00', subject: 'English', class: 'LKG-B' },
@@ -49,43 +61,45 @@ const TeacherTimetableScreen: React.FC<TeacherTimetableScreenProps> = ({ navigat
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntIcon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Teacher Timetable</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        <View style={styles.teacherInfo}>
-          <Text style={styles.teacherName}>Mrs. Sarah Johnson</Text>
-          <Text style={styles.teacherSubject}>Subjects: Mathematics, English, Science</Text>
-          <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
-        </View>
-
-        {weekDays.map((day, index) => (
-          <View key={index} style={styles.dayContainer}>
-            <Text style={styles.dayTitle}>{day}</Text>
-            {teacherTimetable[day]?.map((period, periodIndex) => (
-              <View key={periodIndex} style={styles.periodItem}>
-                <View style={styles.timeContainer}>
-                  <Text style={styles.timeText}>{period.time}</Text>
-                </View>
-                <View style={styles.classInfoContainer}>
-                  <Text style={styles.subjectText}>{period.subject}</Text>
-                  <Text style={styles.classText}>{period.class}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        ))}
-
-        <TouchableOpacity style={styles.downloadButton}>
-          <AntIcon name="download" size={24} color="#ffffff" />
-          <Text style={styles.downloadButtonText}>Download Timetable</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <AntIcon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-      </ScrollView>
+        <Text style={styles.headerTitle}>Teacher Timetable</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.contentContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.teacherInfo}>
+            <Text style={styles.teacherName}>Mrs. Sarah Johnson</Text>
+            <Text style={styles.teacherSubject}>Subjects: Mathematics, English, Science</Text>
+            <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
+          </View>
+
+          {weekDays.map((day, index) => (
+            <View key={index} style={styles.dayContainer}>
+              <Text style={styles.dayTitle}>{day}</Text>
+              {teacherTimetable[day].map((period: Period, periodIndex: number) => (
+                <View key={periodIndex} style={styles.periodItem}>
+                  <View style={styles.timeContainer}>
+                    <Text style={styles.timeText}>{period.time}</Text>
+                  </View>
+                  <View style={styles.classInfoContainer}>
+                    <Text style={styles.subjectText}>{period.subject}</Text>
+                    <Text style={styles.classText}>{period.class}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.downloadButton}>
+            <AntIcon name="download" size={24} color="#ffffff" />
+            <Text style={styles.downloadButtonText}>Download Timetable</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -95,6 +109,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0f2f5',
   },
+  contentContainer: {
+    flex: 1,
+    marginTop: 80, // Height of the header plus top margin
+  },
   scrollContent: {
     padding: 20,
   },
@@ -102,10 +120,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
     backgroundColor: '#001529',
     padding: 15,
     borderRadius: 10,
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+    height: 60, // Specify a fixed height for the header
   },
   headerTitle: {
     color: '#ffffff',
