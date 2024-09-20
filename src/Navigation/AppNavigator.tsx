@@ -7,6 +7,11 @@ import MarksheetScreen from '../Screens/Academics/MarksheetScreen';
 import TimetableScreen from '../Screens/Academics/TimetableScreen';
 import TeacherTimetableScreen from '../Screens/Academics/TeacherTimetableScreen';
 import AttendanceScreen from '../Screens/Attendance/AttendanceScreen';
+import CalendarScreen from '../Screens/Calender/CalenderScreen';
+import NotificationScreen from '../Screens/Notification/NotificationScreen';
+import ProfileScreen from '../Screens/ProfileScreen';
+import LoginScreen from '../Screens/Auth/LoginScreen';
+import AddAttendanceScreen from '../Screens/Attendance/AddAttendanceScreen';
 
 const Stack = createStackNavigator();
 
@@ -28,6 +33,11 @@ const AppNavigator = () => {
         <Stack.Screen name="Timetable" component={TimetableScreen} />
         <Stack.Screen name="TeacherTimetable" component={TeacherTimetableScreen} />
         <Stack.Screen name="Attendance" component={AttendanceScreen} />
+        <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="Notification" component={NotificationScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="AddAttendance" component={AddAttendanceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

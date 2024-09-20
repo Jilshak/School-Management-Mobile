@@ -9,7 +9,6 @@ type MarksheetScreenProps = {
   navigation: StackNavigationProp<any, 'Marksheet'>;
 };
 
-// Add this type definition
 type SubjectName = 'Mathematics' | 'Science' | 'English' | 'Social Studies' | 'Physical Education';
 
 const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
