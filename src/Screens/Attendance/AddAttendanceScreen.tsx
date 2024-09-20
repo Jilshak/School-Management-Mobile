@@ -12,7 +12,6 @@ import {
 import { Text } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import Icon from "react-native-vector-icons/AntDesign";
-import BottomNavBar from "../../Components/BottomNavBar";
 
 type AddAttendanceScreenProps = {
   navigation: StackNavigationProp<any, "AddAttendance">;
@@ -316,7 +315,6 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
         </View>
       </Modal>
 
-      <BottomNavBar />
     </SafeAreaView>
   );
 };

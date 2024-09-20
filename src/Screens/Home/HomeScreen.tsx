@@ -42,9 +42,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <AntIcon name="check-circle" size={40} color="#ffffff" />
               <Text style={styles.cardText}>Take Attendance</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.card, styles.materialsCard]}>
-              <AntIcon name="book" size={40} color="#ffffff" />
-              <Text style={styles.cardText}>Materials</Text>
+            <TouchableOpacity
+              style={[styles.card, styles.materialsCard]}
+              onPress={() => navigation.navigate("Payment")}
+            >
+              <AntIcon name="dollar" size={40} color="#ffffff" />
+              <Text style={styles.cardText}>Payments</Text>
             </TouchableOpacity>
           </View>
 
@@ -88,6 +91,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               >
                 <AntIcon name="schedule" size={30} color="#001529" />
                 <Text style={styles.academicCardText}>Teacher Table</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.academicsCards}>
+              <TouchableOpacity
+                style={styles.academicCard}
+                onPress={() => navigation.navigate("Library")}
+              >
+                <AntIcon name="book" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Library</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.academicCard}
+                onPress={() => navigation.navigate("LeaveRequest")}
+              >
+                <AntIcon name="user-switch" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Leave Request</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.academicCard}
+                onPress={() => navigation.navigate("LeaveApprove")}
+              >
+                <AntIcon name="check-circle" size={30} color="#001529" />
+                <Text style={styles.academicCardText}>Leave Approve</Text>
               </TouchableOpacity>
             </View>
           </View>

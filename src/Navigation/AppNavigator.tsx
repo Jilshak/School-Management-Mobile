@@ -12,6 +12,10 @@ import NotificationScreen from '../Screens/Notification/NotificationScreen';
 import ProfileScreen from '../Screens/ProfileScreen';
 import LoginScreen from '../Screens/Auth/LoginScreen';
 import AddAttendanceScreen from '../Screens/Attendance/AddAttendanceScreen';
+import PaymentScreen from '../Screens/Payments/PaymentScreen';
+import LibraryScreen from '../Screens/Academics/LibraryScreen';
+import LeaveRequestScreen from '../Screens/Attendance/LeaveRequestScreen';
+import LeaveApproveScreen from '../Screens/Attendance/LeaveApproveScreen';
 
 const Stack = createStackNavigator();
 
@@ -38,6 +42,10 @@ const AppNavigator = () => {
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="AddAttendance" component={AddAttendanceScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
+        <Stack.Screen name="Library" component={LibraryScreen} />
+        <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
+        <Stack.Screen name="LeaveApprove" component={LeaveApproveScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
