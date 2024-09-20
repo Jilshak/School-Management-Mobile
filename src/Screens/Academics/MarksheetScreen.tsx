@@ -197,35 +197,41 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
       },
       {
         title: 'Exam Reports',
-        data: filteredExams
+        data: ['search', ...filteredExams],
+        renderItem: ({ item, index }: { item: any; index: number }) => {
+          if (index === 0) {
+            return (
+              <View style={styles.searchContainer}>
+                <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search exams..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+            );
+          }
+          return renderExamItem({ item });
+        }
       }
     ];
 
     return (
-      <SectionList
-        sections={sections}
-        keyExtractor={(item, index) => item.id || index.toString()}
-        renderItem={({ item, section }) => 
-          section.title === 'Exam Reports' ? renderExamItem({ item }) : null
-        }
-        renderSectionHeader={({ section: { title } }) => 
-          title === 'Exam Reports' ? <Text style={styles.sectionTitle}>{title}</Text> : null
-        }
-        ListHeaderComponent={() => (
-          <>
-            <View style={styles.searchContainer}>
-              <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search exams..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          </>
-        )}
-        contentContainerStyle={styles.scrollContent}
-      />
+      <View style={styles.examListContainer}>
+        <SectionList
+          sections={sections}
+          keyExtractor={(item, index) => item.id || index.toString()}
+          renderItem={({ item, section, index }) => section.renderItem({ item, index })}
+          renderSectionHeader={({ section: { title } }) => 
+            title === 'Exam Reports' ? (
+              <Text style={styles.sectionTitle}>{title}</Text>
+            ) : null
+          }
+          contentContainerStyle={styles.scrollContent}
+          stickySectionHeadersEnabled={false}
+        />
+      </View>
     );
   };
 
@@ -367,7 +373,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#001529',
-    marginBottom: 15,
+    marginBottom: 10,
+    marginTop: 20,
   },
   subjectItem: {
     marginBottom: 15,
@@ -476,7 +483,7 @@ const styles = StyleSheet.create({
   },
   summaryContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
@@ -501,7 +508,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 10,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   searchIcon: {
     marginRight: 10,
@@ -535,6 +542,12 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     color: '#4a4a4a',
+  },
+  examReportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
 });
 
