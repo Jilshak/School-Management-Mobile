@@ -23,8 +23,6 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch leave requests from API
-    // This is mock data, replace with actual API call
     setLeaveRequests([
       { id: '1', studentName: 'John Doe', startDate: '2023-05-10', endDate: '2023-05-12', reason: 'Family function', status: 'pending' },
       { id: '2', studentName: 'Jane Smith', startDate: '2023-05-15', endDate: '2023-05-15', reason: 'Medical appointment', status: 'pending' },

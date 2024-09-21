@@ -7,15 +7,29 @@ import {
   SafeAreaView,
   TouchableOpacity,
 } from "react-native";
-import { Text, Icon as AntIcon, Progress } from "@ant-design/react-native";
+import { Text, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import BottomNavBar from "../../Components/BottomNavBar";
+
+type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar";
 
 type HomeScreenProps = {
   navigation: StackNavigationProp<any, "Home">;
 };
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const academicCards: { icon: IconName; text: string; route: string }[] = [
+    { icon: 'file-text', text: 'Marksheet', route: 'Marksheet' },
+    { icon: 'schedule', text: 'Time Table', route: 'Timetable' },
+    { icon: 'schedule', text: 'Teacher Table', route: 'TeacherTimetable' },
+    { icon: 'book', text: 'Library', route: 'Library' },
+    { icon: 'user-switch', text: 'Leave Request', route: 'LeaveRequest' },
+    { icon: 'check-circle', text: 'Leave Approve', route: 'LeaveApprove' },
+    { icon: 'book', text: 'Syllabus', route: 'Syllabus' },
+    { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook' },
+    { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },
+  ];
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -54,7 +68,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.attendanceSection}>
             <Text style={styles.sectionTitle}>Attendance</Text>
             <View style={styles.attendanceProgress}>
-              <Progress percent={85} />
+              <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBar, { width: '85%' }]} />
+              </View>
               <Text style={styles.attendanceText}>85% Present</Text>
             </View>
             <TouchableOpacity
@@ -71,50 +87,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.academicsSection}>
             <Text style={styles.sectionTitle}>Academics</Text>
             <View style={styles.academicsCards}>
-              <TouchableOpacity
-                style={styles.academicCard}
-                onPress={() => navigation.navigate("Marksheet")}
-              >
-                <AntIcon name="file-text" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Marksheet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.academicCard}
-                onPress={() => navigation.navigate("Timetable")}
-              >
-                <AntIcon name="schedule" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Time Table</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.academicCard}
-                onPress={() => navigation.navigate("TeacherTimetable")}
-              >
-                <AntIcon name="schedule" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Teacher Table</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.academicsCards}>
-              <TouchableOpacity
-                style={styles.academicCard}
-                onPress={() => navigation.navigate("Library")}
-              >
-                <AntIcon name="book" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Library</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.academicCard}
-                onPress={() => navigation.navigate("LeaveRequest")}
-              >
-                <AntIcon name="user-switch" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Leave Request</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.academicCard}
-                onPress={() => navigation.navigate("LeaveApprove")}
-              >
-                <AntIcon name="check-circle" size={30} color="#001529" />
-                <Text style={styles.academicCardText}>Leave Approve</Text>
-              </TouchableOpacity>
+              {academicCards.map((card, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.academicCard}
+                  onPress={() => navigation.navigate(card.route)}
+                >
+                  <View style={styles.academicCardIcon}>
+                    <AntIcon name={card.icon} size={24} color="#ffffff" />
+                  </View>
+                  <Text style={styles.academicCardText}>{card.text}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -237,6 +221,17 @@ const styles = StyleSheet.create({
   attendanceProgress: {
     marginBottom: 15,
   },
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 2,
+    marginBottom: 5,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#001529',
+    borderRadius: 2,
+  },
   attendanceText: {
     color: "#001529",
     fontSize: 16,
@@ -258,10 +253,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   academicsSection: {
-    backgroundColor: "#f0f2f5",
+    backgroundColor: '#ffffff',
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     color: "#001529",
@@ -270,24 +270,40 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   academicsCards: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   academicCard: {
-    width: "30%",
-    height: 100,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    width: '30%',
+    aspectRatio: 1,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    padding: 10,
+    paddingTop: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  academicCardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#001529',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   academicCardText: {
-    color: "#001529",
-    marginTop: 5,
-    fontWeight: "bold",
+    color: '#001529',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   eventsSection: {
     backgroundColor: "#f0f2f5",
