@@ -19,6 +19,7 @@ const CalendarScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -30,11 +31,11 @@ const CalendarScreen: React.FC = () => {
 
   const fetchEvents = async () => {
     const fetchedEvents: Event[] = [
-      { id: '1', date: '2023-05-15', type: 'holiday', description: 'School Holiday' },
-      { id: '2', date: '2023-05-20', type: 'event', description: 'Parent-Teacher Meeting' },
-      { id: '3', date: '2023-05-25', type: 'exam', description: 'Math Exam' },
-      { id: '4', date: '2023-05-28', type: 'event', description: 'School Sports Day' },
-      { id: '5', date: '2023-06-01', type: 'holiday', description: 'Summer Break Begins' },
+      { id: '1', date: '2024-09-15', type: 'holiday', description: 'School Holiday' },
+      { id: '2', date: '2024-09-20', type: 'event', description: 'Parent-Teacher Meeting' },
+      { id: '3', date: '2024-09-25', type: 'exam', description: 'Math Exam' },
+      { id: '4', date: '2024-09-28', type: 'event', description: 'School Sports Day' },
+      { id: '5', date: '2024-09-01', type: 'holiday', description: 'Summer Break Begins' },
     ];
 
     setEvents(fetchedEvents);
@@ -44,8 +45,6 @@ const CalendarScreen: React.FC = () => {
       newMarkedDates[event.date] = {
         marked: true,
         dotColor: getEventColor(event.type),
-        selected: event.date === selectedDate,
-        selectedColor: 'rgba(0, 21, 41, 0.1)',
       };
     });
 
@@ -67,14 +66,26 @@ const CalendarScreen: React.FC = () => {
 
   const onDayPress = (day: {dateString: string}) => {
     setSelectedDate(day.dateString);
-    setMarkedDates(prevMarkedDates => ({
-      ...prevMarkedDates,
-      [day.dateString]: {
-        ...prevMarkedDates[day.dateString],
+    const eventForDay = events.find(event => event.date === day.dateString);
+    setSelectedEvent(eventForDay || null);
+
+    const newMarkedDates: {[key: string]: any} = {};
+    events.forEach(event => {
+      newMarkedDates[event.date] = {
+        marked: true,
+        dotColor: getEventColor(event.type),
+      };
+    });
+
+    if (eventForDay) {
+      newMarkedDates[day.dateString] = {
+        ...newMarkedDates[day.dateString],
         selected: true,
         selectedColor: 'rgba(0, 21, 41, 0.1)',
-      },
-    }));
+      };
+    }
+
+    setMarkedDates(newMarkedDates);
   };
 
   const renderEventItem = (event: Event) => (
@@ -113,8 +124,8 @@ const CalendarScreen: React.FC = () => {
                 backgroundColor: '#ffffff',
                 calendarBackground: '#ffffff',
                 textSectionTitleColor: '#b6c1cd',
-                selectedDayBackgroundColor: '#001529',
-                selectedDayTextColor: '#ffffff',
+                selectedDayBackgroundColor: 'rgba(0, 21, 41, 0.1)',
+                selectedDayTextColor: '#001529',
                 todayTextColor: '#001529',
                 dayTextColor: '#2d4150',
                 textDisabledColor: '#d9e1e8',
@@ -131,6 +142,15 @@ const CalendarScreen: React.FC = () => {
                 textDayHeaderFontSize: 14,
               }}
             />
+            {selectedEvent && (
+              <View style={[
+                styles.tooltip, 
+                { backgroundColor: getEventColor(selectedEvent.type) }
+              ]}>
+                <Text style={styles.tooltipDate}>{selectedEvent.date}</Text>
+                <Text style={styles.tooltipDescription}>{selectedEvent.description}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.upcomingEventsContainer}>
@@ -244,6 +264,21 @@ const styles = StyleSheet.create({
   eventDescription: {
     fontSize: 16,
     color: '#001529',
+  },
+  tooltip: {
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  tooltipDate: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  tooltipDescription: {
+    color: '#ffffff',
+    fontSize: 16,
   },
 });
 

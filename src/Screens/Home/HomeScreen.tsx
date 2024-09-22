@@ -29,7 +29,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance' },
     { icon: 'dollar', text: 'Payments', route: 'Payment' },
     { icon: 'book', text: 'Class Details', route: 'ClassDetails' },
-    { icon: 'dollar', text: 'Payments', route: 'Payment' },
   ];
 
   const academicCards: { icon: IconName; text: string; route: string }[] = [

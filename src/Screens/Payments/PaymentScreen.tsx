@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, SectionList, RefreshControl, Dimensions } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, SectionList, RefreshControl, Dimensions, Modal, ScrollView } from 'react-native';
 import { Text, Icon as AntIcon, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LineChart } from 'react-native-chart-kit';
 import PaymentFilter from '../../Components/PaymentFilter';
+import Icon from 'react-native-vector-icons/AntDesign';
 
 type PaymentScreenProps = {
   navigation: StackNavigationProp<any, 'Payment'>;
@@ -20,6 +21,12 @@ interface Payment {
   dueDate?: string;
 }
 
+interface SectionData {
+  title: string;
+  data: (string | Payment)[];
+  renderItem: ({ item, index }: { item: string | Payment; index: number }) => React.ReactElement | null;
+}
+
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
@@ -27,6 +34,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
   const [selectedStatus, setSelectedStatus] = useState<PaymentStatus | 'All'>('All');
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterStartDate, setFilterStartDate] = useState<string | null>(null);
+  const [filterEndDate, setFilterEndDate] = useState<string | null>(null);
 
   const payments: Payment[] = [
     { id: '1', name: 'Tuition Fee', date: '2023-09-01', status: 'Paid', amount: 5000 },
@@ -164,51 +174,101 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const renderSearchAndFilter = () => (
+    <View style={styles.searchContainer}>
+      <Icon name="search1" size={20} color="#001529" style={styles.searchIcon} />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search payments..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholderTextColor="#4a4a4a"
+      />
+      <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterButton}>
+        <Icon name="filter" size={24} color="#001529" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderFilterModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={filterModalVisible}
+      onRequestClose={() => setFilterModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Filter Payments</Text>
+          
+          <Text style={styles.filterLabel}>Status:</Text>
+          <View style={styles.filterOptions}>
+            <TouchableOpacity
+              style={[styles.filterOption, selectedStatus === 'All' && styles.filterOptionActive]}
+              onPress={() => setSelectedStatus('All')}
+            >
+              <Text style={[styles.filterOptionText, selectedStatus === 'All' && styles.filterOptionTextActive]}>All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterOption, selectedStatus === 'Paid' && styles.filterOptionActive]}
+              onPress={() => setSelectedStatus('Paid')}
+            >
+              <Text style={[styles.filterOptionText, selectedStatus === 'Paid' && styles.filterOptionTextActive]}>Paid</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterOption, selectedStatus === 'Pending' && styles.filterOptionActive]}
+              onPress={() => setSelectedStatus('Pending')}
+            >
+              <Text style={[styles.filterOptionText, selectedStatus === 'Pending' && styles.filterOptionTextActive]}>Pending</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterOption, selectedStatus === 'Upcoming' && styles.filterOptionActive]}
+              onPress={() => setSelectedStatus('Upcoming')}
+            >
+              <Text style={[styles.filterOptionText, selectedStatus === 'Upcoming' && styles.filterOptionTextActive]}>Upcoming</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.filterLabel}>Date Range:</Text>
+          {/* Add date pickers for start and end dates here */}
+
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={styles.modalButton} onPress={() => {
+              setSelectedStatus('All');
+              setFilterStartDate(null);
+              setFilterEndDate(null);
+            }}>
+              <Text style={styles.modalButtonText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={() => {
+              filterAndSortPayments();
+              setFilterModalVisible(false);
+            }}>
+              <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderPaymentList = () => {
-    const sections: { title: string; data: (Payment | 'controls')[]; renderItem: ({ item, index }: { item: Payment | 'controls'; index: number }) => JSX.Element }[] = [
+    const sections: SectionData[] = [
       {
         title: 'Overview',
-        data: ['summary', 'controls'] as (Payment | 'controls')[], 
-        renderItem: ({ item }: { item: Payment | 'controls' | string }) => {
+        data: ['summary', 'controls'] as (string | Payment)[],
+        renderItem: ({ item, index }: { item: string | Payment; index: number }) => { 
           if (item === 'summary') return renderPaymentSummary();
-          if (item === 'controls') return renderPaymentChart(); 
-          return renderPaymentItem({ item: item as Payment }); 
+          if (item === 'controls') return renderPaymentChart();
+          return null;
         }
       },
       {
         title: 'Payment History',
         data: ['controls', ...filteredPayments],
-        renderItem: ({ item, index }: { item: Payment | 'controls', index: number }) => {
+        renderItem: ({ item, index }: { item: string | Payment; index: number }) => {
           if (index === 0) {
-            return (
-              <>
-                <View style={styles.searchContainer}>
-                  <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search payments..."
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                </View>
-                <View style={styles.controlsContainer}>
-                  <TouchableOpacity
-                    style={styles.controlButton}
-                    onPress={() => setIsFilterVisible(true)}
-                  >
-                    <Text style={styles.controlButtonText}>Filter</Text>
-                    <AntIcon name="filter" size={16} color="#ffffff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.controlButton}
-                    onPress={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  >
-                    <Text style={styles.controlButtonText}>Sort by Date</Text>
-                    <AntIcon name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={16} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
-              </>
-            );
+            return renderSearchAndFilter();
           }
           return renderPaymentItem({ item: item as Payment });
         }
@@ -216,12 +276,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
     ];
 
     return (
-      <SectionList
+      <SectionList<string | Payment, SectionData>
         sections={sections}
-        keyExtractor={(item: Payment | 'controls', index) => { // Specify the type here
-            if (typeof item === 'string') return item;
-            return item.id || index.toString();
-          }}
+        keyExtractor={(item, index) => {
+          if (typeof item === 'string') return item;
+          return item.id || index.toString();
+        }}
         renderItem={({ item, section, index }) => section.renderItem({ item, index })}
         renderSectionHeader={({ section: { title } }) => 
           <Text style={styles.sectionTitle}>{title}</Text>
@@ -253,12 +313,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
         {renderPaymentList()}
       </View>
 
-      <PaymentFilter
-        isVisible={isFilterVisible}
-        onClose={() => setIsFilterVisible(false)}
-        onApply={applyFilters}
-        selectedStatus={selectedStatus}
-      />
+      {renderFilterModal()}
     </SafeAreaView>
   );
 };
@@ -343,27 +398,74 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+    color: '#001529',
   },
-  controlsContainer: {
+  filterButton: {
+    padding: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  filterOptions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  filterOption: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 10,
     marginBottom: 10,
   },
-  controlButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#001529', // Theme color
-    borderRadius: 10,
-    padding: 10,
-    flex: 1,
-    marginHorizontal: 5,
+  filterOptionActive: {
+    backgroundColor: '#001529',
   },
-  controlButtonText: {
-    fontSize: 14,
-    color: '#ffffff', // White text for contrast
-    marginRight: 5,
-    fontWeight: 'bold', // Make the text bold for better visibility
+  filterOptionText: {
+    color: '#001529',
+  },
+  filterOptionTextActive: {
+    color: '#ffffff',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+  },
+  applyButton: {
+    backgroundColor: '#001529',
+    marginLeft: 10,
+  },
+  applyButtonText: {
+    color: 'white',
   },
   paymentItem: {
     flexDirection: 'row',
