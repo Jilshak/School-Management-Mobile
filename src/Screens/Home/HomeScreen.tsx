@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -6,10 +6,14 @@ import {
   Image,
   SafeAreaView,
   TouchableOpacity,
+  Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { Text, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import BottomNavBar from "../../Components/BottomNavBar";
+import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
 
 type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar";
 
@@ -18,6 +22,16 @@ type HomeScreenProps = {
 };
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const scrollViewRef = useRef<GestureHandlerScrollView>(null);
+
+  const mainCards: { icon: IconName; text: string; route: string }[] = [
+    { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance' },
+    { icon: 'dollar', text: 'Payments', route: 'Payment' },
+    { icon: 'book', text: 'Class Details', route: 'ClassDetails' },
+    { icon: 'dollar', text: 'Payments', route: 'Payment' },
+  ];
+
   const academicCards: { icon: IconName; text: string; route: string }[] = [
     { icon: 'file-text', text: 'Marksheet', route: 'Marksheet' },
     { icon: 'schedule', text: 'Time Table', route: 'Timetable' },
@@ -29,6 +43,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook' },
     { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },
   ];
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const contentOffset = event.nativeEvent.contentOffset.x;
+    const viewSize = event.nativeEvent.layoutMeasurement.width;
+    const contentSize = event.nativeEvent.contentSize.width;
+    
+    const cardWidth = Dimensions.get('window').width * 0.45 + 15; // Card width + margin
+    const newIndex = Math.round(contentOffset / cardWidth);
+    
+    if (contentOffset + viewSize >= contentSize - 1) {
+      setActiveCardIndex(mainCards.length - 1);
+    } else {
+      setActiveCardIndex(Math.min(newIndex, mainCards.length - 1));
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -48,23 +77,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             />
           </View>
 
-          <View style={styles.cardContainer}>
-            <TouchableOpacity
-              style={[styles.card, styles.videosCard]}
-              onPress={() => navigation.navigate("AddAttendance")}
-            >
-              <AntIcon name="check-circle" size={40} color="#ffffff" />
-              <Text style={styles.cardText}>Take Attendance</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.card, styles.materialsCard]}
-              onPress={() => navigation.navigate("Payment")}
-            >
-              <AntIcon name="dollar" size={40} color="#ffffff" />
-              <Text style={styles.cardText}>Payments</Text>
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.attendanceSection}>
             <Text style={styles.sectionTitle}>Attendance</Text>
             <View style={styles.attendanceProgress}>
@@ -82,6 +94,44 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 View Attendance Details
               </Text>
             </TouchableOpacity>
+          </View>
+
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsContainer}>
+            <GestureHandlerScrollView
+              ref={scrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalCardContainer}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              decelerationRate="fast"
+              snapToInterval={Dimensions.get('window').width * 0.45 + 15}
+              snapToAlignment="center"
+            >
+              {mainCards.map((card, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.horizontalCard}
+                  onPress={() => navigation.navigate(card.route)}
+                >
+                  <AntIcon name={card.icon} size={40} color="#ffffff" />
+                  <Text style={styles.cardText}>{card.text}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ width: Dimensions.get('window').width * 0.275 }} />
+            </GestureHandlerScrollView>
+            <View style={styles.scrollIndicator}>
+              {mainCards.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.scrollDot,
+                    index === activeCardIndex && styles.activeScrollDot,
+                  ]}
+                />
+              ))}
+            </View>
           </View>
 
           <View style={styles.academicsSection}>
@@ -188,30 +238,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#ffffff",
   },
-  cardContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 30,
-  },
-  card: {
-    width: "48%",
-    height: 150,
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  videosCard: {
-    backgroundColor: "#001529",
-  },
-  materialsCard: {
-    backgroundColor: "#002140",
-  },
-  cardText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 10,
-  },
   attendanceSection: {
     backgroundColor: "#f0f2f5",
     borderRadius: 15,
@@ -251,6 +277,44 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: "bold",
     fontSize: 16,
+  },
+  quickActionsContainer: {
+    marginBottom: 20,
+  },
+  horizontalCardContainer: {
+    paddingLeft: 20,
+  },
+  horizontalCard: {
+    width: Dimensions.get('window').width * 0.45,
+    height: 150,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+    backgroundColor: "#001529",
+  },
+  scrollIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  scrollDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#001529',
+    marginHorizontal: 4,
+    opacity: 0.3,
+  },
+  activeScrollDot: {
+    opacity: 1,
+  },
+  cardText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 10,
   },
   academicsSection: {
     backgroundColor: '#ffffff',

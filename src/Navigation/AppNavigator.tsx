@@ -20,6 +20,9 @@ import SyllabusScreen from "../Screens/Academics/SyllabusScreen";
 import SubjectDetailScreen from "../Screens/Academics/SubjectDetailScreen";
 import WorkDoneBookScreen from "../Screens/Teacher/WorkDoneBookScreen";
 import RevisionsOfTheWeekScreen from "../Screens/Teacher/RevisionsOfTheWeekScreen";
+import ClassDetailsScreen from "../Screens/ClassDetails/ClassDetailsScreen";
+import StudentListScreen from '../Screens/StudentList/StudentListScreen';
+import StudentDetailsScreen from '../Screens/StudentDetails/StudentDetailsScreen';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +67,9 @@ const AppNavigator: React.FC = () => {
           name="RevisionsOfTheWeek"
           component={RevisionsOfTheWeekScreen}
         />
+        <Stack.Screen name="ClassDetails" component={ClassDetailsScreen} />
+        <Stack.Screen name="StudentList" component={StudentListScreen as React.ComponentType<any>} />
+        <Stack.Screen name="StudentDetails" component={StudentDetailsScreen as React.ComponentType<any>} />
       </Stack.Navigator>
     </NavigationContainer>
   );

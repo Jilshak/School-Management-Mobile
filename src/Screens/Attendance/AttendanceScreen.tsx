@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal } from 'react-native';
 import { Text, Icon as AntIcon, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
@@ -13,12 +13,15 @@ type AttendanceStatus = 'present' | 'halfDay' | 'absent' | 'holiday';
 
 interface AttendanceRecord {
   status: AttendanceStatus;
+  regularizationRequested?: boolean;
 }
 
 const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedDate, setSelectedDate] = useState('');
   const [attendanceData, setAttendanceData] = useState<{ [key: string]: AttendanceRecord }>({});
+  const [isRegularizeModalVisible, setIsRegularizeModalVisible] = useState(false);
+  const [regularizationReason, setRegularizationReason] = useState('');
 
   useEffect(() => {
     generateCurrentMonthAttendance();
@@ -85,11 +88,69 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
     datasets: [
       {
         data: [80, 90, 85, 95],
-        color: (opacity = 1) => `rgba(0, 128, 255, ${opacity})`,
+        color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`, // Changed to #001529
         strokeWidth: 2
       }
     ]
   };
+
+  const handleDayPress = (day: DateData) => {
+    setSelectedDate(day.dateString);
+    const status = attendanceData[day.dateString]?.status;
+    if (status === 'absent' || status === 'halfDay') {
+      setIsRegularizeModalVisible(true);
+    }
+  };
+
+  const handleRegularizeRequest = () => {
+    console.log(`Regularization requested for ${selectedDate}. Reason: ${regularizationReason}`);
+    setIsRegularizeModalVisible(false);
+    setAttendanceData(prev => ({
+      ...prev,
+      [selectedDate]: { ...prev[selectedDate], regularizationRequested: true }
+    }));
+    setRegularizationReason('');
+  };
+
+  const renderRegularizeModal = () => (
+    <Modal
+      visible={isRegularizeModalVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setIsRegularizeModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Regularize Attendance</Text>
+          <Text style={styles.modalDate}>{selectedDate}</Text>
+          <Text style={styles.modalLabel}>Reason for Absence:</Text>
+          <TextInput
+            style={styles.modalInput}
+            multiline
+            numberOfLines={4}
+            value={regularizationReason}
+            onChangeText={setRegularizationReason}
+            placeholder="Please provide a reason for your absence"
+            placeholderTextColor="#999"
+          />
+          <View style={styles.modalButtonContainer}>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setIsRegularizeModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSubmitButton}
+              onPress={handleRegularizeRequest}
+            >
+              <Text style={[styles.modalButtonText, { color: '#ffffff' }]}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -109,7 +170,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
               setSelectedMonth(month.dateString);
               setSelectedDate('');
             }}
-            onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
+            onDayPress={handleDayPress}
             markedDates={{
               ...markedDates,
               [selectedDate]: {
@@ -117,7 +178,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
                 selected: true,
                 selectedColor: '#1976D2',
                 customTextStyle: {
-                  color: 'white',
+                  color: 'black',
                   fontWeight: 'bold',
                 },
               },
@@ -127,14 +188,14 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
               backgroundColor: '#ffffff',
               calendarBackground: '#ffffff',
               textSectionTitleColor: '#b6c1cd',
-              selectedDayBackgroundColor: '#00adf5',
+              selectedDayBackgroundColor: '#001529',
               selectedDayTextColor: '#ffffff',
-              todayTextColor: '#1976D2',
+              todayTextColor: '#001529',
               dayTextColor: '#333333',
-              textDisabledColor: '#BDBDBD',
-              arrowColor: '#1976D2',
-              monthTextColor: '#1976D2',
-              indicatorColor: '#1976D2',
+              textDisabledColor: '#001529',
+              arrowColor: '#001529',
+              monthTextColor: '#001529',
+              indicatorColor: '#001529',
               textDayFontWeight: '400',
               textMonthFontWeight: 'bold',
               textDayHeaderFontWeight: '400',
@@ -192,14 +253,20 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
           <Text style={styles.chartTitle}>Monthly Attendance Trend</Text>
           <LineChart
             data={chartData}
-            width={Dimensions.get('window').width - 40}
+            width={Dimensions.get('window').width - 60}
             height={220}
             chartConfig={{
               backgroundColor: '#ffffff',
               backgroundGradientFrom: '#ffffff',
               backgroundGradientTo: '#ffffff',
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`, // Changed to #001529
+              labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`, // Added for consistent label color
+              propsForDots: {
+                r: "6",
+                strokeWidth: "2",
+                stroke: "#001529" // Added for consistent dot color
+              },
               style: {
                 borderRadius: 16,
               },
@@ -222,6 +289,8 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
             <Text style={styles.reportButtonText}>Generate Detailed Report</Text>
           </TouchableOpacity>
         </View>
+
+        {renderRegularizeModal()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -349,6 +418,75 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalDate: {
+    fontSize: 18,
+    color: '#4a4a4a',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: 16,
+    color: '#4a4a4a',
+    marginBottom: 10,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#d9d9d9',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    textAlignVertical: 'top',
+    width: '100%',
+    fontSize: 16,
+    color: '#001529',
+    height: 100,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalCancelButton: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#d9d9d9',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: '48%',
+    alignItems: 'center',
+  },
+  modalSubmitButton: {
+    backgroundColor: '#001529',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: '48%',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 

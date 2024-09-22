@@ -32,33 +32,27 @@ const RevisionsOfTheWeekScreen: React.FC<RevisionsOfTheWeekScreenProps> = ({ nav
   const [description, setDescription] = useState('');
 
   const handleDayPress = (day: DateData) => {
-    if (!startDate || (startDate && endDate)) {
-      setStartDate(day.dateString);
-      setEndDate('');
-      setMarkedDates({
-        [day.dateString]: { startingDay: true, color: '#50cebb', textColor: 'white' }
-      });
-    } else {
-      let start = new Date(startDate);
-      let end = new Date(day.dateString);
-      if (start > end) {
-        [start, end] = [end, start];
+    const selectedDate = new Date(day.dateString);
+    const startOfWeek = new Date(selectedDate);
+    startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay()); // Set to Sunday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Saturday
+
+    const range: {[key: string]: any} = {};
+    for (let d = new Date(startOfWeek); d <= endOfWeek; d.setDate(d.getDate() + 1)) {
+      const dateString = d.toISOString().split('T')[0];
+      if (d.getTime() === startOfWeek.getTime()) {
+        range[dateString] = { startingDay: true, color: '#50cebb', textColor: 'white' };
+      } else if (d.getTime() === endOfWeek.getTime()) {
+        range[dateString] = { endingDay: true, color: '#50cebb', textColor: 'white' };
+      } else {
+        range[dateString] = { color: '#70d7c7', textColor: 'white' };
       }
-      let range: {[key: string]: any} = {};
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        let dateString = d.toISOString().split('T')[0];
-        if (dateString === start.toISOString().split('T')[0]) {
-          range[dateString] = { startingDay: true, color: '#50cebb', textColor: 'white' };
-        } else if (dateString === end.toISOString().split('T')[0]) {
-          range[dateString] = { endingDay: true, color: '#50cebb', textColor: 'white' };
-        } else {
-          range[dateString] = { color: '#70d7c7', textColor: 'white' };
-        }
-      }
-      setStartDate(start.toISOString().split('T')[0]);
-      setEndDate(end.toISOString().split('T')[0]);
-      setMarkedDates(range);
     }
+
+    setStartDate(startOfWeek.toISOString().split('T')[0]);
+    setEndDate(endOfWeek.toISOString().split('T')[0]);
+    setMarkedDates(range);
   };
 
   const addRevision = () => {
@@ -123,7 +117,7 @@ const RevisionsOfTheWeekScreen: React.FC<RevisionsOfTheWeekScreenProps> = ({ nav
             onDayPress={handleDayPress}
             markedDates={markedDates}
             markingType={'period'}
-            minDate={new Date().toISOString().split('T')[0]}
+            // Remove the minDate prop to allow selection of past dates
             theme={{
               backgroundColor: '#ffffff',
               calendarBackground: '#ffffff',
