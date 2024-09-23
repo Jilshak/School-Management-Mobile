@@ -6,7 +6,7 @@ import { RouteProp } from '@react-navigation/native';
 
 type MCQScreenProps = {
   navigation: StackNavigationProp<any, 'MCQ'>;
-  route: RouteProp<{ params: { subject: string } }, 'params'>;
+  route: RouteProp<{ params: { subjects: string[]; selectedChapters: string[] } }, 'params'>;
 };
 
 type Question = {
@@ -14,59 +14,60 @@ type Question = {
   question: string;
   options: string[];
   correctAnswer: string;
+  chapterId: string;
 };
 
 const questions: { [key: string]: Question[] } = {
   Mathematics: [
-    { id: 1, question: 'What is 2 + 2?', options: ['3', '4', '5', '6'], correctAnswer: '4' },
-    { id: 2, question: 'What is 3 * 3?', options: ['6', '7', '8', '9'], correctAnswer: '9' },
-    { id: 3, question: 'What is the square root of 16?', options: ['2', '4', '8', '16'], correctAnswer: '4' },
-    { id: 4, question: 'What is 15% of 100?', options: ['10', '15', '20', '25'], correctAnswer: '15' },
-    { id: 5, question: 'What is the value of π (pi) to two decimal places?', options: ['3.14', '3.16', '3.18', '3.20'], correctAnswer: '3.14' },
-    { id: 6, question: 'What is the next number in the sequence: 2, 4, 8, 16, ...?', options: ['24', '32', '64', '128'], correctAnswer: '32' },
-    { id: 7, question: 'What is the area of a square with side length 5?', options: ['20', '25', '30', '35'], correctAnswer: '25' },
-    { id: 8, question: 'What is the result of 2^3?', options: ['4', '6', '8', '10'], correctAnswer: '8' },
-    { id: 9, question: 'What is the sum of angles in a triangle?', options: ['90°', '180°', '270°', '360°'], correctAnswer: '180°' },
-    { id: 10, question: 'What is the result of 7 + 3 * 2?', options: ['13', '20', '17', '10'], correctAnswer: '13' },
-    { id: 11, question: 'What is the perimeter of a rectangle with length 5 and width 3?', options: ['8', '12', '16', '15'], correctAnswer: '16' },
-    { id: 12, question: 'What is 1/4 expressed as a decimal?', options: ['0.25', '0.4', '0.75', '0.5'], correctAnswer: '0.25' },
-    { id: 13, question: 'What is the largest prime number less than 20?', options: ['17', '18', '19', '20'], correctAnswer: '19' },
-    { id: 14, question: 'What is the value of x in the equation 2x + 5 = 15?', options: ['5', '7', '8', '10'], correctAnswer: '5' },
-    { id: 15, question: 'What is the mode of the numbers: 2, 3, 3, 4, 5, 5, 5, 6?', options: ['3', '4', '5', '6'], correctAnswer: '5' },
+    { id: 1, question: 'What is 2 + 2?', options: ['3', '4', '5', '6'], correctAnswer: '4', chapterId: 'math1' },
+    { id: 2, question: 'What is 3 * 3?', options: ['6', '7', '8', '9'], correctAnswer: '9', chapterId: 'math1' },
+    { id: 3, question: 'What is the square root of 16?', options: ['2', '4', '8', '16'], correctAnswer: '4', chapterId: 'math1' },
+    { id: 4, question: 'What is 15% of 100?', options: ['10', '15', '20', '25'], correctAnswer: '15', chapterId: 'math1' },
+    { id: 5, question: 'What is the value of π (pi) to two decimal places?', options: ['3.14', '3.16', '3.18', '3.20'], correctAnswer: '3.14', chapterId: 'math1' },
+    { id: 6, question: 'What is the next number in the sequence: 2, 4, 8, 16, ...?', options: ['24', '32', '64', '128'], correctAnswer: '32', chapterId: 'math1' },
+    { id: 7, question: 'What is the area of a square with side length 5?', options: ['20', '25', '30', '35'], correctAnswer: '25', chapterId: 'math2' },
+    { id: 8, question: 'What is the result of 2^3?', options: ['4', '6', '8', '10'], correctAnswer: '8', chapterId: 'math2' },
+    { id: 9, question: 'What is the sum of angles in a triangle?', options: ['90°', '180°', '270°', '360°'], correctAnswer: '180°', chapterId: 'math2' },
+    { id: 10, question: 'What is the result of 7 + 3 * 2?', options: ['13', '20', '17', '10'], correctAnswer: '13', chapterId: 'math2' },
+    { id: 11, question: 'What is the perimeter of a rectangle with length 5 and width 3?', options: ['8', '12', '16', '15'], correctAnswer: '16', chapterId: 'math3' },
+    { id: 12, question: 'What is 1/4 expressed as a decimal?', options: ['0.25', '0.4', '0.75', '0.5'], correctAnswer: '0.25', chapterId: 'math3' },
+    { id: 13, question: 'What is the largest prime number less than 20?', options: ['17', '18', '19', '20'], correctAnswer: '19', chapterId: 'math3' },
+    { id: 14, question: 'What is the value of x in the equation 2x + 5 = 15?', options: ['5', '7', '8', '10'], correctAnswer: '5', chapterId: 'math3' },
+    { id: 15, question: 'What is the mode of the numbers: 2, 3, 3, 4, 5, 5, 5, 6?', options: ['3', '4', '5', '6'], correctAnswer: '5', chapterId: 'math3' },
   ],
   Science: [
-    { id: 1, question: 'What is the chemical symbol for water?', options: ['H2O', 'O2', 'CO2', 'NaCl'], correctAnswer: 'H2O' },
-    { id: 2, question: 'What planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Mars' },
-    { id: 3, question: 'What is the largest organ in the human body?', options: ['Heart', 'Brain', 'Liver', 'Skin'], correctAnswer: 'Skin' },
-    { id: 4, question: 'What is the chemical symbol for gold?', options: ['Go', 'Gd', 'Au', 'Ag'], correctAnswer: 'Au' },
-    { id: 5, question: 'Which of these is not a state of matter?', options: ['Solid', 'Liquid', 'Gas', 'Energy'], correctAnswer: 'Energy' },
-    { id: 6, question: 'What is the closest star to Earth?', options: ['Proxima Centauri', 'Alpha Centauri', 'Sirius', 'The Sun'], correctAnswer: 'The Sun' },
-    { id: 7, question: 'What is the speed of light in vacuum?', options: ['299,792 km/s', '300,000 km/s', '301,000 km/s', '310,000 km/s'], correctAnswer: '299,792 km/s' },
-    { id: 8, question: 'What is the hardest natural substance on Earth?', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], correctAnswer: 'Diamond' },
-    { id: 9, question: 'Which of the following is not a greenhouse gas?', options: ['Carbon dioxide', 'Methane', 'Water vapor', 'Nitrogen'], correctAnswer: 'Nitrogen' },
-    { id: 10, question: 'What is the largest planet in our solar system?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Jupiter' },
-    { id: 11, question: 'What is the chemical symbol for oxygen?', options: ['O', 'O2', 'Ox', 'Og'], correctAnswer: 'O' },
-    { id: 12, question: 'Which of these animals is not a mammal?', options: ['Dolphin', 'Bat', 'Whale', 'Snake'], correctAnswer: 'Snake' },
-    { id: 13, question: 'What is the process by which plants make their own food?', options: ['Photosynthesis', 'Respiration', 'Fermentation', 'Digestion'], correctAnswer: 'Photosynthesis' },
-    { id: 14, question: 'What is the smallest unit of matter?', options: ['Atom', 'Molecule', 'Cell', 'Electron'], correctAnswer: 'Atom' },
-    { id: 15, question: 'Which planet is known as the "Blue Planet"?', options: ['Mars', 'Venus', 'Earth', 'Neptune'], correctAnswer: 'Earth' },
+    { id: 1, question: 'What is the chemical symbol for water?', options: ['H2O', 'O2', 'CO2', 'NaCl'], correctAnswer: 'H2O', chapterId: 'sci1' },
+    { id: 2, question: 'What planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Mars', chapterId: 'sci1' },
+    { id: 3, question: 'What is the largest organ in the human body?', options: ['Heart', 'Brain', 'Liver', 'Skin'], correctAnswer: 'Skin', chapterId: 'sci1' },
+    { id: 4, question: 'What is the chemical symbol for gold?', options: ['Go', 'Gd', 'Au', 'Ag'], correctAnswer: 'Au', chapterId: 'sci1' },
+    { id: 5, question: 'Which of these is not a state of matter?', options: ['Solid', 'Liquid', 'Gas', 'Energy'], correctAnswer: 'Energy', chapterId: 'sci1' },
+    { id: 6, question: 'What is the closest star to Earth?', options: ['Proxima Centauri', 'Alpha Centauri', 'Sirius', 'The Sun'], correctAnswer: 'The Sun', chapterId: 'sci1' },
+    { id: 7, question: 'What is the speed of light in vacuum?', options: ['299,792 km/s', '300,000 km/s', '301,000 km/s', '310,000 km/s'], correctAnswer: '299,792 km/s', chapterId: 'sci2' },
+    { id: 8, question: 'What is the hardest natural substance on Earth?', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], correctAnswer: 'Diamond', chapterId: 'sci2' },
+    { id: 9, question: 'Which of the following is not a greenhouse gas?', options: ['Carbon dioxide', 'Methane', 'Water vapor', 'Nitrogen'], correctAnswer: 'Nitrogen', chapterId: 'sci2' },
+    { id: 10, question: 'What is the largest planet in our solar system?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Jupiter', chapterId: 'sci2' },
+    { id: 11, question: 'What is the chemical symbol for oxygen?', options: ['O', 'O2', 'Ox', 'Og'], correctAnswer: 'O', chapterId: 'sci3' },
+    { id: 12, question: 'Which of these animals is not a mammal?', options: ['Dolphin', 'Bat', 'Whale', 'Snake'], correctAnswer: 'Snake', chapterId: 'sci3' },
+    { id: 13, question: 'What is the process by which plants make their own food?', options: ['Photosynthesis', 'Respiration', 'Fermentation', 'Digestion'], correctAnswer: 'Photosynthesis', chapterId: 'sci3' },
+    { id: 14, question: 'What is the smallest unit of matter?', options: ['Atom', 'Molecule', 'Cell', 'Electron'], correctAnswer: 'Atom', chapterId: 'sci3' },
+    { id: 15, question: 'Which planet is known as the "Blue Planet"?', options: ['Mars', 'Venus', 'Earth', 'Neptune'], correctAnswer: 'Earth', chapterId: 'sci3' },
   ],
   History: [
-    { id: 1, question: 'In which year did World War II end?', options: ['1943', '1945', '1947', '1950'], correctAnswer: '1945' },
-    { id: 2, question: 'Who was the first President of the United States?', options: ['Thomas Jefferson', 'John Adams', 'George Washington', 'Benjamin Franklin'], correctAnswer: 'George Washington' },
-    { id: 3, question: 'Which ancient wonder was located in Alexandria?', options: ['Hanging Gardens', 'Colossus', 'Lighthouse', 'Great Pyramid'], correctAnswer: 'Lighthouse' },
-    { id: 4, question: 'In which year did the French Revolution begin?', options: ['1769', '1779', '1789', '1799'], correctAnswer: '1789' },
-    { id: 5, question: 'Who was the first woman to fly solo across the Atlantic?', options: ['Amelia Earhart', 'Bessie Coleman', 'Harriet Quimby', 'Jacqueline Cochran'], correctAnswer: 'Amelia Earhart' },
-    { id: 6, question: 'Which empire was ruled by Genghis Khan?', options: ['Roman Empire', 'Ottoman Empire', 'Mongol Empire', 'Byzantine Empire'], correctAnswer: 'Mongol Empire' },
-    { id: 7, question: 'In which year did the Berlin Wall fall?', options: ['1987', '1989', '1991', '1993'], correctAnswer: '1989' },
-    { id: 8, question: 'Who wrote the Declaration of Independence?', options: ['George Washington', 'Thomas Jefferson', 'Benjamin Franklin', 'John Adams'], correctAnswer: 'Thomas Jefferson' },
-    { id: 9, question: 'Which country was NOT part of the Allied Powers during World War II?', options: ['United States', 'Soviet Union', 'United Kingdom', 'Japan'], correctAnswer: 'Japan' },
-    { id: 10, question: 'In which year did Christopher Columbus first reach the Americas?', options: ['1492', '1500', '1510', '1520'], correctAnswer: '1492' },
-    { id: 11, question: 'Who was the first Emperor of Rome?', options: ['Julius Caesar', 'Augustus', 'Nero', 'Constantine'], correctAnswer: 'Augustus' },
-    { id: 12, question: 'Which civilization built the Machu Picchu complex in Peru?', options: ['Aztec', 'Maya', 'Inca', 'Olmec'], correctAnswer: 'Inca' },
-    { id: 13, question: 'Who was the leader of the Soviet Union during the Cuban Missile Crisis?', options: ['Joseph Stalin', 'Vladimir Lenin', 'Nikita Khrushchev', 'Leonid Brezhnev'], correctAnswer: 'Nikita Khrushchev' },
-    { id: 14, question: 'In which year did the American Civil War begin?', options: ['1861', '1865', '1870', '1875'], correctAnswer: '1861' },
-    { id: 15, question: 'Who was the first woman to win a Nobel Prize?', options: ['Marie Curie', 'Mother Teresa', 'Jane Addams', 'Barbara McClintock'], correctAnswer: 'Marie Curie' },
+    { id: 1, question: 'In which year did World War II end?', options: ['1943', '1945', '1947', '1950'], correctAnswer: '1945', chapterId: 'hist1' },
+    { id: 2, question: 'Who was the first President of the United States?', options: ['Thomas Jefferson', 'John Adams', 'George Washington', 'Benjamin Franklin'], correctAnswer: 'George Washington', chapterId: 'hist1' },
+    { id: 3, question: 'Which ancient wonder was located in Alexandria?', options: ['Hanging Gardens', 'Colossus', 'Lighthouse', 'Great Pyramid'], correctAnswer: 'Lighthouse', chapterId: 'hist1' },
+    { id: 4, question: 'In which year did the French Revolution begin?', options: ['1769', '1779', '1789', '1799'], correctAnswer: '1789', chapterId: 'hist1' },
+    { id: 5, question: 'Who was the first woman to fly solo across the Atlantic?', options: ['Amelia Earhart', 'Bessie Coleman', 'Harriet Quimby', 'Jacqueline Cochran'], correctAnswer: 'Amelia Earhart', chapterId: 'hist1' },
+    { id: 6, question: 'Which empire was ruled by Genghis Khan?', options: ['Roman Empire', 'Ottoman Empire', 'Mongol Empire', 'Byzantine Empire'], correctAnswer: 'Mongol Empire', chapterId: 'hist2' },
+    { id: 7, question: 'In which year did the Berlin Wall fall?', options: ['1987', '1989', '1991', '1993'], correctAnswer: '1989', chapterId: 'hist2' },
+    { id: 8, question: 'Who wrote the Declaration of Independence?', options: ['George Washington', 'Thomas Jefferson', 'Benjamin Franklin', 'John Adams'], correctAnswer: 'Thomas Jefferson', chapterId: 'hist2' },
+    { id: 9, question: 'Which country was NOT part of the Allied Powers during World War II?', options: ['United States', 'Soviet Union', 'United Kingdom', 'Japan'], correctAnswer: 'Japan', chapterId: 'hist2' },
+    { id: 10, question: 'In which year did Christopher Columbus first reach the Americas?', options: ['1492', '1500', '1510', '1520'], correctAnswer: '1492', chapterId: 'hist2' },
+    { id: 11, question: 'Who was the first Emperor of Rome?', options: ['Julius Caesar', 'Augustus', 'Nero', 'Constantine'], correctAnswer: 'Augustus', chapterId: 'hist3' },
+    { id: 12, question: 'Which civilization built the Machu Picchu complex in Peru?', options: ['Aztec', 'Maya', 'Inca', 'Olmec'], correctAnswer: 'Inca', chapterId: 'hist3' },
+    { id: 13, question: 'Who was the leader of the Soviet Union during the Cuban Missile Crisis?', options: ['Joseph Stalin', 'Vladimir Lenin', 'Nikita Khrushchev', 'Leonid Brezhnev'], correctAnswer: 'Nikita Khrushchev', chapterId: 'hist3' },
+    { id: 14, question: 'In which year did the American Civil War begin?', options: ['1861', '1865', '1870', '1875'], correctAnswer: '1861', chapterId: 'hist3' },
+    { id: 15, question: 'Who was the first woman to win a Nobel Prize?', options: ['Marie Curie', 'Mother Teresa', 'Jane Addams', 'Barbara McClintock'], correctAnswer: 'Marie Curie', chapterId: 'hist3' },
   ],
 };
 
@@ -91,9 +92,38 @@ const CustomProgressBar: React.FC<{ totalQuestions: number; answeredQuestions: n
   );
 };
 
+// Add this helper function at the top of the file, outside of the component
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
-  const { subject } = route.params;
-  const subjectQuestions = questions[subject] || [];
+  const { subjects, selectedChapters } = route.params;
+
+  // Use useMemo to memoize the shuffled questions
+  const subjectQuestions = React.useMemo(() => {
+    const getQuestionsFromChapters = () => {
+      const allQuestions = subjects.flatMap(subject => questions[subject] || []);
+      const selectedQuestions = allQuestions.filter(question => 
+        selectedChapters.includes(question.chapterId)
+      );
+      
+      // Randomly select questions if there are more than 15
+      if (selectedQuestions.length > 15) {
+        return shuffleArray(selectedQuestions).slice(0, 15);
+      }
+      
+      return selectedQuestions;
+    };
+
+    return getQuestionsFromChapters();
+  }, [subjects, selectedChapters]); // Dependencies for useMemo
+
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -247,12 +277,12 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     };
   };
 
-  const renderQuestion = ({ item }: { item: Question }) => (
-    <View style={styles.questionCard}>
-      <Text style={styles.questionText}>{item.question}</Text>
-      {item.options.map((option, index) => (
+  const renderQuestion = ({ item, index }: { item: Question; index: number }) => (
+    <View style={styles.questionCard} key={`question-${index}`}>
+      <Text style={styles.questionText}>{`${index + 1}. ${item.question}`}</Text>
+      {item.options.map((option, optionIndex) => (
         <TouchableOpacity
-          key={index}
+          key={`question-${index}-option-${optionIndex}`}
           style={[
             styles.optionButton,
             selectedAnswers[item.id] === option && styles.selectedOptionButton,
@@ -270,7 +300,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
               submitted && selectedAnswers[item.id] === option && selectedAnswers[item.id] !== item.correctAnswer && styles.incorrectOptionText,
             ]}
           >
-            {option}
+            {`${String.fromCharCode(65 + optionIndex)}. ${option}`}
           </Text>
           {submitted && selectedAnswers[item.id] === option && option === item.correctAnswer && (
             <AntIcon name="check" size={24} color="#ffffff" style={styles.tickIcon} />
@@ -279,10 +309,6 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
       ))}
     </View>
   );
-
-  const startIndex = (currentPage - 1) * QUESTIONS_PER_PAGE;
-  const endIndex = startIndex + QUESTIONS_PER_PAGE;
-  const currentQuestions = subjectQuestions.slice(startIndex, endIndex);
 
   const renderResultModal = () => {
     const { correctCount, incorrectCount, unselectedCount, averageTimePerQuestion } = calculateResults();
@@ -383,12 +409,12 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
       {renderStartModal()}
       {!examStarted && (
         <View style={styles.fadedBackgroundContainer}>
-          {currentQuestions.map((question, index) => (
-            <View key={index} style={styles.fadedQuestionCard}>
-              <Text style={styles.fadedQuestionText}>{question.question}</Text>
+          {subjectQuestions.map((question, index) => (
+            <View key={`faded-question-${index}`} style={styles.fadedQuestionCard}>
+              <Text style={styles.fadedQuestionText}>{`${index + 1}. ${question.question}`}</Text>
               {question.options.map((option, optionIndex) => (
-                <View key={optionIndex} style={styles.fadedOptionButton}>
-                  <Text style={styles.fadedOptionText}>{option}</Text>
+                <View key={`faded-question-${index}-option-${optionIndex}`} style={styles.fadedOptionButton}>
+                  <Text style={styles.fadedOptionText}>{`${String.fromCharCode(65 + optionIndex)}. ${option}`}</Text>
                 </View>
               ))}
             </View>
@@ -401,7 +427,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <AntIcon name="arrow-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{subject} Questions</Text>
+            <Text style={styles.headerTitle}>MCQ Exam</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -418,9 +444,9 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
           </View>
 
           <FlatList
-            data={currentQuestions}
+            data={subjectQuestions}
             renderItem={renderQuestion}
-            keyExtractor={item => item.id.toString()}
+            keyExtractor={(item, index) => `question-${index}`}
             contentContainerStyle={styles.questionList}
           />
 
@@ -834,5 +860,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
 
 export default MCQScreen;

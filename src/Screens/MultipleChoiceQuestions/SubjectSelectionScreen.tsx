@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView, Alert } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -32,6 +32,7 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
   const [filterAvailable, setFilterAvailable] = useState<boolean | null>(null);
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
   const animatedValue = new Animated.Value(0);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     Animated.timing(animatedValue, {
@@ -42,7 +43,20 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
   }, []);
 
   const handleSubjectSelect = (subject: string) => {
-    navigation.navigate('MCQ', { subject });
+    setSelectedSubjects(prev => 
+      prev.includes(subject) 
+        ? prev.filter(s => s !== subject) 
+        : [...prev, subject]
+    );
+  };
+
+  const handleNextStep = () => {
+    if (selectedSubjects.length === 0) {
+      // Show an alert that at least one subject must be selected
+      Alert.alert("Selection Required", "Please select at least one subject.");
+      return;
+    }
+    navigation.navigate('ChapterSelection', { subjects: selectedSubjects });
   };
 
   const renderSubject = ({ item }: { item: Subject }) => (
@@ -51,6 +65,9 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
         <View style={styles.subjectHeader}>
           <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
           <Text style={styles.subjectName}>{item.name}</Text>
+          {selectedSubjects.includes(item.name) && (
+            <AntIcon name="check" size={24} color="#52c41a" style={styles.checkIcon} />
+          )}
         </View>
         <Text style={styles.subjectDescription}>{item.description}</Text>
         <View style={styles.tagsContainer}>
@@ -128,6 +145,10 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
         refreshing={refreshing}
         onRefresh={handleRefresh}
       />
+
+      <TouchableOpacity style={styles.nextButton} onPress={handleNextStep}>
+        <Text style={styles.nextButtonText}>Next</Text>
+      </TouchableOpacity>
 
       <Modal
         animationType="slide"
@@ -382,6 +403,21 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: 'white',
+  },
+  checkIcon: {
+    marginLeft: 10,
+  },
+  nextButton: {
+    backgroundColor: '#001529',
+    padding: 15,
+    borderRadius: 10,
+    margin: 20,
+    alignItems: 'center',
+  },
+  nextButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 
