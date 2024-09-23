@@ -41,6 +41,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'book', text: 'Syllabus', route: 'Syllabus' },
     { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook' },
     { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },
+    { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection' },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

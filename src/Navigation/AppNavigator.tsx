@@ -23,6 +23,8 @@ import RevisionsOfTheWeekScreen from "../Screens/Teacher/RevisionsOfTheWeekScree
 import ClassDetailsScreen from "../Screens/ClassDetails/ClassDetailsScreen";
 import StudentListScreen from '../Screens/StudentList/StudentListScreen';
 import StudentDetailsScreen from '../Screens/StudentDetails/StudentDetailsScreen';
+import SubjectSelectionScreen from '../Screens/MultipleChoiceQuestions/SubjectSelectionScreen';
+import MCQScreen from '../Screens/MultipleChoiceQuestions/MCQScreen';
 
 const Stack = createStackNavigator();
 
@@ -70,6 +72,8 @@ const AppNavigator: React.FC = () => {
         <Stack.Screen name="ClassDetails" component={ClassDetailsScreen} />
         <Stack.Screen name="StudentList" component={StudentListScreen as React.ComponentType<any>} />
         <Stack.Screen name="StudentDetails" component={StudentDetailsScreen as React.ComponentType<any>} />
+        <Stack.Screen name="SubjectSelection" component={SubjectSelectionScreen} />
+        <Stack.Screen name="MCQ" component={MCQScreen as React.ComponentType<any>} />
       </Stack.Navigator>
     </NavigationContainer>
   );
