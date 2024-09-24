@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, Alert, Modal, Dimensions } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -46,28 +46,11 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
   const { subjects, selectedChapters, blacklistedQuestions } = route.params;
 
-  const subjectQuestions = React.useMemo(() => {
-    const getQuestionsFromChapters = () => {
-      const allQuestions = subjects.flatMap(subject => questions[subject] || []);
-      const selectedQuestions = allQuestions.filter(question => 
-        selectedChapters.includes(question.chapterId) && !blacklistedQuestions.includes(question.id)
-      );
-      
-      // Randomly select questions if there are more than 15
-      if (selectedQuestions.length > 15) {
-        return shuffleArray(selectedQuestions).slice(0, 15);
-      }
-      
-      return selectedQuestions;
-    };
-
-    return getQuestionsFromChapters();
-  }, [subjects, selectedChapters, blacklistedQuestions]); // Dependencies for useMemo
-
+  const [subjectQuestions, setSubjectQuestions] = useState<Question[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [remainingTime, setRemainingTime] = useState(subjectQuestions.length * 60); // 1 minute per question
+  const [remainingTime, setRemainingTime] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [score, setScore] = useState(0);
   const [showResultModal, setShowResultModal] = useState(false);
@@ -76,13 +59,29 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
   const [quizDuration, setQuizDuration] = useState(0);
   const [showStartModal, setShowStartModal] = useState(true);
   const [examStarted, setExamStarted] = useState(false);
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | null>(null);
+
+  const initialQuestions = useMemo(() => {
+    const getQuestionsFromChapters = () => {
+      const allQuestions = subjects.flatMap(subject => questions[subject] || []);
+      const selectedQuestions = allQuestions.filter(question => 
+        selectedChapters.includes(question.chapterId) && !blacklistedQuestions.includes(question.id)
+      );
+      return selectedQuestions;
+    };
+
+    return getQuestionsFromChapters();
+  }, [subjects, selectedChapters, blacklistedQuestions]);
+
+  useEffect(() => {
+    setSubjectQuestions(initialQuestions);
+  }, [initialQuestions]);
 
   const totalPages = Math.ceil(subjectQuestions.length / QUESTIONS_PER_PAGE);
 
   useEffect(() => {
     if (examStarted) {
       setStartTime(Date.now());
-      // Start the timer only when the exam has started
       let timer: ReturnType<typeof setInterval>;
       if (timerActive) {
         timer = setInterval(() => {
@@ -306,8 +305,15 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
   };
 
   const handleStartExam = () => {
-    setShowStartModal(false);
-    setExamStarted(true);
+    if (selectedQuestionCount) {
+      setShowStartModal(false);
+      setExamStarted(true);
+      const shuffledQuestions = shuffleArray(initialQuestions).slice(0, selectedQuestionCount);
+      setSubjectQuestions(shuffledQuestions);
+      setRemainingTime(selectedQuestionCount * 60);
+    } else {
+      Alert.alert("Please select the number of questions");
+    }
   };
 
   const renderStartModal = () => (
@@ -319,9 +325,29 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     >
       <View style={styles.startModalContainer}>
         <View style={styles.startModalContent}>
-          <Text style={styles.startModalTitle}>Exam Rules</Text>
-          <Text style={styles.startModalText}>• This is a 15-minute exam</Text>
-          <Text style={styles.startModalText}>• There are {subjectQuestions.length} questions</Text>
+          <Text style={styles.startModalTitle}>Exam Setup</Text>
+          <Text style={styles.startModalText}>Select the number of questions:</Text>
+          <View style={styles.questionCountContainer}>
+            {[30, 50, 90, 120, 150, 180].map((count) => (
+              <TouchableOpacity
+                key={count}
+                style={[
+                  styles.questionCountButton,
+                  selectedQuestionCount === count && styles.selectedQuestionCountButton,
+                ]}
+                onPress={() => setSelectedQuestionCount(count)}
+              >
+                <Text
+                  style={[
+                    styles.questionCountButtonText,
+                    selectedQuestionCount === count && styles.selectedQuestionCountButtonText,
+                  ]}
+                >
+                  {count}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <Text style={styles.startModalText}>• Each question carries 4 marks</Text>
           <Text style={styles.startModalText}>• Wrong selection: -1 mark</Text>
           <Text style={styles.startModalText}>• Unselected: 0 marks</Text>
@@ -333,8 +359,9 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.startButton}
+              style={[styles.startButton, !selectedQuestionCount && styles.disabledButton]}
               onPress={handleStartExam}
+              disabled={!selectedQuestionCount}
             >
               <Text style={styles.startButtonText}>Start Exam</Text>
             </TouchableOpacity>
@@ -799,7 +826,30 @@ const styles = StyleSheet.create({
   fadedOptionText: {
     fontSize: 16,
   },
+  questionCountContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  questionCountButton: {
+    backgroundColor: '#f0f2f5',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+    margin: 5,
+  },
+  selectedQuestionCountButton: {
+    backgroundColor: '#001529',
+  },
+  questionCountButtonText: {
+    color: '#001529',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  selectedQuestionCountButtonText: {
+    color: '#ffffff',
+  },
 });
-
 
 export default MCQScreen;

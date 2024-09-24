@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, Switch, Alert, Modal, ScrollView, TextInput } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, Switch, Alert, Modal, ScrollView, TextInput, TextInput as RNTextInput } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -127,6 +127,8 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
   const [filteredChapters, setFilteredChapters] = useState<Chapter[]>([]);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterSelected, setFilterSelected] = useState<boolean | null>(null);
+  const [randomSelectionModalVisible, setRandomSelectionModalVisible] = useState(false);
+  const [randomSelectionCount, setRandomSelectionCount] = useState('');
 
   useEffect(() => {
     if (subjects && subjects.length > 0) {
@@ -142,6 +144,16 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
         ? prev.filter(id => id !== chapterId)
         : [...prev, chapterId]
     );
+  };
+
+  const toggleAllChapters = () => {
+    if (selectedChapters.length === availableChapters.length) {
+      // If all chapters are selected, deselect all
+      setSelectedChapters([]);
+    } else {
+      // Otherwise, select all chapters
+      setSelectedChapters(availableChapters.map(chapter => chapter.id));
+    }
   };
 
   const handleStartExam = () => {
@@ -197,6 +209,20 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
     setFilterSelected(null);
     setSearchQuery('');
     setFilteredChapters(availableChapters);
+  };
+
+  const handleRandomSelection = () => {
+    const count = parseInt(randomSelectionCount, 10);
+    if (isNaN(count) || count <= 0 || count > availableChapters.length) {
+      Alert.alert('Invalid Input', `Please enter a number between 1 and ${availableChapters.length}.`);
+      return;
+    }
+
+    const shuffled = [...availableChapters].sort(() => 0.5 - Math.random());
+    const randomlySelected = shuffled.slice(0, count).map(chapter => chapter.id);
+    setSelectedChapters(randomlySelected);
+    setRandomSelectionModalVisible(false);
+    setRandomSelectionCount('');
   };
 
   const renderChapter = ({ item }: { item: Chapter }) => (
@@ -270,6 +296,43 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
     </Modal>
   );
 
+  const renderRandomSelectionModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={randomSelectionModalVisible}
+      onRequestClose={() => setRandomSelectionModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Random Chapter Selection</Text>
+          <Text style={styles.modalText}>Enter the number of chapters to randomly select:</Text>
+          <RNTextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={randomSelectionCount}
+            onChangeText={setRandomSelectionCount}
+            placeholder={`1 - ${availableChapters.length}`}
+          />
+          <View style={styles.modalButtons}>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.cancelButton]} 
+              onPress={() => setRandomSelectionModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.applyButton]} 
+              onPress={handleRandomSelection}
+            >
+              <Text style={[styles.modalButtonText, styles.applyButtonText]}>Select</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -294,6 +357,20 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
         </TouchableOpacity>
       </View>
 
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity onPress={toggleAllChapters} style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>
+            {selectedChapters.length === availableChapters.length ? 'Deselect All' : 'Select All'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => setRandomSelectionModalVisible(true)} 
+          style={styles.actionButton}
+        >
+          <Text style={styles.actionButtonText}>Random Selection</Text>
+        </TouchableOpacity>
+      </View>
+
       {filteredChapters.length > 0 ? (
         <FlatList
           data={filteredChapters}
@@ -310,6 +387,7 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
       </TouchableOpacity>
 
       {renderQuestionModal()}
+      {renderRandomSelectionModal()}
 
       <Modal
         animationType="slide"
@@ -599,6 +677,40 @@ const styles = StyleSheet.create({
     color: '#4a4a4a',
     textAlign: 'center',
     marginTop: 20,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  actionButton: {
+    backgroundColor: '#001529',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#001529',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
   },
 });
 
