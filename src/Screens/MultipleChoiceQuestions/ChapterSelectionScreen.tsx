@@ -226,18 +226,17 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
   };
 
   const renderChapter = ({ item }: { item: Chapter }) => (
-    <View style={styles.chapterCard}>
+    <TouchableOpacity 
+      style={styles.chapterCard}
+      onPress={() => toggleChapter(item.id)}
+    >
       <View style={styles.chapterHeader}>
         <View style={styles.chapterInfo}>
           <Text style={styles.chapterName}>{item.name}</Text>
         </View>
-        <Switch
-          value={selectedChapters.includes(item.id)}
-          onValueChange={() => toggleChapter(item.id)}
-          trackColor={{ false: "#767577", true: "#001529" }}
-          thumbColor={selectedChapters.includes(item.id) ? "#ffffff" : "#f4f3f4"}
-          ios_backgroundColor="#3e3e3e"
-        />
+        {selectedChapters.includes(item.id) && (
+          <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
+        )}
       </View>
       <View style={styles.questionCountContainer}>
         <View style={styles.questionCountChip}>
@@ -251,7 +250,7 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
         <Text style={styles.viewQuestionsButtonText}>View Questions</Text>
         <AntIcon name="right" size={16} color="#ffffff" />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderQuestionModal = () => (
@@ -494,6 +493,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#001529',
     marginBottom: 2,
+  },
+  checkIcon: {
+    marginLeft: 10,
   },
   questionCountContainer: {
     flexDirection: 'row',

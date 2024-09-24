@@ -65,7 +65,7 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
           <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
           <Text style={styles.subjectName}>{item.name}</Text>
           {selectedSubjects.includes(item.name) && (
-            <AntIcon name="check" size={24} color="#52c41a" style={styles.checkIcon} />
+            <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
           )}
         </View>
         <Text style={styles.subjectDescription}>{item.description}</Text>
@@ -276,6 +276,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+    justifyContent: 'space-between',
   },
   subjectIcon: {
     marginRight: 10,
@@ -287,6 +288,7 @@ const styles = StyleSheet.create({
     color: '#001529',
     fontSize: 18,
     fontWeight: 'bold',
+    flex: 1,
   },
   subjectDescription: {
     color: '#4a4a4a',
