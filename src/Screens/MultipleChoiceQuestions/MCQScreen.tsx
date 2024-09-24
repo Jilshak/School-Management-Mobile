@@ -3,73 +3,14 @@ import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, Alert
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { Question, questions } from './questions';
 
 type MCQScreenProps = {
   navigation: StackNavigationProp<any, 'MCQ'>;
   route: RouteProp<{ params: { subjects: string[]; selectedChapters: string[]; blacklistedQuestions: number[] } }, 'params'>;
 };
 
-type Question = {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  chapterId: string;
-};
 
-const questions: { [key: string]: Question[] } = {
-  Mathematics: [
-    { id: 1, question: 'What is 2 + 2?', options: ['3', '4', '5', '6'], correctAnswer: '4', chapterId: 'math1' },
-    { id: 2, question: 'What is 3 * 3?', options: ['6', '7', '8', '9'], correctAnswer: '9', chapterId: 'math1' },
-    { id: 3, question: 'What is the square root of 16?', options: ['2', '4', '8', '16'], correctAnswer: '4', chapterId: 'math1' },
-    { id: 4, question: 'What is 15% of 100?', options: ['10', '15', '20', '25'], correctAnswer: '15', chapterId: 'math1' },
-    { id: 5, question: 'What is the value of π (pi) to two decimal places?', options: ['3.14', '3.16', '3.18', '3.20'], correctAnswer: '3.14', chapterId: 'math1' },
-    { id: 6, question: 'What is the next number in the sequence: 2, 4, 8, 16, ...?', options: ['24', '32', '64', '128'], correctAnswer: '32', chapterId: 'math1' },
-    { id: 7, question: 'What is the area of a square with side length 5?', options: ['20', '25', '30', '35'], correctAnswer: '25', chapterId: 'math2' },
-    { id: 8, question: 'What is the result of 2^3?', options: ['4', '6', '8', '10'], correctAnswer: '8', chapterId: 'math2' },
-    { id: 9, question: 'What is the sum of angles in a triangle?', options: ['90°', '180°', '270°', '360°'], correctAnswer: '180°', chapterId: 'math2' },
-    { id: 10, question: 'What is the result of 7 + 3 * 2?', options: ['13', '20', '17', '10'], correctAnswer: '13', chapterId: 'math2' },
-    { id: 11, question: 'What is the perimeter of a rectangle with length 5 and width 3?', options: ['8', '12', '16', '15'], correctAnswer: '16', chapterId: 'math3' },
-    { id: 12, question: 'What is 1/4 expressed as a decimal?', options: ['0.25', '0.4', '0.75', '0.5'], correctAnswer: '0.25', chapterId: 'math3' },
-    { id: 13, question: 'What is the largest prime number less than 20?', options: ['17', '18', '19', '20'], correctAnswer: '19', chapterId: 'math3' },
-    { id: 14, question: 'What is the value of x in the equation 2x + 5 = 15?', options: ['5', '7', '8', '10'], correctAnswer: '5', chapterId: 'math3' },
-    { id: 15, question: 'What is the mode of the numbers: 2, 3, 3, 4, 5, 5, 5, 6?', options: ['3', '4', '5', '6'], correctAnswer: '5', chapterId: 'math3' },
-  ],
-  Science: [
-    { id: 1, question: 'What is the chemical symbol for water?', options: ['H2O', 'O2', 'CO2', 'NaCl'], correctAnswer: 'H2O', chapterId: 'sci1' },
-    { id: 2, question: 'What planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Mars', chapterId: 'sci1' },
-    { id: 3, question: 'What is the largest organ in the human body?', options: ['Heart', 'Brain', 'Liver', 'Skin'], correctAnswer: 'Skin', chapterId: 'sci1' },
-    { id: 4, question: 'What is the chemical symbol for gold?', options: ['Go', 'Gd', 'Au', 'Ag'], correctAnswer: 'Au', chapterId: 'sci1' },
-    { id: 5, question: 'Which of these is not a state of matter?', options: ['Solid', 'Liquid', 'Gas', 'Energy'], correctAnswer: 'Energy', chapterId: 'sci1' },
-    { id: 6, question: 'What is the closest star to Earth?', options: ['Proxima Centauri', 'Alpha Centauri', 'Sirius', 'The Sun'], correctAnswer: 'The Sun', chapterId: 'sci1' },
-    { id: 7, question: 'What is the speed of light in vacuum?', options: ['299,792 km/s', '300,000 km/s', '301,000 km/s', '310,000 km/s'], correctAnswer: '299,792 km/s', chapterId: 'sci2' },
-    { id: 8, question: 'What is the hardest natural substance on Earth?', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], correctAnswer: 'Diamond', chapterId: 'sci2' },
-    { id: 9, question: 'Which of the following is not a greenhouse gas?', options: ['Carbon dioxide', 'Methane', 'Water vapor', 'Nitrogen'], correctAnswer: 'Nitrogen', chapterId: 'sci2' },
-    { id: 10, question: 'What is the largest planet in our solar system?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Jupiter', chapterId: 'sci2' },
-    { id: 11, question: 'What is the chemical symbol for oxygen?', options: ['O', 'O2', 'Ox', 'Og'], correctAnswer: 'O', chapterId: 'sci3' },
-    { id: 12, question: 'Which of these animals is not a mammal?', options: ['Dolphin', 'Bat', 'Whale', 'Snake'], correctAnswer: 'Snake', chapterId: 'sci3' },
-    { id: 13, question: 'What is the process by which plants make their own food?', options: ['Photosynthesis', 'Respiration', 'Fermentation', 'Digestion'], correctAnswer: 'Photosynthesis', chapterId: 'sci3' },
-    { id: 14, question: 'What is the smallest unit of matter?', options: ['Atom', 'Molecule', 'Cell', 'Electron'], correctAnswer: 'Atom', chapterId: 'sci3' },
-    { id: 15, question: 'Which planet is known as the "Blue Planet"?', options: ['Mars', 'Venus', 'Earth', 'Neptune'], correctAnswer: 'Earth', chapterId: 'sci3' },
-  ],
-  History: [
-    { id: 1, question: 'In which year did World War II end?', options: ['1943', '1945', '1947', '1950'], correctAnswer: '1945', chapterId: 'hist1' },
-    { id: 2, question: 'Who was the first President of the United States?', options: ['Thomas Jefferson', 'John Adams', 'George Washington', 'Benjamin Franklin'], correctAnswer: 'George Washington', chapterId: 'hist1' },
-    { id: 3, question: 'Which ancient wonder was located in Alexandria?', options: ['Hanging Gardens', 'Colossus', 'Lighthouse', 'Great Pyramid'], correctAnswer: 'Lighthouse', chapterId: 'hist1' },
-    { id: 4, question: 'In which year did the French Revolution begin?', options: ['1769', '1779', '1789', '1799'], correctAnswer: '1789', chapterId: 'hist1' },
-    { id: 5, question: 'Who was the first woman to fly solo across the Atlantic?', options: ['Amelia Earhart', 'Bessie Coleman', 'Harriet Quimby', 'Jacqueline Cochran'], correctAnswer: 'Amelia Earhart', chapterId: 'hist1' },
-    { id: 6, question: 'Which empire was ruled by Genghis Khan?', options: ['Roman Empire', 'Ottoman Empire', 'Mongol Empire', 'Byzantine Empire'], correctAnswer: 'Mongol Empire', chapterId: 'hist2' },
-    { id: 7, question: 'In which year did the Berlin Wall fall?', options: ['1987', '1989', '1991', '1993'], correctAnswer: '1989', chapterId: 'hist2' },
-    { id: 8, question: 'Who wrote the Declaration of Independence?', options: ['George Washington', 'Thomas Jefferson', 'Benjamin Franklin', 'John Adams'], correctAnswer: 'Thomas Jefferson', chapterId: 'hist2' },
-    { id: 9, question: 'Which country was NOT part of the Allied Powers during World War II?', options: ['United States', 'Soviet Union', 'United Kingdom', 'Japan'], correctAnswer: 'Japan', chapterId: 'hist2' },
-    { id: 10, question: 'In which year did Christopher Columbus first reach the Americas?', options: ['1492', '1500', '1510', '1520'], correctAnswer: '1492', chapterId: 'hist2' },
-    { id: 11, question: 'Who was the first Emperor of Rome?', options: ['Julius Caesar', 'Augustus', 'Nero', 'Constantine'], correctAnswer: 'Augustus', chapterId: 'hist3' },
-    { id: 12, question: 'Which civilization built the Machu Picchu complex in Peru?', options: ['Aztec', 'Maya', 'Inca', 'Olmec'], correctAnswer: 'Inca', chapterId: 'hist3' },
-    { id: 13, question: 'Who was the leader of the Soviet Union during the Cuban Missile Crisis?', options: ['Joseph Stalin', 'Vladimir Lenin', 'Nikita Khrushchev', 'Leonid Brezhnev'], correctAnswer: 'Nikita Khrushchev', chapterId: 'hist3' },
-    { id: 14, question: 'In which year did the American Civil War begin?', options: ['1861', '1865', '1870', '1875'], correctAnswer: '1861', chapterId: 'hist3' },
-    { id: 15, question: 'Who was the first woman to win a Nobel Prize?', options: ['Marie Curie', 'Mother Teresa', 'Jane Addams', 'Barbara McClintock'], correctAnswer: 'Marie Curie', chapterId: 'hist3' },
-  ],
-};
 
 const QUESTIONS_PER_PAGE = 10;
 
@@ -105,7 +46,6 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
   const { subjects, selectedChapters, blacklistedQuestions } = route.params;
 
-  // Use useMemo to memoize the shuffled questions
   const subjectQuestions = React.useMemo(() => {
     const getQuestionsFromChapters = () => {
       const allQuestions = subjects.flatMap(subject => questions[subject] || []);
