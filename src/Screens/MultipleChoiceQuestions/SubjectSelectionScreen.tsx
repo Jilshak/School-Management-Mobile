@@ -19,10 +19,9 @@ type Subject = {
 
 const subjects: Subject[] = [
   { name: 'Mathematics', questionCount: 10, completed: 5, available: true, genre: 'Science', description: 'Master the art of numbers and equations.', difficulty: 'Medium' },
-  { name: 'Science', questionCount: 8, completed: 3, available: false, genre: 'Science', description: 'Dive into the world of scientific discoveries.', difficulty: 'Hard' },
-  { name: 'English', questionCount: 12, completed: 7, available: true, genre: 'Language', description: 'Enhance your English language skills.', difficulty: 'Easy' },
-  { name: 'Social Studies', questionCount: 7, completed: 2, available: false, genre: 'History', description: 'Explore the history of human society.', difficulty: 'Medium' },
-  { name: 'Physical Education', questionCount: 5, completed: 1, available: true, genre: 'Sports', description: 'Stay active and healthy with physical exercises.', difficulty: 'Easy' },
+  { name: 'Physics', questionCount: 8, completed: 3, available: true, genre: 'Science', description: 'Explore the fundamental laws of the universe.', difficulty: 'Hard' },
+  { name: 'Chemistry', questionCount: 12, completed: 7, available: true, genre: 'Science', description: 'Discover the composition and properties of matter.', difficulty: 'Medium' },
+  { name: 'Biology', questionCount: 7, completed: 2, available: true, genre: 'Science', description: 'Study the science of life and living organisms.', difficulty: 'Medium' },
 ];
 
 const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigation }) => {

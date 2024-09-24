@@ -4,6 +4,7 @@ import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
+import { questions, Question } from './questions';
 
 type ChapterSelectionScreenProps = {
   navigation: StackNavigationProp<any, 'ChapterSelection'>;
@@ -17,39 +18,94 @@ type Chapter = {
   questionCount: number;
 };
 
-type Question = {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  chapterId: string;
-};
-
 const chapters: { [key: string]: Chapter[] } = {
-  Mathematics: [
-    { id: 'math1', name: 'Algebra', topics: ['Linear equations', 'Quadratic equations'], questionCount: 20 },
-    { id: 'math2', name: 'Geometry', topics: ['Triangles', 'Circles'], questionCount: 15 },
-    { id: 'math3', name: 'Calculus', topics: ['Limits', 'Derivatives'], questionCount: 25 },
+  Physics: [
+    { id: 'phy1', name: 'Physical World', topics: [], questionCount: 10 },
+    { id: 'phy2', name: 'Units and Measurements', topics: [], questionCount: 15 },
+    { id: 'phy3', name: 'Motion in a Straight Line', topics: [], questionCount: 20 },
+    { id: 'phy4', name: 'Motion in a Plane', topics: [], questionCount: 18 },
+    { id: 'phy5', name: 'Laws of Motion', topics: [], questionCount: 25 },
+    { id: 'phy6', name: 'Work, Energy, and Power', topics: [], questionCount: 22 },
+    { id: 'phy7', name: 'System of Particles and Rotational Motion', topics: [], questionCount: 20 },
+    { id: 'phy8', name: 'Gravitation', topics: [], questionCount: 18 },
+    { id: 'phy9', name: 'Mechanical Properties of Solids', topics: [], questionCount: 15 },
+    { id: 'phy10', name: 'Mechanical Properties of Fluids', topics: [], questionCount: 17 },
+    { id: 'phy11', name: 'Thermal Properties of Matter', topics: [], questionCount: 16 },
+    { id: 'phy12', name: 'Thermodynamics', topics: [], questionCount: 20 },
+    { id: 'phy13', name: 'Kinetic Theory', topics: [], questionCount: 15 },
+    { id: 'phy14', name: 'Oscillations', topics: [], questionCount: 18 },
+    { id: 'phy15', name: 'Waves', topics: [], questionCount: 20 },
   ],
-  Science: [
-    { id: 'sci1', name: 'Physics', topics: ['Mechanics', 'Thermodynamics'], questionCount: 18 },
-    { id: 'sci2', name: 'Chemistry', topics: ['Atomic structure', 'Chemical bonding'], questionCount: 22 },
-    { id: 'sci3', name: 'Biology', topics: ['Cell biology', 'Genetics'], questionCount: 20 },
+  Biology: [
+    { id: 'bio1', name: 'The Living World', topics: [], questionCount: 12 },
+    { id: 'bio2', name: 'Biological Classification', topics: [], questionCount: 15 },
+    { id: 'bio3', name: 'Plant Kingdom', topics: [], questionCount: 18 },
+    { id: 'bio4', name: 'Animal Kingdom', topics: [], questionCount: 20 },
+    { id: 'bio5', name: 'Morphology of Flowering Plants', topics: [], questionCount: 16 },
+    { id: 'bio6', name: 'Anatomy of Flowering Plants', topics: [], questionCount: 17 },
+    { id: 'bio7', name: 'Structural Organisation in Animals', topics: [], questionCount: 18 },
+    { id: 'bio8', name: 'Cell: The Unit of Life', topics: [], questionCount: 22 },
+    { id: 'bio9', name: 'Biomolecules', topics: [], questionCount: 20 },
+    { id: 'bio10', name: 'Cell Cycle and Cell Division', topics: [], questionCount: 18 },
+    { id: 'bio11', name: 'Transport in Plants', topics: [], questionCount: 15 },
+    { id: 'bio12', name: 'Mineral Nutrition', topics: [], questionCount: 14 },
+    { id: 'bio13', name: 'Photosynthesis in Higher Plants', topics: [], questionCount: 20 },
+    { id: 'bio14', name: 'Respiration in Plants', topics: [], questionCount: 18 },
+    { id: 'bio15', name: 'Plant Growth and Development', topics: [], questionCount: 16 },
+    { id: 'bio16', name: 'Digestion and Absorption', topics: [], questionCount: 18 },
+    { id: 'bio17', name: 'Breathing and Exchange of Gases', topics: [], questionCount: 17 },
+    { id: 'bio18', name: 'Body Fluids and Circulation', topics: [], questionCount: 19 },
+    { id: 'bio19', name: 'Excretory Products and Their Elimination', topics: [], questionCount: 16 },
+    { id: 'bio20', name: 'Locomotion and Movement', topics: [], questionCount: 15 },
+    { id: 'bio21', name: 'Neural Control and Coordination', topics: [], questionCount: 20 },
+    { id: 'bio22', name: 'Chemical Coordination and Integration', topics: [], questionCount: 18 },
+    { id: 'bio23', name: 'Reproduction in Organisms', topics: [], questionCount: 16 },
+    { id: 'bio24', name: 'Sexual Reproduction in Flowering Plants', topics: [], questionCount: 18 },
+    { id: 'bio25', name: 'Human Reproduction', topics: [], questionCount: 20 },
+    { id: 'bio26', name: 'Reproductive Health', topics: [], questionCount: 15 },
+    { id: 'bio27', name: 'Principles of Inheritance and Variation', topics: [], questionCount: 22 },
+    { id: 'bio28', name: 'Molecular Basis of Inheritance', topics: [], questionCount: 25 },
+    { id: 'bio29', name: 'Evolution', topics: [], questionCount: 18 },
+    { id: 'bio30', name: 'Human Health and Disease', topics: [], questionCount: 20 },
+    { id: 'bio31', name: 'Strategies for Enhancement in Food Production', topics: [], questionCount: 15 },
+    { id: 'bio32', name: 'Microbes in Human Welfare', topics: [], questionCount: 16 },
+    { id: 'bio33', name: 'Biotechnology: Principles and Processes', topics: [], questionCount: 18 },
+    { id: 'bio34', name: 'Biotechnology and Its Applications', topics: [], questionCount: 17 },
+    { id: 'bio35', name: 'Organisms and Populations', topics: [], questionCount: 19 },
+    { id: 'bio36', name: 'Ecosystem', topics: [], questionCount: 20 },
+    { id: 'bio37', name: 'Biodiversity and Conservation', topics: [], questionCount: 18 },
+    { id: 'bio38', name: 'Environmental Issues', topics: [], questionCount: 16 },
   ],
-};
-
-const questions: { [key: string]: Question[] } = {
-  Mathematics: [
-    { id: 1, question: 'What is 2 + 2?', options: ['3', '4', '5', '6'], correctAnswer: '4', chapterId: 'math1' },
-    { id: 2, question: 'What is 3 * 3?', options: ['6', '7', '8', '9'], correctAnswer: '9', chapterId: 'math1' },
-    // ... (add more questions for each chapter)
+  Chemistry: [
+    { id: 'chem1', name: 'Some Basic Concepts of Chemistry', topics: [], questionCount: 15 },
+    { id: 'chem2', name: 'Structure of Atom', topics: [], questionCount: 20 },
+    { id: 'chem3', name: 'Classification of Elements and Periodicity in Properties', topics: [], questionCount: 18 },
+    { id: 'chem4', name: 'Chemical Bonding and Molecular Structure', topics: [], questionCount: 22 },
+    { id: 'chem5', name: 'States of Matter', topics: [], questionCount: 16 },
+    { id: 'chem6', name: 'Thermodynamics', topics: [], questionCount: 20 },
+    { id: 'chem7', name: 'Equilibrium', topics: [], questionCount: 25 },
+    { id: 'chem8', name: 'Redox Reactions', topics: [], questionCount: 18 },
+    { id: 'chem9', name: 'Hydrogen', topics: [], questionCount: 15 },
+    { id: 'chem10', name: 's-Block Elements', topics: [], questionCount: 17 },
+    { id: 'chem11', name: 'p-Block Elements', topics: [], questionCount: 20 },
+    { id: 'chem12', name: 'Organic Chemistry: Some Basic Principles and Techniques', topics: [], questionCount: 22 },
+    { id: 'chem13', name: 'Hydrocarbons', topics: [], questionCount: 20 },
+    { id: 'chem14', name: 'Environmental Chemistry', topics: [], questionCount: 15 },
+    { id: 'chem15', name: 'Solid State', topics: [], questionCount: 18 },
+    { id: 'chem16', name: 'Solutions', topics: [], questionCount: 20 },
+    { id: 'chem17', name: 'Electrochemistry', topics: [], questionCount: 22 },
+    { id: 'chem18', name: 'Chemical Kinetics', topics: [], questionCount: 20 },
+    { id: 'chem19', name: 'Surface Chemistry', topics: [], questionCount: 16 },
+    { id: 'chem20', name: 'd and f Block Elements', topics: [], questionCount: 18 },
+    { id: 'chem21', name: 'Coordination Compounds', topics: [], questionCount: 20 },
+    { id: 'chem22', name: 'Haloalkanes and Haloarenes', topics: [], questionCount: 18 },
+    { id: 'chem23', name: 'Alcohols, Phenols and Ethers', topics: [], questionCount: 20 },
+    { id: 'chem24', name: 'Aldehydes, Ketones and Carboxylic Acids', topics: [], questionCount: 22 },
+    { id: 'chem25', name: 'Amines', topics: [], questionCount: 18 },
+    { id: 'chem26', name: 'Biomolecules', topics: [], questionCount: 20 },
+    { id: 'chem27', name: 'Polymers', topics: [], questionCount: 15 },
+    { id: 'chem28', name: 'Chemistry in Everyday Life', topics: [], questionCount: 16 },
   ],
-  Science: [
-    { id: 1, question: 'What is the chemical symbol for water?', options: ['H2O', 'O2', 'CO2', 'NaCl'], correctAnswer: 'H2O', chapterId: 'sci1' },
-    { id: 2, question: 'What planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Mars', chapterId: 'sci1' },
-    // ... (add more questions for each chapter)
-  ],
-  // ... (add questions for other subjects)
 };
 
 type RootStackParamList = {
@@ -110,7 +166,17 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
   };
 
   const handleViewQuestions = (chapter: Chapter) => {
-    navigation.navigate('QuestionList', { chapter, subject: subjects[0] });
+    const subject = subjects[0]; // Assuming we're using the first selected subject
+    if (subject && questions[subject]) {
+      const chapterQuestions = questions[subject].filter(q => q.chapterId === chapter.id);
+      if (chapterQuestions.length > 0) {
+        navigation.navigate('QuestionList', { chapter, subject });
+      } else {
+        Alert.alert("No Questions", "There are no questions available for this chapter yet.");
+      }
+    } else {
+      Alert.alert("No Questions", "There are no questions available for this subject yet.");
+    }
   };
 
   const handleSearch = (query: string) => {
@@ -173,24 +239,28 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>{currentChapter?.name} Questions</Text>
           <ScrollView style={styles.questionList}>
-            {questions[subjects[0]]
-              .filter(q => q.chapterId === currentChapter?.id)
-              .map(question => (
-                <View key={question.id} style={styles.questionItem}>
-                  <Text style={styles.questionText}>{question.question}</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.blacklistButton,
-                      blacklistedQuestions.includes(question.id) && styles.blacklistedButton
-                    ]}
-                    onPress={() => toggleBlacklistedQuestion(question.id)}
-                  >
-                    <Text style={styles.blacklistButtonText}>
-                      {blacklistedQuestions.includes(question.id) ? 'Unblacklist' : 'Blacklist'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+            {subjects[0] && questions[subjects[0]] ? (
+              questions[subjects[0]]
+                .filter(q => q.chapterId === currentChapter?.id)
+                .map(question => (
+                  <View key={question.id} style={styles.questionItem}>
+                    <Text style={styles.questionText}>{question.question}</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.blacklistButton,
+                        blacklistedQuestions.includes(question.id) && styles.blacklistedButton
+                      ]}
+                      onPress={() => toggleBlacklistedQuestion(question.id)}
+                    >
+                      <Text style={styles.blacklistButtonText}>
+                        {blacklistedQuestions.includes(question.id) ? 'Unblacklist' : 'Blacklist'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+            ) : (
+              <Text style={styles.noQuestionsText}>No questions available for this chapter.</Text>
+            )}
           </ScrollView>
           <TouchableOpacity style={styles.closeModalButton} onPress={() => setModalVisible(false)}>
             <Text style={styles.closeModalButtonText}>Close</Text>
@@ -296,6 +366,7 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -523,6 +594,13 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: '#ffffff',
   },
+  noQuestionsText: {
+    fontSize: 16,
+    color: '#4a4a4a',
+    textAlign: 'center',
+    marginTop: 20,
+  },
 });
+
 
 export default ChapterSelectionScreen;
