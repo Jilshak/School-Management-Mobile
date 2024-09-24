@@ -28,7 +28,8 @@ import MCQScreen from '../Screens/MultipleChoiceQuestions/MCQScreen';
 import ChapterSelectionScreen from '../Screens/MultipleChoiceQuestions/ChapterSelectionScreen';
 import QuestionListScreen from '../Screens/MultipleChoiceQuestions/QuestionListScreen';
 import MCQStatsScreen from "../Screens/MultipleChoiceQuestions/MCQStatsScreen";
-
+import FlashCardScreen from "../Screens/FlashCards/FlashCardScreen";
+import FlashCardsLogicScreen from "../Screens/FlashCards/FlashCardsLogicScreen";
 const Stack = createStackNavigator();
 
 const AppNavigator: React.FC = () => {
@@ -80,6 +81,8 @@ const AppNavigator: React.FC = () => {
         <Stack.Screen name="QuestionList" component={QuestionListScreen as React.ComponentType<any>} />
         <Stack.Screen name="MCQ" component={MCQScreen as React.ComponentType<any>} />
         <Stack.Screen name="MCQStats" component={MCQStatsScreen as React.ComponentType<any>} />
+        <Stack.Screen name="FlashCardScreen" component={FlashCardScreen as React.ComponentType<any>} />
+        <Stack.Screen name="FlashCards" component={FlashCardsLogicScreen as React.ComponentType<any>} />
       </Stack.Navigator>
     </NavigationContainer>
   );

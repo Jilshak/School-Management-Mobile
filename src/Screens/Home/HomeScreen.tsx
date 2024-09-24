@@ -15,7 +15,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import BottomNavBar from "../../Components/BottomNavBar";
 import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
 
-type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar";
+type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar" | "test";
 
 type HomeScreenProps = {
   navigation: StackNavigationProp<any, "Home">;
@@ -43,6 +43,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },
     { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection' },
     { icon: 'book', text: 'MCQ Stats', route: 'MCQStats' },
+    { icon: 'test', text: 'Flash Cards', route: 'FlashCardScreen' },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -115,8 +116,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   key={index}
                   style={styles.horizontalCard}
                   onPress={() => navigation.navigate(card.route)}
-                >
-                  <AntIcon name={card.icon} size={40} color="#ffffff" />
+                  >
+                  <AntIcon name={card.icon as any} size={40} color="#ffffff" />
                   <Text style={styles.cardText}>{card.text}</Text>
                 </TouchableOpacity>
               ))}
@@ -145,7 +146,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   onPress={() => navigation.navigate(card.route)}
                 >
                   <View style={styles.academicCardIcon}>
-                    <AntIcon name={card.icon} size={24} color="#ffffff" />
+                    <AntIcon name={card.icon as any} size={24} color="#ffffff" />
                   </View>
                   <Text style={styles.academicCardText}>{card.text}</Text>
                 </TouchableOpacity>
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   academicCard: {
-    width: '30%',
+    width: '31%', // Changed from 30% to 31%
     aspectRatio: 1,
     backgroundColor: '#f0f2f5',
     borderRadius: 15,
@@ -348,7 +349,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
     padding: 10,
-    paddingTop: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -356,8 +356,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   academicCardIcon: {
-    width: 50,
-    height: 50,
+    width: '60%', // Changed from fixed 50 to 60%
+    aspectRatio: 1,
     borderRadius: 25,
     backgroundColor: '#001529',
     justifyContent: 'center',

@@ -207,6 +207,12 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     };
   };
 
+  const getCurrentPageQuestions = () => {
+    const startIndex = (currentPage - 1) * QUESTIONS_PER_PAGE;
+    const endIndex = startIndex + QUESTIONS_PER_PAGE;
+    return subjectQuestions.slice(startIndex, endIndex);
+  };
+
   const renderQuestion = ({ item, index }: { item: Question; index: number }) => (
     <View style={styles.questionCard} key={`question-${index}`}>
       <Text style={styles.questionText}>{`${index + 1}. ${item.question}`}</Text>
@@ -402,32 +408,30 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
           </View>
 
           <FlatList
-            data={subjectQuestions}
+            data={getCurrentPageQuestions()}
             renderItem={renderQuestion}
-            keyExtractor={(item, index) => `question-${index}`}
+            keyExtractor={(item, index) => `question-${index + (currentPage - 1) * QUESTIONS_PER_PAGE}`}
             contentContainerStyle={styles.questionList}
           />
 
           <View style={styles.bottomContainer}>
-            {totalPages > 1 && (
-              <View style={styles.paginationContainer}>
-                <TouchableOpacity
-                  style={[styles.paginationButton, currentPage === 1 && styles.disabledButton]}
-                  onPress={handlePreviousPage}
-                  disabled={currentPage === 1}
-                >
-                  <Text style={styles.paginationButtonText}>Previous</Text>
-                </TouchableOpacity>
-                <Text style={styles.pageIndicator}>{`${currentPage} / ${totalPages}`}</Text>
-                <TouchableOpacity
-                  style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
-                  onPress={handleNextPage}
-                  disabled={currentPage === totalPages}
-                >
-                  <Text style={styles.paginationButtonText}>Next</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                style={[styles.paginationButton, currentPage === 1 && styles.disabledButton]}
+                onPress={handlePreviousPage}
+                disabled={currentPage === 1}
+              >
+                <Text style={styles.paginationButtonText}>Previous</Text>
+              </TouchableOpacity>
+              <Text style={styles.pageIndicator}>{`${currentPage} / ${totalPages}`}</Text>
+              <TouchableOpacity
+                style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
+                onPress={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                <Text style={styles.paginationButtonText}>Next</Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity 
               style={[styles.submitButton, submitted && styles.viewResultsButton]} 
