@@ -6,7 +6,7 @@ import { RouteProp } from '@react-navigation/native';
 
 type MCQScreenProps = {
   navigation: StackNavigationProp<any, 'MCQ'>;
-  route: RouteProp<{ params: { subjects: string[]; selectedChapters: string[] } }, 'params'>;
+  route: RouteProp<{ params: { subjects: string[]; selectedChapters: string[]; blacklistedQuestions: number[] } }, 'params'>;
 };
 
 type Question = {
@@ -103,14 +103,14 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
-  const { subjects, selectedChapters } = route.params;
+  const { subjects, selectedChapters, blacklistedQuestions } = route.params;
 
   // Use useMemo to memoize the shuffled questions
   const subjectQuestions = React.useMemo(() => {
     const getQuestionsFromChapters = () => {
       const allQuestions = subjects.flatMap(subject => questions[subject] || []);
       const selectedQuestions = allQuestions.filter(question => 
-        selectedChapters.includes(question.chapterId)
+        selectedChapters.includes(question.chapterId) && !blacklistedQuestions.includes(question.id)
       );
       
       // Randomly select questions if there are more than 15
@@ -122,7 +122,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     };
 
     return getQuestionsFromChapters();
-  }, [subjects, selectedChapters]); // Dependencies for useMemo
+  }, [subjects, selectedChapters, blacklistedQuestions]); // Dependencies for useMemo
 
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [submitted, setSubmitted] = useState(false);

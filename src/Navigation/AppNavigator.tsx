@@ -26,6 +26,7 @@ import StudentDetailsScreen from '../Screens/StudentDetails/StudentDetailsScreen
 import SubjectSelectionScreen from '../Screens/MultipleChoiceQuestions/SubjectSelectionScreen';
 import MCQScreen from '../Screens/MultipleChoiceQuestions/MCQScreen';
 import ChapterSelectionScreen from '../Screens/MultipleChoiceQuestions/ChapterSelectionScreen';
+import QuestionListScreen from '../Screens/MultipleChoiceQuestions/QuestionListScreen';
 
 const Stack = createStackNavigator();
 
@@ -75,6 +76,7 @@ const AppNavigator: React.FC = () => {
         <Stack.Screen name="StudentDetails" component={StudentDetailsScreen as React.ComponentType<any>} />
         <Stack.Screen name="SubjectSelection" component={SubjectSelectionScreen} />
         <Stack.Screen name="ChapterSelection" component={ChapterSelectionScreen as React.ComponentType<any>} />
+        <Stack.Screen name="QuestionList" component={QuestionListScreen as React.ComponentType<any>} />
         <Stack.Screen name="MCQ" component={MCQScreen as React.ComponentType<any>} />
       </Stack.Navigator>
     </NavigationContainer>
