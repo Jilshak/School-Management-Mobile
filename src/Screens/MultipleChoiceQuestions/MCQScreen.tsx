@@ -18,17 +18,11 @@ const CustomProgressBar: React.FC<{ totalQuestions: number; answeredQuestions: n
   totalQuestions,
   answeredQuestions,
 }) => {
+  const progress = (answeredQuestions / totalQuestions) * 100;
+
   return (
     <View style={styles.customProgressBar}>
-      {Array.from({ length: totalQuestions }).map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.progressSegment,
-            index < answeredQuestions ? styles.answeredSegment : styles.unansweredSegment,
-          ]}
-        />
-      ))}
+      <View style={[styles.progressFill, { width: `${progress}%` }]} />
     </View>
   );
 };
@@ -113,11 +107,9 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     if (!submitted) {
       setSelectedAnswers(prev => {
         if (prev[questionId] === option) {
-          // If the same option is clicked again, deselect it
           const { [questionId]: _, ...rest } = prev;
           return rest;
         } else {
-          // Otherwise, select the new option
           return { ...prev, [questionId]: option };
         }
       });
@@ -133,7 +125,6 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
       } else if (selectedAnswer && selectedAnswer !== question.correctAnswer) {
         totalScore -= 1;
       }
-      // If no answer is selected, score remains unchanged (implicitly +0)
     });
     return totalScore;
   };
@@ -655,20 +646,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   customProgressBar: {
-    flexDirection: 'row',
     height: 10,
+    backgroundColor: '#d9d9d9',
     borderRadius: 5,
     overflow: 'hidden',
   },
-  progressSegment: {
-    flex: 1,
-    marginHorizontal: 1,
-  },
-  answeredSegment: {
+  progressFill: {
+    height: '100%',
     backgroundColor: '#001529',
-  },
-  unansweredSegment: {
-    backgroundColor: '#d9d9d9',
   },
   infoContainer: {
     flexDirection: 'row',
