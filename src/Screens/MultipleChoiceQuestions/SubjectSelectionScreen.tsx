@@ -10,14 +10,14 @@ type SubjectSelectionScreenProps = {
 type Subject = {
   name: string;
   questionCount: number;
-  completed: number; // New field to show progress
+  completed: number;
   available: boolean;
   genre: string;
   description: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
 };
 
-const subjects: Subject[] = [
+export const subjects: Subject[] = [
   { name: 'Mathematics', questionCount: 10, completed: 5, available: true, genre: 'Science', description: 'Master the art of numbers and equations.', difficulty: 'Medium' },
   { name: 'Physics', questionCount: 8, completed: 3, available: true, genre: 'Science', description: 'Explore the fundamental laws of the universe.', difficulty: 'Hard' },
   { name: 'Chemistry', questionCount: 12, completed: 7, available: true, genre: 'Science', description: 'Discover the composition and properties of matter.', difficulty: 'Medium' },

@@ -27,6 +27,7 @@ import SubjectSelectionScreen from '../Screens/MultipleChoiceQuestions/SubjectSe
 import MCQScreen from '../Screens/MultipleChoiceQuestions/MCQScreen';
 import ChapterSelectionScreen from '../Screens/MultipleChoiceQuestions/ChapterSelectionScreen';
 import QuestionListScreen from '../Screens/MultipleChoiceQuestions/QuestionListScreen';
+import MCQStatsScreen from "../Screens/MultipleChoiceQuestions/MCQStatsScreen";
 
 const Stack = createStackNavigator();
 
@@ -78,6 +79,7 @@ const AppNavigator: React.FC = () => {
         <Stack.Screen name="ChapterSelection" component={ChapterSelectionScreen as React.ComponentType<any>} />
         <Stack.Screen name="QuestionList" component={QuestionListScreen as React.ComponentType<any>} />
         <Stack.Screen name="MCQ" component={MCQScreen as React.ComponentType<any>} />
+        <Stack.Screen name="MCQStats" component={MCQStatsScreen as React.ComponentType<any>} />
       </Stack.Navigator>
     </NavigationContainer>
   );

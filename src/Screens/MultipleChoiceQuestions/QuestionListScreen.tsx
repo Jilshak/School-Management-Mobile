@@ -127,7 +127,6 @@ const QuestionListScreen: React.FC<QuestionListScreenProps> = ({ navigation, rou
       <TouchableOpacity 
         style={styles.saveButton}
         onPress={() => {
-          // Save excluded questions and go back
           navigation.goBack();
         }}
       >
