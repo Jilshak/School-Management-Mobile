@@ -5,21 +5,24 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { questions, FlashCard } from './flashCards';
 
-type FlashCardsProps = {
-  route: RouteProp<any, 'FlashCardsLogic'>;
+type FlashCardsLogicScreenProps = {
   navigation: StackNavigationProp<any, 'FlashCardsLogic'>;
+  route: RouteProp<{ params: { selectedChapters: string[]; flashCardCount: number } }, 'params'>;
 };
 
-const FlashCardsLogicScreen: React.FC<FlashCardsProps> = ({ route, navigation }) => {
-  const { selectedChapters = [] } : {selectedChapters?: any} = route.params || {};
+const FlashCardsLogicScreen: React.FC<FlashCardsLogicScreenProps> = ({ navigation, route }) => {
+  const { selectedChapters, flashCardCount } = route.params;
+  
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const flipAnimation = useRef(new Animated.Value(0)).current;
 
-  // Filter questions based on selected chapters
+  // Filter questions based on selected chapters and limit to flashCardCount
   const selectedQuestions: FlashCard[] = Object.values(questions)
     .flat()
-    .filter(q => selectedChapters.includes(q.chapterId));
+    .filter(q => selectedChapters.includes(q.chapterId))
+    .sort(() => 0.5 - Math.random()) // Shuffle the questions
+    .slice(0, flashCardCount); // Limit to the specified number of flash cards
 
   useEffect(() => {
     if (selectedQuestions.length === 0) {
@@ -28,8 +31,14 @@ const FlashCardsLogicScreen: React.FC<FlashCardsProps> = ({ route, navigation })
         "There are no questions available for the selected chapters.",
         [{ text: "OK", onPress: () => navigation.goBack() }]
       );
+    } else if (selectedQuestions.length < flashCardCount) {
+      Alert.alert(
+        "Insufficient Questions",
+        `Only ${selectedQuestions.length} questions are available. Proceeding with available questions.`,
+        [{ text: "OK" }]
+      );
     }
-  }, [selectedQuestions, navigation]);
+  }, [selectedQuestions, navigation, flashCardCount]);
 
   const flipCard = () => {
     if (selectedQuestions.length === 0) return;
