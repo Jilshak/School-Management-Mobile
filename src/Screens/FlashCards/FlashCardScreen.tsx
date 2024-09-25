@@ -1,37 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView, Alert } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { FlashCardDeck, flashCardDecks } from './flashCards';
 
 type FlashCardScreenProps = {
   navigation: StackNavigationProp<any, 'FlashCards'>;
 };
 
-type FlashCardDeck = {
-  id: string;
+type Subject = {
   name: string;
-  subject: string;
-  cardCount: number;
-  masteredCards: number;
+  deckCount: number;
+  completed: number;
+  available: boolean;
+  genre: string;
   description: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  lastStudied: string;
 };
 
-const flashCardDecks: FlashCardDeck[] = [
-  { id: '1', name: 'Biology', subject: 'Biology', cardCount: 20, masteredCards: 10, description: 'Biology is the study of living organisms and their interactions with each other and their environment.', difficulty: 'Easy', lastStudied: '2023-05-15' },
-  { id: '2', name: 'Physics', subject: 'Physics', cardCount: 30, masteredCards: 15, description: 'Physics is the study of matter, energy, and their interactions.', difficulty: 'Medium', lastStudied: '2023-05-18' },
-  { id: '3', name: 'Chemistry', subject: 'Chemistry', cardCount: 25, masteredCards: 5, description: 'Chemistry is the study of substances and their properties.', difficulty: 'Hard', lastStudied: '2023-05-10' },
-  { id: '4', name: 'Mathematics', subject: 'Mathematics', cardCount: 40, masteredCards: 20, description: 'Mathematics is the study of numbers, shapes, and patterns.', difficulty: 'Medium', lastStudied: '2023-05-20' },
+const subjects: Subject[] = [
+  { name: 'Mathematics', deckCount: 10, completed: 5, available: true, genre: 'Science', description: 'Master the art of numbers and equations.', difficulty: 'Medium' },
+  { name: 'Physics', deckCount: 8, completed: 3, available: true, genre: 'Science', description: 'Explore the fundamental laws of the universe.', difficulty: 'Hard' },
+  { name: 'Chemistry', deckCount: 12, completed: 7, available: true, genre: 'Science', description: 'Discover the composition and properties of matter.', difficulty: 'Medium' },
+  { name: 'Biology', deckCount: 7, completed: 2, available: true, genre: 'Science', description: 'Study the science of life and living organisms.', difficulty: 'Medium' },
 ];
 
 const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [filterDifficulty, setFilterDifficulty] = useState<string | null>(null);
-  const [filterSubject, setFilterSubject] = useState<string | null>(null);
+  const [filterAvailable, setFilterAvailable] = useState<boolean | null>(null);
+  const [filterGenre, setFilterGenre] = useState<string | null>(null);
   const animatedValue = new Animated.Value(0);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     Animated.timing(animatedValue, {
@@ -41,39 +42,49 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
     }).start();
   }, []);
 
-  const handleDeckSelect = (deck: FlashCardDeck) => {
-    navigation.navigate('FlashCards', { deckId: deck.id });
+  const handleSubjectSelect = (subject: string) => {
+    setSelectedSubjects(prev => 
+      prev.includes(subject) 
+        ? prev.filter(s => s !== subject) 
+        : [...prev, subject]
+    );
   };
 
-  const renderDeck = ({ item }: { item: FlashCardDeck }) => (
-    <Animated.View style={[styles.deckCard, { opacity: animatedValue }]} key={item.id}>
-      <TouchableOpacity onPress={() => handleDeckSelect(item)}>
-        <View style={styles.deckHeader}>
-          <AntIcon name="book" size={24} color="#ffffff" style={styles.deckIcon} />
-          <View style={styles.deckTitleContainer}>
-            <Text style={styles.deckName}>{item.name}</Text>
-            <Text style={styles.deckSubject}>{item.subject}</Text>
-          </View>
-          <AntIcon 
-            name={item.difficulty === 'Easy' ? 'smile' : item.difficulty === 'Medium' ? 'meh' : 'frown'} 
-            size={24} 
-            color={item.difficulty === 'Easy' ? '#52c41a' : item.difficulty === 'Medium' ? '#faad14' : '#f5222d'} 
-          />
+  const handleNextStep = () => {
+    if (selectedSubjects.length === 0) {
+      Alert.alert("Selection Required", "Please select at least one subject.");
+      return;
+    }
+    navigation.navigate('FlashCardChapterList', { subjects: selectedSubjects });
+  };
+
+  const renderSubject = ({ item }: { item: Subject }) => (
+    <Animated.View style={[styles.subjectCard, { opacity: animatedValue }]}>
+      <TouchableOpacity onPress={() => handleSubjectSelect(item.name)}>
+        <View style={styles.subjectHeader}>
+          <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
+          <Text style={styles.subjectName}>{item.name}</Text>
+          {selectedSubjects.includes(item.name) && (
+            <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
+          )}
         </View>
-        <Text style={styles.deckDescription}>{item.description}</Text>
-        <View style={styles.deckFooter}>
-          <Text style={styles.cardCount}>{item.cardCount} Cards</Text>
-          <Text style={styles.lastStudied}>Last studied: {item.lastStudied}</Text>
+        <Text style={styles.subjectDescription}>{item.description}</Text>
+        <View style={styles.tagsContainer}>
+          <Text style={[styles.tag, styles[item.difficulty as keyof typeof styles]]}>{item.difficulty}</Text>
+        </View>
+        <Text style={styles.deckCount}>{item.deckCount} Decks</Text>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${(item.completed / item.deckCount) * 100}%` }]} />
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 
-  const filteredDecks = flashCardDecks.filter(deck =>
-    (deck.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    deck.subject.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (filterDifficulty === null || deck.difficulty === filterDifficulty) &&
-    (filterSubject === null || deck.subject === filterSubject)
+  const filteredSubjects = subjects.filter(subject =>
+    (subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    subject.genre.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (filterAvailable === null || subject.available === filterAvailable) &&
+    (filterGenre === null || subject.genre === filterGenre)
   );
 
   const handleRefresh = () => {
@@ -87,12 +98,11 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
     setSearchQuery('');
   };
 
-  const subjects = Array.from(new Set(flashCardDecks.map(deck => deck.subject)));
-  const difficulties = ['Easy', 'Medium', 'Hard'];
+  const genres = Array.from(new Set(subjects.map(subject => subject.genre)));
 
   const resetFilters = () => {
-    setFilterDifficulty(null);
-    setFilterSubject(null);
+    setFilterAvailable(null);
+    setFilterGenre(null);
   };
 
   return (
@@ -101,7 +111,7 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <AntIcon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Flash Card Decks</Text>
+        <Text style={styles.headerTitle}>Select Subject</Text>
         <TouchableOpacity onPress={handleRefresh}>
           <AntIcon name="reload" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -111,7 +121,7 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
         <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
         <TextInput
           style={styles.searchBar}
-          placeholder="Search decks..."
+          placeholder="Search subjects..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor="#4a4a4a"
@@ -127,13 +137,17 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
       </View>
 
       <FlatList
-        data={filteredDecks}
-        renderItem={renderDeck}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.deckList}
+        data={filteredSubjects}
+        renderItem={renderSubject}
+        keyExtractor={item => item.name}
+        contentContainerStyle={styles.subjectList}
         refreshing={refreshing}
         onRefresh={handleRefresh}
       />
+
+      <TouchableOpacity style={styles.nextButton} onPress={handleNextStep}>
+        <Text style={styles.nextButtonText}>Next</Text>
+      </TouchableOpacity>
 
       <Modal
         animationType="slide"
@@ -143,42 +157,45 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Decks</Text>
+            <Text style={styles.modalTitle}>Filter Subjects</Text>
             
-            <Text style={styles.filterLabel}>Difficulty:</Text>
+            <Text style={styles.filterLabel}>Availability:</Text>
             <View style={styles.filterOptions}>
               <TouchableOpacity
-                style={[styles.filterOption, filterDifficulty === null && styles.filterOptionActive]}
-                onPress={() => setFilterDifficulty(null)}
+                style={[styles.filterOption, filterAvailable === null && styles.filterOptionActive]}
+                onPress={() => setFilterAvailable(null)}
               >
-                <Text style={[styles.filterOptionText, filterDifficulty === null && styles.filterOptionTextActive]}>All</Text>
+                <Text style={[styles.filterOptionText, filterAvailable === null && styles.filterOptionTextActive]}>All</Text>
               </TouchableOpacity>
-              {difficulties.map(difficulty => (
-                <TouchableOpacity
-                  key={difficulty}
-                  style={[styles.filterOption, filterDifficulty === difficulty && styles.filterOptionActive]}
-                  onPress={() => setFilterDifficulty(difficulty)}
-                >
-                  <Text style={[styles.filterOptionText, filterDifficulty === difficulty && styles.filterOptionTextActive]}>{difficulty}</Text>
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity
+                style={[styles.filterOption, filterAvailable === true && styles.filterOptionActive]}
+                onPress={() => setFilterAvailable(true)}
+              >
+                <Text style={[styles.filterOptionText, filterAvailable === true && styles.filterOptionTextActive]}>Available</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterOption, filterAvailable === false && styles.filterOptionActive]}
+                onPress={() => setFilterAvailable(false)}
+              >
+                <Text style={[styles.filterOptionText, filterAvailable === false && styles.filterOptionTextActive]}>Not Available</Text>
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.filterLabel}>Subject:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectScroll}>
+            <Text style={styles.filterLabel}>Genre:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.genreScroll}>
               <TouchableOpacity
-                style={[styles.filterOption, filterSubject === null && styles.filterOptionActive]}
-                onPress={() => setFilterSubject(null)}
+                style={[styles.filterOption, filterGenre === null && styles.filterOptionActive]}
+                onPress={() => setFilterGenre(null)}
               >
-                <Text style={[styles.filterOptionText, filterSubject === null && styles.filterOptionTextActive]}>All</Text>
+                <Text style={[styles.filterOptionText, filterGenre === null && styles.filterOptionTextActive]}>All</Text>
               </TouchableOpacity>
-              {subjects.map(subject => (
+              {genres.map(genre => (
                 <TouchableOpacity
-                  key={subject}
-                  style={[styles.filterOption, filterSubject === subject && styles.filterOptionActive]}
-                  onPress={() => setFilterSubject(subject)}
+                  key={genre}
+                  style={[styles.filterOption, filterGenre === genre && styles.filterOptionActive]}
+                  onPress={() => setFilterGenre(genre)}
                 >
-                  <Text style={[styles.filterOptionText, filterSubject === subject && styles.filterOptionTextActive]}>{subject}</Text>
+                  <Text style={[styles.filterOptionText, filterGenre === genre && styles.filterOptionTextActive]}>{genre}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -242,10 +259,10 @@ const styles = StyleSheet.create({
     padding: 5,
     marginLeft: 10,
   },
-  deckList: {
+  subjectList: {
     padding: 20,
   },
-  deckCard: {
+  subjectCard: {
     backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
@@ -256,48 +273,76 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  deckHeader: {
+  subjectHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
   },
-  deckIcon: {
+  subjectIcon: {
     marginRight: 10,
     backgroundColor: '#001529',
     padding: 5,
     borderRadius: 5,
   },
-  deckTitleContainer: {
-    flex: 1,
-  },
-  deckName: {
+  subjectName: {
     color: '#001529',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  deckSubject: {
-    color: '#4a4a4a',
-    fontSize: 14,
-  },
-  deckDescription: {
+  subjectDescription: {
     color: '#4a4a4a',
     fontSize: 14,
     marginBottom: 10,
   },
-  deckFooter: {
+  tagsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 10,
   },
-  cardCount: {
+  tag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 10,
+  },
+  Easy: {
+    color: '#52c41a',
+  },
+  Medium: {
+    color: '#faad14',
+  },
+  Hard: {
+    color: '#f5222d',
+  },
+  deckCount: {
     color: '#4a4a4a',
     fontSize: 14,
+    marginBottom: 10,
   },
-  lastStudied: {
-    color: '#8c8c8c',
-    fontSize: 12,
-    fontStyle: 'italic',
+  progressBarContainer: {
+    height: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#001529',
+  },
+  checkIcon: {
+    marginLeft: 'auto',
+  },
+  nextButton: {
+    backgroundColor: '#001529',
+    padding: 15,
+    borderRadius: 10,
+    margin: 20,
+    alignItems: 'center',
+  },
+  nextButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   modalContainer: {
     flex: 1,
@@ -342,7 +387,7 @@ const styles = StyleSheet.create({
   filterOptionTextActive: {
     color: '#ffffff',
   },
-  subjectScroll: {
+  genreScroll: {
     flexDirection: 'row',
     marginBottom: 15,
   },
