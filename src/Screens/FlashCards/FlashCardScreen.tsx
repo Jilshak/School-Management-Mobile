@@ -19,11 +19,10 @@ type FlashCardDeck = {
 };
 
 const flashCardDecks: FlashCardDeck[] = [
-  { id: '1', name: 'Basic Algebra', subject: 'Mathematics', cardCount: 20, masteredCards: 10, description: 'Fundamental algebraic concepts', difficulty: 'Easy', lastStudied: '2023-05-15' },
-  { id: '2', name: 'Calculus I', subject: 'Mathematics', cardCount: 30, masteredCards: 15, description: 'Introduction to calculus', difficulty: 'Medium', lastStudied: '2023-05-18' },
-  { id: '3', name: 'Newtonian Mechanics', subject: 'Physics', cardCount: 25, masteredCards: 5, description: 'Laws of motion and force', difficulty: 'Hard', lastStudied: '2023-05-10' },
-  { id: '4', name: 'Organic Chemistry', subject: 'Chemistry', cardCount: 40, masteredCards: 20, description: 'Study of carbon-based compounds', difficulty: 'Medium', lastStudied: '2023-05-20' },
-  { id: '5', name: 'Cell Biology', subject: 'Biology', cardCount: 35, masteredCards: 12, description: 'Structure and function of cells', difficulty: 'Medium', lastStudied: '2023-05-17' },
+  { id: '1', name: 'Biology', subject: 'Biology', cardCount: 20, masteredCards: 10, description: 'Biology is the study of living organisms and their interactions with each other and their environment.', difficulty: 'Easy', lastStudied: '2023-05-15' },
+  { id: '2', name: 'Physics', subject: 'Physics', cardCount: 30, masteredCards: 15, description: 'Physics is the study of matter, energy, and their interactions.', difficulty: 'Medium', lastStudied: '2023-05-18' },
+  { id: '3', name: 'Chemistry', subject: 'Chemistry', cardCount: 25, masteredCards: 5, description: 'Chemistry is the study of substances and their properties.', difficulty: 'Hard', lastStudied: '2023-05-10' },
+  { id: '4', name: 'Mathematics', subject: 'Mathematics', cardCount: 40, masteredCards: 20, description: 'Mathematics is the study of numbers, shapes, and patterns.', difficulty: 'Medium', lastStudied: '2023-05-20' },
 ];
 
 const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {

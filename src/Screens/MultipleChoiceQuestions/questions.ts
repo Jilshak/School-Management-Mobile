@@ -262,7 +262,6 @@ export const questions: { [key: string]: Question[] } = {
 
       ],
   Biology: [
-    // Chapter 1: The Living World
     { id: 1, question: "What is the basic unit of classification in biology?", options: ["Species", "Genus", "Family", "Order"], correctAnswer: "Species", chapterId: "bio1" },
     { id: 2, question: "Which of the following is NOT a characteristic of living organisms?", options: ["Growth", "Reproduction", "Metabolism", "Crystallization"], correctAnswer: "Crystallization", chapterId: "bio1" },
     { id: 3, question: "What is the process of grouping organisms based on their similarities and differences called?", options: ["Evolution", "Natural selection", "Classification", "Speciation"], correctAnswer: "Classification", chapterId: "bio1" },
