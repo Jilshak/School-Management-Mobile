@@ -58,27 +58,27 @@ const FlashCardScreen: React.FC<FlashCardScreenProps> = ({ navigation }) => {
     navigation.navigate('FlashCardChapterList', { subjects: selectedSubjects });
   };
 
-  const renderSubject = ({ item }: { item: Subject }) => (
-    <Animated.View style={[styles.subjectCard, { opacity: animatedValue }]}>
-      <TouchableOpacity onPress={() => handleSubjectSelect(item.name)}>
-        <View style={styles.subjectHeader}>
-          <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
-          <Text style={styles.subjectName}>{item.name}</Text>
-          {selectedSubjects.includes(item.name) && (
-            <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
-          )}
-        </View>
-        <Text style={styles.subjectDescription}>{item.description}</Text>
-        <View style={styles.tagsContainer}>
-          <Text style={[styles.tag, styles[item.difficulty as keyof typeof styles]]}>{item.difficulty}</Text>
-        </View>
-        <Text style={styles.deckCount}>{item.deckCount} Decks</Text>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: `${(item.completed / item.deckCount) * 100}%` }]} />
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+  const renderSubject = ({ item }: { item: Subject }) => {
+    const isSelected = selectedSubjects.includes(item.name);
+    return (
+      <Animated.View style={[styles.subjectCard, { opacity: animatedValue }, isSelected && styles.selectedCard]}>
+        <TouchableOpacity onPress={() => handleSubjectSelect(item.name)}>
+          <View style={styles.subjectHeader}>
+            <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
+            <Text style={styles.subjectName}>{item.name}</Text>
+            {isSelected && (
+              <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
+            )}
+          </View>
+          <Text style={styles.subjectDescription}>{item.description}</Text>
+          <View style={styles.tagsContainer}>
+            <Text style={[styles.tag, styles[item.difficulty as keyof typeof styles]]}>{item.difficulty}</Text>
+          </View>
+          <Text style={styles.deckCount}>{item.deckCount} Decks</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   const filteredSubjects = subjects.filter(subject =>
     (subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -299,35 +299,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tag: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#001529', // Match the header color
+    borderRadius: 10, // Smaller border radius
+    paddingVertical: 4, // Smaller padding
+    paddingHorizontal: 8, // Smaller padding
+    marginRight: 5, // Smaller margin
+    color: '#001529', // Match the header color
+    fontSize: 12, // Smaller font size
   },
   Easy: {
-    color: '#52c41a',
+    color: '#001529', // Match the header color
   },
   Medium: {
-    color: '#faad14',
+    color: '#001529', // Match the header color
   },
   Hard: {
-    color: '#f5222d',
+    color: '#001529', // Match the header color
   },
   deckCount: {
     color: '#4a4a4a',
     fontSize: 14,
     marginBottom: 10,
-  },
-  progressBarContainer: {
-    height: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#001529',
   },
   checkIcon: {
     marginLeft: 'auto',
@@ -411,6 +404,9 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: 'white',
+  },
+  selectedCard: {
+    backgroundColor: '#f0faff' // Light blue background for selected card
   },
 });
 

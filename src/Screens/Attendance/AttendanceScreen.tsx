@@ -38,7 +38,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
       const date = new Date(year, month, day);
       const dateString = date.toISOString().split('T')[0];
       
-      if (date.getDay() === 1) { // Saturday
+      if (date.getDay() === 1) {
         newAttendanceData[dateString] = { status: 'holiday' };
       } else {
         newAttendanceData[dateString] = {

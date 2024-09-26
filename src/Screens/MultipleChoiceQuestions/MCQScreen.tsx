@@ -4,6 +4,7 @@ import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { Question, questions } from './questions';
+import { AntDesign } from '@expo/vector-icons'; // Add this import
 
 type MCQScreenProps = {
   navigation: StackNavigationProp<any, 'MCQ'>;
@@ -396,8 +397,11 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
           </View>
 
           <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>Time remaining: {formatTime(remainingTime)}</Text>
             <Text style={styles.infoText}>Total Questions: {subjectQuestions.length}</Text>
+            <View style={styles.timeContainer}>
+              <AntDesign name="clockcircleo" size={16} color="#001529" />
+              <Text style={styles.timeText}>{formatTime(remainingTime)}</Text>
+            </View>
           </View>
 
           <View style={styles.progressBarContainer}>
@@ -666,6 +670,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginVertical: 10,
   },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeText: {
+    fontSize: 16,
+    color: '#001529',
+    fontWeight: 'bold',
+    marginLeft: 5,
+  },
   infoText: {
     fontSize: 16,
     color: '#001529',
@@ -840,5 +854,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+
 
 export default MCQScreen;

@@ -225,33 +225,36 @@ const ChapterSelectionScreen: React.FC<ChapterSelectionScreenProps> = ({ route }
     setRandomSelectionCount('');
   };
 
-  const renderChapter = ({ item }: { item: Chapter }) => (
-    <TouchableOpacity 
-      style={styles.chapterCard}
-      onPress={() => toggleChapter(item.id)}
-    >
-      <View style={styles.chapterHeader}>
-        <View style={styles.chapterInfo}>
-          <Text style={styles.chapterName}>{item.name}</Text>
-        </View>
-        {selectedChapters.includes(item.id) && (
-          <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
-        )}
-      </View>
-      <View style={styles.questionCountContainer}>
-        <View style={styles.questionCountChip}>
-          <Text style={styles.questionCountText}>{item.questionCount} Questions</Text>
-        </View>
-      </View>
+  const renderChapter = ({ item }: { item: Chapter }) => {
+    const isSelected = selectedChapters.includes(item.id);
+    return (
       <TouchableOpacity 
-        style={styles.viewQuestionsButton} 
-        onPress={() => handleViewQuestions(item)}
+        style={[styles.chapterCard, isSelected && styles.selectedCard]}
+        onPress={() => toggleChapter(item.id)}
       >
-        <Text style={styles.viewQuestionsButtonText}>View Questions</Text>
-        <AntIcon name="right" size={16} color="#ffffff" />
+        <View style={styles.chapterHeader}>
+          <View style={styles.chapterInfo}>
+            <Text style={styles.chapterName}>{item.name}</Text>
+          </View>
+          {isSelected && (
+            <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
+          )}
+        </View>
+        <View style={styles.questionCountContainer}>
+          <View style={styles.questionCountChip}>
+            <Text style={styles.questionCountText}>{item.questionCount} Questions</Text>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.viewQuestionsButton} 
+          onPress={() => handleViewQuestions(item)}
+        >
+          <Text style={styles.viewQuestionsButtonText}>View Questions</Text>
+          <AntIcon name="right" size={16} color="#ffffff" />
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const renderQuestionModal = () => (
     <Modal
@@ -713,6 +716,9 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#f0f0f0',
+  },
+  selectedCard: {
+    backgroundColor: '#f0faff', // Very light blue background for selected cards
   },
 });
 

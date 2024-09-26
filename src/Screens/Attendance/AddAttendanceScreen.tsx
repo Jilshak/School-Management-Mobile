@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   FlatList,
   TextInput,
   Modal,
+  Animated,
 } from "react-native";
 import { Text } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -30,6 +31,16 @@ interface Student {
 const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   navigation,
 }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
+
   const [students, setStudents] = useState<Student[]>([
     {
       id: "1",
@@ -182,140 +193,141 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrowleft" size={24} color="#ffffff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mark Attendance</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.contentContainer}>
-        <View style={styles.summaryContainer}>
-          <Text style={styles.summaryTitle}>Attendance Summary</Text>
-          <View style={styles.summaryContent}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryItemValue}>
-                {attendanceSummary.present}
-              </Text>
-              <Text style={styles.summaryItemLabel}>Present</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryItemValue}>
-                {attendanceSummary.halfDay}
-              </Text>
-              <Text style={styles.summaryItemLabel}>Half-day</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryItemValue}>
-                {attendanceSummary.absent}
-              </Text>
-              <Text style={styles.summaryItemLabel}>Absent</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <Icon name="checkcircle" size={16} color="#52c41a" />
-            <Text style={styles.legendText}>Present</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Icon name="clockcircle" size={16} color="#faad14" />
-            <Text style={styles.legendText}>Half-day</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Icon name="closecircle" size={16} color="#f5222d" />
-            <Text style={styles.legendText}>Absent</Text>
-          </View>
-        </View>
-
-        <View style={styles.bulkActionsContainer}>
-          <TouchableOpacity
-            style={[styles.bulkActionButton, styles.presentButton]}
-            onPress={() => bulkMarkAttendance("present")}
-          >
-            <Text style={styles.bulkActionButtonText}>Mark All Present</Text>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrowleft" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.bulkActionButton, styles.halfDayButton]}
-            onPress={() => bulkMarkAttendance("half-day")}
-          >
-            <Text style={styles.bulkActionButtonText}>Mark All Half-Day</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.bulkActionButton, styles.absentButton]}
-            onPress={() => bulkMarkAttendance("absent")}
-          >
-            <Text style={styles.bulkActionButtonText}>Mark All Absent</Text>
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Mark Attendance</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        <View style={styles.searchContainer}>
-          <Icon name="search1" size={20} color="#001529" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or roll number"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <ScrollView style={styles.contentContainer}>
+          <View style={styles.summaryContainer}>
+            <Text style={styles.summaryTitle}>Attendance Summary</Text>
+            <View style={styles.summaryContent}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryItemValue}>
+                  {attendanceSummary.present}
+                </Text>
+                <Text style={styles.summaryItemLabel}>Present</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryItemValue}>
+                  {attendanceSummary.halfDay}
+                </Text>
+                <Text style={styles.summaryItemLabel}>Half-day</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryItemValue}>
+                  {attendanceSummary.absent}
+                </Text>
+                <Text style={styles.summaryItemLabel}>Absent</Text>
+              </View>
+            </View>
+          </View>
 
-        <View style={styles.studentListContainer}>
-          <Text style={styles.sectionTitle}>Class Attendance</Text>
-          <FlatList
-            data={filteredStudents}
-            renderItem={renderStudentItem}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-        </View>
+          <View style={styles.legendContainer}>
+            <View style={styles.legendItem}>
+              <Icon name="checkcircle" size={16} color="#52c41a" />
+              <Text style={styles.legendText}>Present</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Icon name="clockcircle" size={16} color="#faad14" />
+              <Text style={styles.legendText}>Half-day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Icon name="closecircle" size={16} color="#f5222d" />
+              <Text style={styles.legendText}>Absent</Text>
+            </View>
+          </View>
 
-        <TouchableOpacity
-          onPress={handleSaveAttendance}
-          style={styles.saveButton}
-        >
-          <Text style={styles.saveButtonText}>Save Attendance</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={styles.bulkActionsContainer}>
+            <TouchableOpacity
+              style={[styles.bulkActionButton, styles.presentButton]}
+              onPress={() => bulkMarkAttendance("present")}
+            >
+              <Text style={styles.bulkActionButtonText}>Mark All Present</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkActionButton, styles.halfDayButton]}
+              onPress={() => bulkMarkAttendance("half-day")}
+            >
+              <Text style={styles.bulkActionButtonText}>Mark All Half-Day</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkActionButton, styles.absentButton]}
+              onPress={() => bulkMarkAttendance("absent")}
+            >
+              <Text style={styles.bulkActionButtonText}>Mark All Absent</Text>
+            </TouchableOpacity>
+          </View>
 
-      <Modal
-        visible={isCommentModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setCommentModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Comment</Text>
+          <View style={styles.searchContainer}>
+            <Icon name="search1" size={20} color="#001529" />
             <TextInput
-              style={styles.commentInput}
-              multiline
-              numberOfLines={4}
-              value={comment}
-              onChangeText={setComment}
-              placeholder="Enter comment here"
+              style={styles.searchInput}
+              placeholder="Search by name or roll number"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                onPress={() => setCommentModalVisible(false)}
-                style={styles.modalButton}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={saveComment}
-                style={[styles.modalButton, styles.saveCommentButton]}
-              >
-                <Text style={styles.saveCommentButtonText}>Save</Text>
-              </TouchableOpacity>
+          </View>
+
+          <View style={styles.studentListContainer}>
+            <Text style={styles.sectionTitle}>Class Attendance</Text>
+            <FlatList
+              data={filteredStudents}
+              renderItem={renderStudentItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={handleSaveAttendance}
+            style={styles.saveButton}
+          >
+            <Text style={styles.saveButtonText}>Save Attendance</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <Modal
+          visible={isCommentModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setCommentModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Comment</Text>
+              <TextInput
+                style={styles.commentInput}
+                multiline
+                numberOfLines={4}
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Enter comment here"
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  onPress={() => setCommentModalVisible(false)}
+                  style={styles.modalButton}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={saveComment}
+                  style={[styles.modalButton, styles.saveCommentButton]}
+                >
+                  <Text style={styles.saveCommentButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </Animated.View>
   );
 };
 

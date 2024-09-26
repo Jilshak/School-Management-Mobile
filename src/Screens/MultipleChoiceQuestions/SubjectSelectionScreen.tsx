@@ -58,27 +58,30 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
     navigation.navigate('ChapterSelection', { subjects: selectedSubjects });
   };
 
-  const renderSubject = ({ item }: { item: Subject }) => (
-    <Animated.View style={[styles.subjectCard, { opacity: animatedValue }]}>
-      <TouchableOpacity onPress={() => handleSubjectSelect(item.name)}>
-        <View style={styles.subjectHeader}>
-          <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
-          <Text style={styles.subjectName}>{item.name}</Text>
-          {selectedSubjects.includes(item.name) && (
-            <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
-          )}
-        </View>
-        <Text style={styles.subjectDescription}>{item.description}</Text>
-        <View style={styles.tagsContainer}>
-          <Text style={[styles.tag, styles[item.difficulty as keyof typeof styles]]}>{item.difficulty}</Text>
-        </View>
-        <Text style={styles.questionCount}>{item.questionCount} Questions</Text>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: `${(item.completed / item.questionCount) * 100}%` }]} />
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+  const renderSubject = ({ item }: { item: Subject }) => {
+    const isSelected = selectedSubjects.includes(item.name);
+    return (
+      <Animated.View style={[styles.subjectCard, { opacity: animatedValue }, isSelected && styles.selectedCard]}>
+        <TouchableOpacity onPress={() => handleSubjectSelect(item.name)}>
+          <View style={styles.subjectHeader}>
+            <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
+            <Text style={styles.subjectName}>{item.name}</Text>
+            {isSelected && (
+              <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
+            )}
+          </View>
+          <Text style={styles.subjectDescription}>{item.description}</Text>
+          <View style={styles.tagsContainer}>
+            <Text style={[styles.tag, styles[item.difficulty as keyof typeof styles]]}>{item.difficulty}</Text>
+          </View>
+          <Text style={styles.questionCount}>{item.questionCount} Questions</Text>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${(item.completed / item.questionCount) * 100}%` }]} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   const filteredSubjects = subjects.filter(subject =>
     (subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -271,6 +274,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  selectedCard: {
+    backgroundColor: '#f0faff', // Very light blue background for selected cards
   },
   subjectHeader: {
     flexDirection: 'row',

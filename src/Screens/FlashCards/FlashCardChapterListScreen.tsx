@@ -100,21 +100,24 @@ const FlashCardChapterListScreen: React.FC<FlashCardChapterListScreenProps> = ({
     setRandomSelectionCount('');
   };
 
-  const renderChapter = ({ item }: { item: typeof chapters[keyof typeof chapters][number] }) => (
-    <TouchableOpacity 
-      style={styles.chapterCard}
-      onPress={() => handleChapterSelect(item.id)}
-    >
-      <View style={styles.chapterHeader}>
-        <Text style={styles.chapterName}>{item.name}</Text>
-        {selectedChapters.includes(item.id) && (
-          <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
-        )}
-      </View>
-      <Text style={styles.chapterSubject}>{getSubjectForChapter(item.id)}</Text>
-      <Text style={styles.deckCount}>{item.questionCount} Questions</Text>
-    </TouchableOpacity>
-  );
+  const renderChapter = ({ item }: { item: typeof chapters[keyof typeof chapters][number] }) => {
+    const isSelected = selectedChapters.includes(item.id);
+    return (
+      <TouchableOpacity 
+        style={[styles.chapterCard, isSelected && styles.selectedCard]}
+        onPress={() => handleChapterSelect(item.id)}
+      >
+        <View style={styles.chapterHeader}>
+          <Text style={styles.chapterName}>{item.name}</Text>
+          {isSelected && (
+            <AntIcon name="check-circle" size={24} color="#001529" style={styles.checkIcon} />
+          )}
+        </View>
+        <Text style={styles.chapterSubject}>{getSubjectForChapter(item.id)}</Text>
+        <Text style={styles.deckCount}>{item.questionCount} Questions</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -499,6 +502,9 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#f0f0f0',
+  },
+  selectedCard: {
+    backgroundColor: '#e6f7ff',
   },
 });
 
