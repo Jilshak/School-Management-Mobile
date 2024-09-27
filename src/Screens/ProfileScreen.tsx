@@ -4,6 +4,7 @@ import { Text, Icon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BottomNavBar from '../Components/BottomNavBar';
 import * as ImagePicker from 'expo-image-picker';
+import useAuthStore from '../store/authStore';
 
 type ProfileScreenProps = {
   navigation: StackNavigationProp<any, 'Profile'>;
@@ -49,6 +50,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     extracurricularActivities: ['Basketball', 'Debate Club', 'Chess'],
     profileImage: 'https://via.placeholder.com/150',
   });
+
+  const logout = useAuthStore((state: any) => state.logout);
 
   const renderInfoItem = (icon: IconName, title: string, value: string, key: keyof UserInfo) => (
     <View style={styles.infoItem}>
@@ -109,9 +112,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    // Here you would typically clear the user's session or token
-    // For now, we'll just navigate to the Login screen
-    navigation.navigate('Login');
+    logout();
+    navigation.navigate("Login")
   };
 
   return (

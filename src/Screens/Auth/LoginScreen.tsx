@@ -1,33 +1,64 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Image, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
-import { Text, Icon } from '@ant-design/react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import React, { useState } from "react";
+import {
+  View,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+} from "react-native";
+import { Text, Icon } from "@ant-design/react-native";
+import useAuthStore from "../../store/authStore";
+import { useToast } from '../../contexts/ToastContext';
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type LoginScreenProps = {
-  navigation: StackNavigationProp<any, 'Login'>;
-};
+const { width, height } = Dimensions.get("window");
 
-const { width, height } = Dimensions.get('window');
-
-const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const LoginScreen: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const login = useAuthStore((state: any) => state.login);
+  const isAuthenticated = AsyncStorage.getItem("token")
+  const { showToast } = useToast();
+  const navigate:any = useNavigation()
 
-  const handleLogin = () => {
-    navigation.navigate('Home');
+  const handleLogin = async () => { 
+    if (isLoading) return; // Prevent multiple login attempts
+    setIsLoading(true);
+    try {
+      await login(email, password);   
+      if (await isAuthenticated) { 
+        setEmail("");
+        setPassword("");
+        
+        navigate.navigate("Home");
+        showToast('Login successful', 'success');
+      } else {
+        showToast('Login failed', 'error');
+      }
+    } catch (error) {
+      showToast('Login failed', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.contentContainer}>
           <View style={styles.headerContainer}>
             <Image
-              source={require('../../../assets/school-logo.avif')}
+              source={require("../../../assets/school-logo.avif")}
               style={styles.logo}
             />
             <Text style={styles.welcomeText}>Welcome Back</Text>
@@ -36,12 +67,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Icon name="user" size={24} color="#001529" style={styles.inputIcon} />
+              <Icon
+                name="user"
+                size={24}
+                color="#001529"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
                 placeholderTextColor="#4a4a4a"
-                value={email}
+                value={email || ""}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -49,22 +85,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Icon name="lock" size={24} color="#001529" style={styles.inputIcon} />
+              <Icon
+                name="lock"
+                size={24}
+                color="#001529"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Password"
                 placeholderTextColor="#4a4a4a"
-                value={password}
+                value={password || ""}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                <Icon name={showPassword ? "eye" : "eye-invisible"} size={24} color="#001529" />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                <Icon
+                  name={showPassword ? "eye" : "eye-invisible"}
+                  size={24}
+                  color="#001529"
+                />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Sign In</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, isLoading && styles.disabledButton]} 
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              <Text style={styles.loginButtonText}>
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.forgotPasswordButton}>
@@ -80,51 +134,51 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: "#f0f2f5",
   },
   keyboardAvoidingView: {
     flex: 1,
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    justifyContent: "flex-start",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: height * 0.1,
   },
   headerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 40,
   },
   logo: {
     width: width * 0.25,
     height: width * 0.25,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     marginBottom: 20,
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#001529',
+    fontWeight: "bold",
+    color: "#001529",
     marginBottom: 10,
   },
   subText: {
     fontSize: 16,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
   },
   formContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 350,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 10,
     marginBottom: 20,
     paddingHorizontal: 15,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   inputIcon: {
     marginRight: 10,
@@ -133,29 +187,32 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     fontSize: 16,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
   },
   eyeIcon: {
     padding: 10,
   },
   loginButton: {
-    backgroundColor: '#001529',
+    backgroundColor: "#001529",
     padding: 15,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   loginButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+  disabledButton: {
+    backgroundColor: "#cccccc",
   },
   forgotPasswordButton: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   forgotPasswordText: {
-    color: '#001529',
+    color: "#001529",
     fontSize: 16,
   },
 });
