@@ -17,6 +17,8 @@ import useAuthStore from "../../store/authStore";
 import useProfileStore from "../../store/profileStore";
 import { formatDate } from "../../utils/DateUtil";
 import { IconName } from "../../utils/IconUtils";
+import { checkUsernameAvailability, updateUserProfile } from "../../Services/Profile/ProfileServices";
+import debounce from 'lodash/debounce';
 
 type ProfileScreenProps = {
   navigation: StackNavigationProp<any, "Profile">;
@@ -64,6 +66,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const logout = useAuthStore((state: any) => state.logout);
   const profile = useProfileStore((state: any) => state.profile);
+  const [editableProfile, setEditableProfile] = useState({ ...profile });
+  const [usernameAvailability, setUsernameAvailability] = useState<'available' | 'unavailable' | 'checking' | null>(null);
 
 
 
@@ -83,9 +87,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     </View>
   );
 
-  const handleSaveChanges = () => {
-    setIsEditing(false);
-  };
+
 
   const handleImagePick = async () => {
     if (isEditing) {
@@ -130,6 +132,90 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     ["teacher", "admin", "staff"].includes(role.toLowerCase())
   );
 
+  const handleEditToggle = () => {
+    if (isEditing) {
+      handleSaveChanges();
+    } else {
+      setEditableProfile({ ...profile });
+      setIsEditing(true);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setEditableProfile({ ...editableProfile, [field]: value });
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      await updateUserProfile(editableProfile.userId, editableProfile);
+      useProfileStore.getState().setProfile(editableProfile);
+      setIsEditing(false);
+      alert("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile. Please try again.");
+    }
+  };
+
+  const renderEditableInfoItem = (
+    icon: IconName,
+    title: string,
+    field: string,
+    value: string | undefined
+  ) => (
+    <View style={styles.infoItem}>
+      <View style={styles.infoIcon}>
+        <Icon name={icon} size={24} color="#001529" />
+      </View>
+      <View style={styles.infoMainContent}>
+        <Text style={styles.infoTitle}>{title}</Text>
+        {isEditing ? (
+          <TextInput
+            style={styles.input}
+            value={editableProfile[field] || ""}
+            onChangeText={(text) => handleInputChange(field, text)}
+          />
+        ) : (
+          <Text style={styles.infoValue}>{value || "N/A"}</Text>
+        )}
+      </View>
+    </View>
+  );
+
+  const checkUsername = debounce(async (username: string) => {
+    if (username === profile.username) {
+      setUsernameAvailability(null);
+      return;
+    }
+    setUsernameAvailability('checking');
+    try {
+      const isAvailable = await checkUsernameAvailability(username);
+      setUsernameAvailability(isAvailable ? 'available' : 'unavailable');
+    } catch (error) {
+      console.error("Error checking username availability:", error);
+      setUsernameAvailability(null);
+    }
+  }, 500);
+
+  const handleUsernameChange = (text: string) => {
+    handleInputChange('username', text);
+    checkUsername(text);
+  };
+
+  const renderUsernameAvailability = () => {
+    if (!isEditing) return null;
+    switch (usernameAvailability) {
+      case 'available':
+        return <Text style={styles.availableUsername}>Username is available</Text>;
+      case 'unavailable':
+        return <Text style={styles.unavailableUsername}>Username is not available</Text>;
+      case 'checking':
+        return <Text style={styles.checkingUsername}>Checking username...</Text>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -137,7 +223,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <Icon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+        <TouchableOpacity onPress={handleEditToggle}>
           <Icon name={isEditing ? "check" : "edit"} size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
@@ -149,7 +235,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             style={styles.imageContainer}
           >
             <Image
-              source={{ uri: "https://via.placeholder.com/150" }}
+              source={{ uri: editableProfile.profileImage || "https://via.placeholder.com/150" }}
               style={styles.profileImage}
             />
             {isEditing && (
@@ -159,61 +245,77 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               </View>
             )}
           </TouchableOpacity>
-          <Text
-            style={styles.profileName}
-          >{`${profile.firstName} ${profile.lastName}`}</Text>
-          <Text style={styles.profileGrade}>{profile.roles.join(", ")}</Text>
-          <Text style={styles.profileRollNumber}>
-            Username: {profile.username}
-          </Text>
+          {isEditing ? (
+            <View style={styles.editNameContainer}>
+              <TextInput
+                style={styles.editNameInput}
+                value={editableProfile.firstName}
+                onChangeText={(text) => handleInputChange('firstName', text)}
+                placeholder="First Name"
+              />
+              <TextInput
+                style={styles.editNameInput}
+                value={editableProfile.lastName}
+                onChangeText={(text) => handleInputChange('lastName', text)}
+                placeholder="Last Name"
+              />
+            </View>
+          ) : (
+            <Text style={styles.profileName}>
+              {`${editableProfile.firstName} ${editableProfile.lastName}`}
+            </Text>
+          )}
+          <Text style={styles.profileGrade}>{editableProfile.roles.join(", ")}</Text>
+          {isEditing ? (
+            <View style={styles.editUsernameContainer}>
+              <TextInput
+                style={styles.editUsernameInput}
+                value={editableProfile.username}
+                onChangeText={handleUsernameChange}
+                placeholder="Username"
+              />
+              {renderUsernameAvailability()}
+            </View>
+          ) : (
+            <Text style={styles.profileRollNumber}>
+              Username: {editableProfile.username}
+            </Text>
+          )}
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Personal Information</Text>
-          {renderInfoItem("mail", "Email", profile.email)}
-          {renderInfoItem("phone", "Phone", profile.contactNumber)}
-          {renderInfoItem("environment", "Address", profile.address)}
-          {renderInfoItem(
-            "calendar",
-            "Date of Birth",
-            formatDate(profile.dateOfBirth)
-          )}
-          {renderInfoItem("user", "Gender", profile.gender)}
-          {renderInfoItem("flag", "Nationality", profile.nationality)}
+          {/* Remove these two lines as we're now editing the name near the profile picture */}
+          {/* {renderEditableInfoItem("user", "First Name", "firstName", editableProfile.firstName)} */}
+          {/* {renderEditableInfoItem("user", "Last Name", "lastName", editableProfile.lastName)} */}
+          {renderEditableInfoItem("mail", "Email", "email", editableProfile.email)}
+          {renderEditableInfoItem("phone", "Phone", "contactNumber", editableProfile.contactNumber)}
+          {renderEditableInfoItem("environment", "Address", "address", editableProfile.address)}
+          {renderEditableInfoItem("calendar", "Date of Birth", "dateOfBirth", formatDate(editableProfile.dateOfBirth))}
+          {renderEditableInfoItem("user", "Gender", "gender", editableProfile.gender)}
+          {renderEditableInfoItem("flag", "Nationality", "nationality", editableProfile.nationality)}
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Official Information</Text>
           {isStaff ? (
             <>
-              {renderInfoItem(
-                "solution",
-                "Adhaar Number",
-                profile.adhaarNumber
-              )}
-              {renderInfoItem(
-                "idcard",
-                "PAN Card Number",
-                profile.pancardNumber
-              )}
-              {renderInfoItem(
-                "calendar",
-                "Join Date",
-                formatDate(profile.joinDate)
-              )}
+              {renderEditableInfoItem("solution", "Adhaar Number", "adhaarNumber", editableProfile.adhaarNumber)}
+              {renderEditableInfoItem("idcard", "PAN Card Number", "pancardNumber", editableProfile.pancardNumber)}
+              {renderEditableInfoItem("calendar", "Join Date", "joinDate", formatDate(editableProfile.joinDate))}
             </>
           ) : (
             <>
-              {renderInfoItem("number", "Roll Number", profile.rollNumber)}
-              {renderInfoItem("book", "Grade", profile.grade)}
+              {renderEditableInfoItem("number", "Roll Number", "rollNumber", editableProfile.rollNumber)}
+              {renderEditableInfoItem("book", "Grade", "grade", editableProfile.grade)}
             </>
           )}
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Emergency Contact</Text>
-          {renderInfoItem("user", "Name", profile.emergencyContactName)}
-          {renderInfoItem("phone", "Phone", profile.emergencyContactNumber)}
+          {renderEditableInfoItem("user", "Name", "emergencyContactName", editableProfile.emergencyContactName)}
+          {renderEditableInfoItem("phone", "Phone", "emergencyContactNumber", editableProfile.emergencyContactNumber)}
         </View>
 
         {isStaff && (
@@ -564,6 +666,50 @@ const styles = StyleSheet.create({
   },
   employmentTitle: {
     fontWeight: "bold",
+  },
+  editNameContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  editNameInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 5,
+    marginHorizontal: 5,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#001529',
+    textAlign: 'center',
+    width: '40%',
+  },
+  editUsernameContainer: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  editUsernameInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 5,
+    fontSize: 16,
+    color: '#001529',
+    textAlign: 'center',
+    width: '80%',
+  },
+  availableUsername: {
+    color: 'green',
+    marginTop: 5,
+  },
+  unavailableUsername: {
+    color: 'red',
+    marginTop: 5,
+  },
+  checkingUsername: {
+    color: 'orange',
+    marginTop: 5,
   },
 });
 
