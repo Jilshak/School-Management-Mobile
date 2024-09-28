@@ -11,7 +11,7 @@ import TeacherTimetableScreen from "../Screens/Academics/TeacherTimetableScreen"
 import AttendanceScreen from "../Screens/Attendance/AttendanceScreen";
 import CalendarScreen from "../Screens/Calender/CalenderScreen";
 import NotificationScreen from "../Screens/Notification/NotificationScreen";
-import ProfileScreen from "../Screens/ProfileScreen";
+import ProfileScreen from "../Screens/Profile/ProfileScreen";
 import AddAttendanceScreen from "../Screens/Attendance/AddAttendanceScreen";
 import PaymentScreen from "../Screens/Payments/PaymentScreen";
 import LibraryScreen from "../Screens/Academics/LibraryScreen";
