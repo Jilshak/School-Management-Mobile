@@ -33,6 +33,7 @@ const useAuthStore = create<AuthState>((set) => ({
       const profile = await fetchUserProfile();
 
       const profileData: ProfileState = {
+        _id: profile._id,
         userId: profile.userId,
         username: profile.username,
         firstName: profile.firstName,

@@ -58,7 +58,6 @@ const AppNavigator: React.FC = () => {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {isAuthenticated ? (
             <>
-              <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Staff" component={StaffScreen} />
               <Stack.Screen name="Marksheet" component={MarksheetScreen} />
               <Stack.Screen name="Timetable" component={TimetableScreen} />
@@ -150,9 +149,12 @@ const AppNavigator: React.FC = () => {
               />
             <Stack.Screen name="Login" component={LoginScreen} />
             </>
-          ) : (
+          ) : (<>
             <Stack.Screen name="Login" component={LoginScreen} />
+          </>
           )}
+          <Stack.Screen name="Home" component={HomeScreen} />
+
         </Stack.Navigator>
       </ToastProvider>
     </NavigationContainer>

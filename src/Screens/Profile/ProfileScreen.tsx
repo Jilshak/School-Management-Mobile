@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -19,6 +19,8 @@ import { formatDate } from "../../utils/DateUtil";
 import { IconName } from "../../utils/IconUtils";
 import { checkUsernameAvailability, updateUserProfile } from "../../Services/Profile/ProfileServices";
 import debounce from 'lodash/debounce';
+import { updateUserCredentials } from "../../Services/Profile/PasswordResetService";
+import { TextInput as RNTextInput } from "react-native";
 
 type ProfileScreenProps = {
   navigation: StackNavigationProp<any, "Profile">;
@@ -43,33 +45,30 @@ interface UserInfo {
 
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isResetingPassword, setIsResetingPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [userInfo, setUserInfo] = useState<UserInfo>({
-    name: "John Doe",
-    grade: "10th Grade",
-    email: "johndoe@example.com",
-    phone: "+1 234 567 8900",
-    address: "123 School Street, City, Country",
-    parentName: "Jane Doe",
-    parentPhone: "+1 234 567 8901",
-    rollNumber: "2023001",
-    dateOfBirth: "15 May 2005",
-    bloodGroup: "A+",
-    emergencyContact: "+1 234 567 8902",
-    admissionDate: "1 June 2020",
-    extracurricularActivities: ["Basketball", "Debate Club", "Chess"],
-    profileImage: "https://via.placeholder.com/150",
-  });
-
   const logout = useAuthStore((state: any) => state.logout);
   const profile = useProfileStore((state: any) => state.profile);
-  const [editableProfile, setEditableProfile] = useState({ ...profile });
-  const [usernameAvailability, setUsernameAvailability] = useState<'available' | 'unavailable' | 'checking' | 'invalid' | null>(null);
+  const [isResettingCredentials, setIsResettingCredentials] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const newUsernameRef = useRef("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [usernameAvailability, setUsernameAvailability] = useState<'available' | 'unavailable' | 'checking' | null>(null);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 
-
+  const getInputStyle = () => {
+    switch (usernameAvailability) {
+      case 'available':
+        return [styles.modalInput, styles.availableInput];
+      case 'unavailable':
+        return [styles.modalInput, styles.unavailableInput];
+      case 'checking':
+        return [styles.modalInput, styles.checkingInput];
+      default:
+        return styles.modalInput;
+    }
+  };
 
   const renderInfoItem = (
     icon: IconName,
@@ -87,142 +86,86 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     </View>
   );
 
-
-
-  const handleImagePick = async () => {
-    if (isEditing) {
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permissionResult.granted === false) {
-        alert("Permission to access camera roll is required!");
-        return;
-      }
-
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
-
-      if (!pickerResult.canceled) {
-        setUserInfo({ ...userInfo, profileImage: pickerResult.assets[0].uri });
-      }
-    }
-  };
-
-  const handleResetPassword = () => {
-    if (newPassword === confirmPassword) {
-      
-      alert("Password reset successfully!");
-      setIsResetingPassword(false);
-      setNewPassword("");
-      setConfirmPassword("");
-    } else {
-      alert("Passwords do not match. Please try again.");
-    }
-  };
-
   const handleLogout = () => {
     navigation.navigate("Login");
     logout();
   };
 
-  const isStaff = profile.roles.some((role: string) =>
+  const isStaff = profile?.roles?.some((role: string) =>
     ["teacher", "admin", "staff"].includes(role.toLowerCase())
   );
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      handleSaveChanges();
-    } else {
-      setEditableProfile({ ...profile });
-      setIsEditing(true);
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setEditableProfile({ ...editableProfile, [field]: value });
-  };
-
-  const handleSaveChanges = async () => {
-    try {
-      await updateUserProfile(editableProfile.userId, editableProfile);
-      useProfileStore.getState().setProfile(editableProfile);
-      setIsEditing(false);
-      alert("Profile updated successfully!");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile. Please try again.");
-    }
-  };
-
-  const renderEditableInfoItem = (
-    icon: IconName,
-    title: string,
-    field: string,
-    value: string | undefined
-  ) => (
-    <View style={styles.infoItem}>
-      <View style={styles.infoIcon}>
-        <Icon name={icon} size={24} color="#001529" />
-      </View>
-      <View style={styles.infoMainContent}>
-        <Text style={styles.infoTitle}>{title}</Text>
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={editableProfile[field] || ""}
-            onChangeText={(text) => handleInputChange(field, text)}
-          />
-        ) : (
-          <Text style={styles.infoValue}>{value || "N/A"}</Text>
-        )}
-      </View>
-    </View>
-  );
-
-  const checkUsername = debounce(async (username: string) => {
-    if (username === profile.username) {
+  const checkUsername = async (username: string) => {
+    if (username.length < 3) {
       setUsernameAvailability(null);
       return;
     }
-    if (username.length < 3) {
-      setUsernameAvailability('invalid');
-      return;
-    }
+    setIsCheckingUsername(true);
     setUsernameAvailability('checking');
     try {
-      const isAvailable = await checkUsernameAvailability(username);
-      setUsernameAvailability(isAvailable ? 'available' : 'unavailable');
+      if (username === profile?.username) {
+        setUsernameAvailability('available');
+      } else {
+        const isAvailable = await checkUsernameAvailability(username);
+        setUsernameAvailability(isAvailable ? 'available' : 'unavailable');
+      }
     } catch (error) {
       console.error("Error checking username availability:", error);
       setUsernameAvailability(null);
-    }
-  }, 500);
-
-  const handleUsernameChange = (text: string) => {
-    handleInputChange('username', text);
-    if (text.length >= 3) {
-      checkUsername(text);
-    } else {
-      setUsernameAvailability(null);
+    } finally {
+      setIsCheckingUsername(false);
     }
   };
 
-  const renderUsernameAvailability = () => {
-    if (!isEditing) return null;
-    switch (usernameAvailability) {
-      case 'available':
-        return <Text style={styles.availableUsername}>Username is available</Text>;
-      case 'unavailable':
-        return <Text style={styles.unavailableUsername}>Username is not available</Text>;
-      case 'checking':
-        return <Text style={styles.checkingUsername}>Checking username...</Text>;
-      case 'invalid':
-        return <Text style={styles.invalidUsername}>Username must be at least 3 characters long</Text>;
-      default:
-        return null;
+  const debouncedCheckUsername = debounce(checkUsername, 300);
+
+  const handleUsernameChange = (text: string) => {
+    setNewUsername(text);
+    newUsernameRef.current = text;
+    debouncedCheckUsername(text);
+  };
+
+  const handleResetCredentials = async () => {
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match. Please try again.");
+      return;
+    }
+
+    const finalUsername = newUsernameRef.current;
+
+    if (finalUsername.length < 3) {
+      alert("Username must be at least 3 characters long.");
+      return;
+    }
+
+    if (isCheckingUsername) {
+      alert("Please wait while we verify the username availability.");
+      return;
+    }
+
+    // Force a final check of username availability
+    await checkUsername(finalUsername);
+
+    if (usernameAvailability !== 'available') {
+      alert("The chosen username is not available. Please choose a different username.");
+      return;
+    }
+
+    try {
+      await updateUserCredentials(profile.userId, finalUsername, newPassword);
+      alert("Credentials updated successfully!");
+      setIsResettingCredentials(false);
+      setNewUsername("");
+      newUsernameRef.current = "";
+      setNewPassword("");
+      setConfirmPassword("");
+      setUsernameAvailability(null);
+      if (finalUsername) {
+        useProfileStore.getState().setProfile({ ...profile, username: finalUsername });
+      }
+    } catch (error) {
+      console.error("Error updating credentials:", error);
+      alert("Failed to update credentials. Please try again.");
     }
   };
 
@@ -232,107 +175,60 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={handleEditToggle}>
-          <Icon name={isEditing ? "check" : "edit"} size={24} color="#ffffff" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.contentContainer}>
         <View style={styles.profileSection}>
-          <TouchableOpacity
-            onPress={handleImagePick}
-            style={styles.imageContainer}
-          >
-            <Image
-              source={{ uri: editableProfile.profileImage || "https://via.placeholder.com/150" }}
-              style={styles.profileImage}
-            />
-            {isEditing && (
-              <View style={styles.editImageOverlay}>
-                <Icon name="camera" size={24} color="#ffffff" />
-                <Text style={styles.editImageText}>Edit</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          {isEditing ? (
-            <View style={styles.editNameContainer}>
-              <TextInput
-                style={styles.editNameInput}
-                value={editableProfile.firstName}
-                onChangeText={(text) => handleInputChange('firstName', text)}
-                placeholder="First Name"
-              />
-              <TextInput
-                style={styles.editNameInput}
-                value={editableProfile.lastName}
-                onChangeText={(text) => handleInputChange('lastName', text)}
-                placeholder="Last Name"
-              />
-            </View>
-          ) : (
-            <Text style={styles.profileName}>
-              {`${editableProfile.firstName} ${editableProfile.lastName}`}
-            </Text>
-          )}
-          <Text style={styles.profileGrade}>{editableProfile.roles.join(", ")}</Text>
-          {isEditing ? (
-            <View style={styles.editUsernameContainer}>
-              <TextInput
-                style={styles.editUsernameInput}
-                value={editableProfile.username}
-                onChangeText={handleUsernameChange}
-                placeholder="Username"
-              />
-              {renderUsernameAvailability()}
-            </View>
-          ) : (
-            <Text style={styles.profileRollNumber}>
-              Username: {editableProfile.username}
-            </Text>
-          )}
+          <Image
+            source={{ uri: profile?.profileImage || "https://via.placeholder.com/150" }}
+            style={styles.profileImage}
+          />
+          <Text style={styles.profileName}>
+            {`${profile?.firstName} ${profile?.lastName}`}
+          </Text>
+          <Text style={styles.profileGrade}>{profile?.roles.join(", ")}</Text>
+          <Text style={styles.profileRollNumber}>
+            Username: {profile?.username}
+          </Text>
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Personal Information</Text>
-          {/* Remove these two lines as we're now editing the name near the profile picture */}
-          {/* {renderEditableInfoItem("user", "First Name", "firstName", editableProfile.firstName)} */}
-          {/* {renderEditableInfoItem("user", "Last Name", "lastName", editableProfile.lastName)} */}
-          {renderEditableInfoItem("mail", "Email", "email", editableProfile.email)}
-          {renderEditableInfoItem("phone", "Phone", "contactNumber", editableProfile.contactNumber)}
-          {renderEditableInfoItem("environment", "Address", "address", editableProfile.address)}
-          {renderEditableInfoItem("calendar", "Date of Birth", "dateOfBirth", formatDate(editableProfile.dateOfBirth))}
-          {renderEditableInfoItem("user", "Gender", "gender", editableProfile.gender)}
-          {renderEditableInfoItem("flag", "Nationality", "nationality", editableProfile.nationality)}
+          {renderInfoItem("mail", "Email", profile?.email)}
+          {renderInfoItem("phone", "Phone", profile?.contactNumber)}
+          {renderInfoItem("environment", "Address", profile?.address)}
+          {renderInfoItem("calendar", "Date of Birth", formatDate(profile?.dateOfBirth))}
+          {renderInfoItem("user", "Gender", profile?.gender)}
+          {renderInfoItem("flag", "Nationality", profile?.nationality)}
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Official Information</Text>
           {isStaff ? (
             <>
-              {renderEditableInfoItem("solution", "Adhaar Number", "adhaarNumber", editableProfile.adhaarNumber)}
-              {renderEditableInfoItem("idcard", "PAN Card Number", "pancardNumber", editableProfile.pancardNumber)}
-              {renderEditableInfoItem("calendar", "Join Date", "joinDate", formatDate(editableProfile.joinDate))}
+              {renderInfoItem("solution", "Adhaar Number", profile?.adhaarNumber)}
+              {renderInfoItem("idcard", "PAN Card Number", profile?.pancardNumber)}
+              {renderInfoItem("calendar", "Join Date", formatDate(profile?.joinDate))}
             </>
           ) : (
             <>
-              {renderEditableInfoItem("number", "Roll Number", "rollNumber", editableProfile.rollNumber)}
-              {renderEditableInfoItem("book", "Grade", "grade", editableProfile.grade)}
+              {renderInfoItem("number", "Roll Number", profile?.rollNumber)}
+              {renderInfoItem("book", "Grade", profile?.grade)}
             </>
           )}
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Emergency Contact</Text>
-          {renderEditableInfoItem("user", "Name", "emergencyContactName", editableProfile.emergencyContactName)}
-          {renderEditableInfoItem("phone", "Phone", "emergencyContactNumber", editableProfile.emergencyContactNumber)}
+          {renderInfoItem("user", "Name", profile?.emergencyContactName)}
+          {renderInfoItem("phone", "Phone", profile?.emergencyContactNumber)}
         </View>
 
         {isStaff && (
           <>
             <View style={styles.infoSection}>
               <Text style={styles.sectionHeader}>Qualifications</Text>
-              {profile.qualifications.map((qual: any, index: number) => (
+              {profile?.qualifications.map((qual: any, index: number) => (
                 <View key={index} style={styles.qualificationItem}>
                   <Text style={styles.qualificationTitle}>{qual.degree}</Text>
                   <Text>
@@ -346,14 +242,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
             <View style={styles.infoSection}>
               <Text style={styles.sectionHeader}>Previous Employments</Text>
-              {profile.previousEmployments.map((emp: any, index: number) => (
+              {profile?.previousEmployments.map((emp: any, index: number) => (
                 <View key={index} style={styles.employmentItem}>
                   <Text style={styles.employmentTitle}>
-                    {emp.instituteName}
+                    {emp?.instituteName}
                   </Text>
-                  <Text>{emp.role}</Text>
-                  <Text>{`${formatDate(emp.joinedDate)} - ${formatDate(
-                    emp.revealedDate
+                  <Text>{emp?.role}</Text>
+                  <Text>{`${formatDate(emp?.joinedDate)} - ${formatDate(
+                    emp?.revealedDate
                   )}`}</Text>
                 </View>
               ))}
@@ -362,71 +258,84 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         )}
 
         <TouchableOpacity
-          style={styles.resetPasswordButton}
-          onPress={() => setIsResetingPassword(true)}
+          style={styles.resetCredentialsButton}
+          onPress={() => setIsResettingCredentials(true)}
         >
           <Icon
             name="lock"
             size={20}
             color="#ffffff"
-            style={styles.resetPasswordIcon}
+            style={styles.resetCredentialsIcon}
           />
-          <Text style={styles.resetPasswordButtonText}>Reset Password</Text>
+          <Text style={styles.resetCredentialsButtonText}>Reset Credentials</Text>
         </TouchableOpacity>
 
-        {isEditing ? (
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSaveChanges}
-          >
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Icon
-              name="logout"
-              size={20}
-              color="#ffffff"
-              style={styles.logoutIcon}
-            />
-            <Text style={styles.logoutButtonText}>Log Out</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Icon
+            name="logout"
+            size={20}
+            color="#ffffff"
+            style={styles.logoutIcon}
+          />
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <Modal
-        visible={isResetingPassword}
+        visible={isResettingCredentials}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setIsResetingPassword(false)}
+        onRequestClose={() => setIsResettingCredentials(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Reset Password</Text>
-              <TouchableOpacity onPress={() => setIsResetingPassword(false)}>
+              <Text style={styles.modalTitle}>Reset Credentials</Text>
+              <TouchableOpacity onPress={() => setIsResettingCredentials(false)}>
                 <Icon name="close" size={24} color="#001529" />
               </TouchableOpacity>
             </View>
             <TextInput
-              style={styles.modalInput}
-              placeholder="New Password"
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
+              style={getInputStyle()}
+              placeholder="New Username"
+              value={newUsername}
+              onChangeText={handleUsernameChange}
             />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Confirm New Password"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
+            <View style={styles.passwordInputContainer}>
+              <RNTextInput
+                style={[styles.modalInput, styles.passwordInput]}
+                placeholder="New Password"
+                secureTextEntry={!showNewPassword}
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIconContainer}
+                onPress={() => setShowNewPassword(!showNewPassword)}
+              >
+                <Icon name={showNewPassword ? "eye" : "eye-invisible"} size={24} color="#001529" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.passwordInputContainer}>
+              <RNTextInput
+                style={[styles.modalInput, styles.passwordInput]}
+                placeholder="Confirm New Password"
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIconContainer}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Icon name={showConfirmPassword ? "eye" : "eye-invisible"} size={24} color="#001529" />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={styles.modalButton}
-              onPress={handleResetPassword}
+              onPress={handleResetCredentials}
             >
-              <Text style={styles.modalButtonText}>Reset Password</Text>
+              <Text style={styles.modalButtonText}>Update Credentials</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -444,7 +353,6 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#001529",
     padding: 15,
@@ -646,12 +554,21 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
     marginBottom: 15,
-    width: "100%",
+    width: '100%',
     fontSize: 16,
+  },
+  availableInput: {
+    borderColor: 'green',
+  },
+  unavailableInput: {
+    borderColor: 'red',
+  },
+  checkingInput: {
+    borderColor: 'orange',
   },
   modalButton: {
     backgroundColor: "#001529",
@@ -724,6 +641,39 @@ const styles = StyleSheet.create({
   invalidUsername: {
     color: 'red',
     marginTop: 5,
+  },
+  resetCredentialsButton: {
+    flexDirection: "row",
+    backgroundColor: "#001529",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  resetCredentialsIcon: {
+    marginRight: 10,
+  },
+  resetCredentialsButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  eyeIconContainer: {
+    position: 'absolute',
+    right: 10,
+    height: '100%',
+    justifyContent: 'center',
   },
 });
 

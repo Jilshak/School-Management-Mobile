@@ -26,7 +26,6 @@ const LoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const login = useAuthStore((state: any) => state.login);
   const decodeAndSaveToken = useAuthStore((state: any) => state.decodeAndSaveToken);
-  const setProfile = useProfileStore((state: any) => state.setProfile);
   
   const { showToast } = useToast();
   const navigate: any = useNavigation()

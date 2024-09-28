@@ -38,12 +38,12 @@ export const fetchUserProfile = async (): Promise<UserProfile> => {
 export const updateUserProfile = async (id:string, profile: UserProfile): Promise<UserProfile> => {
   try {
     const response = await api.patch(`/user/${id}`, profile);
+    console.log(response)
     return response.data;
   } catch (error) {
     throw error;
   }
 };
-
 
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
   try {
