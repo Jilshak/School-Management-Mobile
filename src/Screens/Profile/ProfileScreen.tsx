@@ -172,9 +172,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.contentContainer}>
@@ -354,6 +356,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#001529",
     padding: 15,
     borderRadius: 10,
@@ -364,10 +367,18 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     height: 60,
   },
+  backButton: {
+    width: 24,
+  },
   headerTitle: {
     color: "#ffffff",
     fontSize: 20,
     fontWeight: "bold",
+    textAlign: "center",
+    flex: 1,
+  },
+  placeholder: {
+    width: 24,
   },
   contentContainer: {
     flex: 1,
