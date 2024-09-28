@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Text, Icon } from "@ant-design/react-native";
 import useAuthStore from "../../store/authStore";
+import useProfileStore from "../../store/profileStore";
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,19 +25,22 @@ const LoginScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const login = useAuthStore((state: any) => state.login);
-  const isAuthenticated = AsyncStorage.getItem("token")
+  const decodeAndSaveToken = useAuthStore((state: any) => state.decodeAndSaveToken);
+  const setProfile = useProfileStore((state: any) => state.setProfile);
+  
   const { showToast } = useToast();
-  const navigate:any = useNavigation()
+  const navigate: any = useNavigation()
 
   const handleLogin = async () => { 
-    if (isLoading) return; // Prevent multiple login attempts
+    if (isLoading) return;
     setIsLoading(true);
     try {
       await login(email, password);   
-      if (await isAuthenticated) { 
+      const token = await AsyncStorage.getItem("token");
+      if (token) { 
+        decodeAndSaveToken(token);
         setEmail("");
         setPassword("");
-        
         navigate.navigate("Home");
         showToast('Login successful', 'success');
       } else {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -14,6 +14,7 @@ import { Text, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import BottomNavBar from "../../Components/BottomNavBar";
 import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
+import useProfileStore from "../../store/profileStore";
 
 type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar" | "test";
 
@@ -24,6 +25,7 @@ type HomeScreenProps = {
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const scrollViewRef = useRef<GestureHandlerScrollView>(null);
+  const profile =  useProfileStore((state: any) => state.profile);
 
   const mainCards: { icon: IconName; text: string; route: string }[] = [
     { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance' },
@@ -61,6 +63,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
+  useEffect(() => {
+    console.log(profile);
+  }, [profile]);
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -68,9 +74,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.header}>
             <View>
               <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.userName}>MUHAMMED AYAAN P P</Text>
+              <Text style={styles.userName}>{profile.firstName} {profile.lastName}</Text>
               <View style={styles.gradeBadge}>
-                <Text style={styles.gradeText}>UKG</Text>
+                <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => role)}</Text>
               </View>
             </View>
             <Image

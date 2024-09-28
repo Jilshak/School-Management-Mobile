@@ -5,6 +5,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import BottomNavBar from '../Components/BottomNavBar';
 import * as ImagePicker from 'expo-image-picker';
 import useAuthStore from '../store/authStore';
+import useProfileStore from '../store/profileStore';
+
 
 type ProfileScreenProps = {
   navigation: StackNavigationProp<any, 'Profile'>;
@@ -27,7 +29,7 @@ interface UserInfo {
   profileImage: string;
 }
 
-type IconName = 'mail' | 'phone' | 'environment' | 'calendar' | 'heart' | 'solution' | 'user' | 'alert' | 'camera' | 'check' | 'edit' | 'logout' | 'lock' | 'close' | 'zoom-out'; // Updated 'solution1' to 'solution'
+type IconName = 'mail' | 'phone' | 'environment' | 'calendar' | 'heart' | 'solution' | 'user' | 'alert' | 'camera' | 'check' | 'edit' | 'logout' | 'lock' | 'close' | 'zoom-out' | 'flag' | 'idcard' | 'number' | 'book'; // Updated 'solution1' to 'solution'
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -52,23 +54,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   });
 
   const logout = useAuthStore((state: any) => state.logout);
+  const profile =  useProfileStore((state: any) => state.profile);
 
-  const renderInfoItem = (icon: IconName, title: string, value: string, key: keyof UserInfo) => (
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  const renderInfoItem = (icon: IconName, title: string, value: string | undefined) => (
     <View style={styles.infoItem}>
       <View style={styles.infoIcon}>
         <Icon name={icon} size={24} color="#001529" />
       </View>
       <View style={styles.infoMainContent}>
         <Text style={styles.infoTitle}>{title}</Text>
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={value}
-            onChangeText={(text) => setUserInfo({ ...userInfo, [key]: text })}
-          />
-        ) : (
-          <Text style={styles.infoValue}>{value}</Text>
-        )}
+        <Text style={styles.infoValue}>{value || 'N/A'}</Text>
       </View>
     </View>
   );
@@ -112,9 +112,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    logout();
     navigation.navigate("Login")
+    logout();
   };
+
+  const isStaff = profile.roles.some((role: string) => ['teacher', 'admin', 'staff'].includes(role.toLowerCase()));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -132,7 +134,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <View style={styles.profileSection}>
           <TouchableOpacity onPress={handleImagePick} style={styles.imageContainer}>
             <Image
-              source={{ uri: userInfo.profileImage }}
+              source={{ uri: 'https://via.placeholder.com/150' }}
               style={styles.profileImage}
             />
             {isEditing && (
@@ -142,48 +144,69 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               </View>
             )}
           </TouchableOpacity>
-          <Text style={styles.profileName}>{userInfo.name}</Text>
-          <Text style={styles.profileGrade}>{userInfo.grade}</Text>
-          <Text style={styles.profileRollNumber}>Roll Number: {userInfo.rollNumber}</Text>
+          <Text style={styles.profileName}>{`${profile.firstName} ${profile.lastName}`}</Text>
+          <Text style={styles.profileGrade}>{profile.roles.join(', ')}</Text>
+          <Text style={styles.profileRollNumber}>Username: {profile.username}</Text>
         </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionHeader}>Personal Information</Text>
-          {renderInfoItem('mail', 'Email', userInfo.email, 'email')}
-          {renderInfoItem('phone', 'Phone', userInfo.phone, 'phone')}
-          {renderInfoItem('environment', 'Address', userInfo.address, 'address')}
-          {renderInfoItem('calendar', 'Date of Birth', userInfo.dateOfBirth, 'dateOfBirth')}
-          {renderInfoItem('heart', 'Blood Group', userInfo.bloodGroup, 'bloodGroup')}
+          {renderInfoItem('mail', 'Email', profile.email)}
+          {renderInfoItem('phone', 'Phone', profile.contactNumber)}
+          {renderInfoItem('environment', 'Address', profile.address)}
+          {renderInfoItem('calendar', 'Date of Birth', formatDate(profile.dateOfBirth))}
+          {renderInfoItem('user', 'Gender', profile.gender)}
+          {renderInfoItem('flag', 'Nationality', profile.nationality)}
         </View>
 
         <View style={styles.infoSection}>
-          <Text style={styles.sectionHeader}>Academic Information</Text>
-          {renderInfoItem('solution', 'Roll Number', userInfo.rollNumber, 'rollNumber')}
-          {renderInfoItem('calendar', 'Admission Date', userInfo.admissionDate, 'admissionDate')}
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionHeader}>Parent/Guardian Information</Text>
-          {renderInfoItem('user', 'Name', userInfo.parentName, 'parentName')}
-          {renderInfoItem('phone', 'Phone', userInfo.parentPhone, 'parentPhone')}
-          {renderInfoItem('alert', 'Emergency Contact', userInfo.emergencyContact, 'emergencyContact')}
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionHeader}>Extracurricular Activities</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={userInfo.extracurricularActivities.join(', ')}
-              onChangeText={(text) => setUserInfo({ ...userInfo, extracurricularActivities: text.split(', ') })}
-              placeholder="Enter activities separated by commas"
-            />
+          <Text style={styles.sectionHeader}>Official Information</Text>
+          {isStaff ? (
+            <>
+              {renderInfoItem('solution', 'Adhaar Number', profile.adhaarNumber)}
+              {renderInfoItem('idcard', 'PAN Card Number', profile.pancardNumber)}
+              {renderInfoItem('calendar', 'Join Date', formatDate(profile.joinDate))}
+            </>
           ) : (
-            userInfo.extracurricularActivities.map((activity, index) => (
-              <Text key={index} style={styles.activityItem}>• {activity}</Text>
-            ))
+            <>
+              {renderInfoItem('number', 'Roll Number', profile.rollNumber)}
+              {renderInfoItem('book', 'Grade', profile.grade)}
+            </>
           )}
         </View>
+
+        <View style={styles.infoSection}>
+          <Text style={styles.sectionHeader}>Emergency Contact</Text>
+          {renderInfoItem('user', 'Name', profile.emergencyContactName)}
+          {renderInfoItem('phone', 'Phone', profile.emergencyContactNumber)}
+        </View>
+
+        {isStaff && (
+          <>
+            <View style={styles.infoSection}>
+              <Text style={styles.sectionHeader}>Qualifications</Text>
+              {profile.qualifications.map((qual: any, index: number) => (
+                <View key={index} style={styles.qualificationItem}>
+                  <Text style={styles.qualificationTitle}>{qual.degree}</Text>
+                  <Text>{qual.fieldOfStudy} - {qual.yearOfPass}</Text>
+                  <Text>{qual.instituteName}</Text>
+                  <Text>Grade: {qual.gradePercentage}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.infoSection}>
+              <Text style={styles.sectionHeader}>Previous Employments</Text>
+              {profile.previousEmployments.map((emp: any, index: number) => (
+                <View key={index} style={styles.employmentItem}>
+                  <Text style={styles.employmentTitle}>{emp.instituteName}</Text>
+                  <Text>{emp.role}</Text>
+                  <Text>{`${formatDate(emp.joinedDate)} - ${formatDate(emp.revealedDate)}`}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         <TouchableOpacity 
           style={styles.resetPasswordButton} 
@@ -471,6 +494,18 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  qualificationItem: {
+    marginBottom: 10,
+  },
+  qualificationTitle: {
+    fontWeight: 'bold',
+  },
+  employmentItem: {
+    marginBottom: 10,
+  },
+  employmentTitle: {
     fontWeight: 'bold',
   },
 });
