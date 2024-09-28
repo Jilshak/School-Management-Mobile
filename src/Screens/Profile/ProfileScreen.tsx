@@ -67,7 +67,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const logout = useAuthStore((state: any) => state.logout);
   const profile = useProfileStore((state: any) => state.profile);
   const [editableProfile, setEditableProfile] = useState({ ...profile });
-  const [usernameAvailability, setUsernameAvailability] = useState<'available' | 'unavailable' | 'checking' | null>(null);
+  const [usernameAvailability, setUsernameAvailability] = useState<'available' | 'unavailable' | 'checking' | 'invalid' | null>(null);
 
 
 
@@ -187,6 +187,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       setUsernameAvailability(null);
       return;
     }
+    if (username.length < 3) {
+      setUsernameAvailability('invalid');
+      return;
+    }
     setUsernameAvailability('checking');
     try {
       const isAvailable = await checkUsernameAvailability(username);
@@ -199,7 +203,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const handleUsernameChange = (text: string) => {
     handleInputChange('username', text);
-    checkUsername(text);
+    if (text.length >= 3) {
+      checkUsername(text);
+    } else {
+      setUsernameAvailability(null);
+    }
   };
 
   const renderUsernameAvailability = () => {
@@ -211,6 +219,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         return <Text style={styles.unavailableUsername}>Username is not available</Text>;
       case 'checking':
         return <Text style={styles.checkingUsername}>Checking username...</Text>;
+      case 'invalid':
+        return <Text style={styles.invalidUsername}>Username must be at least 3 characters long</Text>;
       default:
         return null;
     }
@@ -709,6 +719,10 @@ const styles = StyleSheet.create({
   },
   checkingUsername: {
     color: 'orange',
+    marginTop: 5,
+  },
+  invalidUsername: {
+    color: 'red',
     marginTop: 5,
   },
 });
