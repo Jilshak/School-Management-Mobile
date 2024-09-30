@@ -7,49 +7,57 @@ interface ToastProps {
   type?: 'success' | 'error' | 'info';
   duration?: number;
   onClose: () => void;
+  isVisible: boolean;
 }
 
 const { width } = Dimensions.get('window');
 const TOAST_MARGIN = 16;
 const TOAST_WIDTH = width - (TOAST_MARGIN * 2); 
 
-const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 3000, onClose }) => {
+const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 3000, onClose, isVisible }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-100)).current;
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(translateY, {
-        toValue: 0,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.timing(progress, {
-        toValue: TOAST_WIDTH, // Update to use TOAST_WIDTH instead of width
-        duration: duration,
-        useNativeDriver: false,
-      }),
-    ]).start(() => {
+    if (isVisible) {
       Animated.parallel([
         Animated.timing(opacity, {
-          toValue: 0,
+          toValue: 1,
           duration: 300,
           useNativeDriver: true,
         }),
         Animated.spring(translateY, {
-          toValue: -100,
+          toValue: 0,
           friction: 8,
           useNativeDriver: true,
         }),
-      ]).start(onClose);
-    });
-  }, [opacity, translateY, progress, duration, onClose]);
+        Animated.timing(progress, {
+          toValue: TOAST_WIDTH,
+          duration: duration,
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(translateY, {
+            toValue: -100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]).start(onClose);
+      });
+    } else {
+      // Reset animations when toast is hidden
+      opacity.setValue(0);
+      translateY.setValue(-100);
+      progress.setValue(0);
+    }
+  }, [isVisible, opacity, translateY, progress, duration, onClose]);
 
   const getIconName = () => {
     switch (type) {
@@ -75,7 +83,7 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 3000, 
 
   const color = getToastColor();
 
-  return (
+  return isVisible ? (
     <Animated.View 
       style={[
         styles.container, 
@@ -96,7 +104,7 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 3000, 
         ]} 
       />
     </Animated.View>
-  );
+  ) : null;
 };
 
 const styles = StyleSheet.create({
@@ -107,13 +115,14 @@ const styles = StyleSheet.create({
     right: TOAST_MARGIN,
     width: TOAST_WIDTH,
     backgroundColor: 'white',
-    borderRadius: 8, // Added border radius for rounded corners
+    borderRadius: 8, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
     overflow: 'hidden',
+    zIndex: 9999,
   },
   content: {
     flexDirection: 'row',

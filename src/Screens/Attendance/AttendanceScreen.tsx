@@ -29,7 +29,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
 
   const generateCurrentMonthAttendance = () => {
     const year = parseInt(selectedMonth.split('-')[0]);
-    const month = parseInt(selectedMonth.split('-')[1]) - 1; // JS months are 0-indexed
+    const month = parseInt(selectedMonth.split('-')[1]) - 1;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     const newAttendanceData: { [key: string]: AttendanceRecord } = {};

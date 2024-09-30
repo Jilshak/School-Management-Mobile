@@ -24,6 +24,24 @@ interface UserProfile {
   username: string;
   name: string;
   email: string;
+
+  classroom?: {
+    _id: string;
+    name: string;
+    academicYear: {
+      _id: string;
+      startDate: string;
+      endDate: string;
+    };
+    classTeacherId: string;
+    isActive: boolean;
+    schoolId: string;
+    subjects: string[];
+  };
+  enrollmentNumber?: string;
+  state?: string;
+  tcDocument?: string;
+  tcNumber?: string;
 }
 
 export const fetchUserProfile = async (): Promise<UserProfile> => {
@@ -38,7 +56,6 @@ export const fetchUserProfile = async (): Promise<UserProfile> => {
 export const updateUserProfile = async (id:string, profile: UserProfile): Promise<UserProfile> => {
   try {
     const response = await api.patch(`/user/${id}`, profile);
-    console.log(response)
     return response.data;
   } catch (error) {
     throw error;

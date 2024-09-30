@@ -12,7 +12,6 @@ import {
 import { Text, Icon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import BottomNavBar from "../../Components/BottomNavBar";
-import * as ImagePicker from "expo-image-picker";
 import useAuthStore from "../../store/authStore";
 import useProfileStore from "../../store/profileStore";
 import { formatDate } from "../../utils/DateUtil";
@@ -143,7 +142,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // Force a final check of username availability
     await checkUsername(finalUsername);
 
     if (usernameAvailability !== 'available') {
@@ -169,6 +167,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -188,10 +190,19 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <Text style={styles.profileName}>
             {`${profile?.firstName} ${profile?.lastName}`}
           </Text>
-          <Text style={styles.profileGrade}>{profile?.roles.join(", ")}</Text>
-          <Text style={styles.profileRollNumber}>
-            Username: {profile?.username}
-          </Text>
+          <View style={styles.infoRow}>
+            <View style={styles.roleTagContainer}>
+              {profile?.roles.map((role: string, index: number) => (
+                <View key={index} style={styles.roleTag}>
+                  <Text style={styles.roleTagText}>{capitalizeFirstLetter(role)}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.usernameContainer}>
+              <Icon name="user" size={16} color="#001529" style={styles.usernameIcon} />
+              <Text style={styles.usernameText}>{profile?.username}</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.infoSection}>
@@ -214,8 +225,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </>
           ) : (
             <>
-              {renderInfoItem("number", "Roll Number", profile?.rollNumber)}
-              {renderInfoItem("book", "Grade", profile?.grade)}
+              {renderInfoItem("number", "Roll Number", profile?.enrollmentNumber)}
+              {renderInfoItem("book", "Grade", profile?.classroom?.name)}
             </>
           )}
         </View>
@@ -685,6 +696,49 @@ const styles = StyleSheet.create({
     right: 10,
     height: '100%',
     justifyContent: 'center',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    flexWrap: 'wrap',
+  },
+  roleTagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  roleTag: {
+    backgroundColor: '#001529',
+    borderRadius: 15,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    margin: 2,
+    borderWidth: 1,
+    borderColor: '#ffffff',
+  },
+  roleTagText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  usernameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f2f5',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  usernameIcon: {
+    marginRight: 5,
+  },
+  usernameText: {
+    fontSize: 14,
+    color: '#001529',
+    fontWeight: '500',
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -9,29 +9,78 @@ import {
   TextInput,
   Modal,
   Animated,
+  Button,
 } from "react-native";
 import { Text } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import Icon from "react-native-vector-icons/AntDesign";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  fetchStudentsInClass,
+  saveAttendance,
+} from "../../Services/Attendance/ClassAttendance";
+import { AttendanceStatus, IStudent } from "./Interfaces/AttendanceInterfaces";
+import useAuthStore from "../../store/authStore";
+import Toast from "../../Components/common/Toast";
+import { useToast } from '../../hooks/useToast';
 
 type AddAttendanceScreenProps = {
   navigation: StackNavigationProp<any, "AddAttendance">;
+  route: any;
 };
-
-type AttendanceStatus = "present" | "absent" | "half-day";
-
-interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  attendanceStatus: AttendanceStatus;
-  comment?: string;
-}
 
 const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   navigation,
+  route,
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [studentDetails, setStudentDetails] = useState<any[]>([]);
+  const classId = route.params?.classId || "66f6dcfd7c56fe0bb7ab7a53";
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [isCachedData, setIsCachedData] = useState(false);
+
+  const { isVisible, toastProps, showToast, hideToast } = useToast();
+
+  const handleToast = async (message: string, type: "success" | "error") => {
+    showToast({
+      message: message,
+      type: type,
+      duration: 3000,
+    });
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split("T")[0];
+  };
+
+  const fetchStudents = async () => {
+    const today = formatDate(new Date());
+    const cacheKey = `attendance_${classId}_${today}`;
+    const cachedData = await AsyncStorage.getItem(cacheKey);
+
+    if (cachedData) {
+      const parsedData = JSON.parse(cachedData);
+      setStudentDetails(parsedData);
+      setIsCachedData(true);
+    } else {
+      const students = await fetchStudentsInClass(classId);
+      console.log("Raw students data:", students);
+
+      const formattedStudents = students
+        .filter((student: any) => student && student.studentDetails)
+        .map((student: any) => ({
+          _id: student._id,
+          studentDetails: student.studentDetails,
+          attendanceStatus: "present" as AttendanceStatus,
+          comment: "",
+        }));
+
+      setStudentDetails(formattedStudents);
+      setIsCachedData(false);
+    }
+  };
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -39,30 +88,12 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
       duration: 500,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+    fetchStudents();
+  }, [fadeAnim, classId]);
 
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: "1",
-      name: "John Doe",
-      rollNumber: "2023001",
-      attendanceStatus: "present",
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      rollNumber: "2023002",
-      attendanceStatus: "present",
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      rollNumber: "2023003",
-      attendanceStatus: "present",
-    },
-  ]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>(students);
+  const [filteredStudents, setFilteredStudents] =
+    useState<IStudent[]>(studentDetails);
   const [attendanceSummary, setAttendanceSummary] = useState({
     present: 0,
     absent: 0,
@@ -76,16 +107,18 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
 
   useEffect(() => {
     setFilteredStudents(
-      students.filter(
+      studentDetails.filter(
         (student) =>
-          student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          student.rollNumber.includes(searchQuery)
+          `${student?.studentDetails?.firstName} ${student?.studentDetails?.lastName}`
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          student?.studentDetails?.enrollmentNumber?.includes(searchQuery)
       )
     );
-  }, [searchQuery, students]);
+  }, [searchQuery, studentDetails]);
 
   useEffect(() => {
-    const summary = students.reduce(
+    const summary = studentDetails.reduce(
       (acc, student) => {
         acc[
           student.attendanceStatus === "half-day"
@@ -97,12 +130,12 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
       { present: 0, absent: 0, halfDay: 0 }
     );
     setAttendanceSummary(summary);
-  }, [students]);
+  }, [studentDetails]);
 
   const toggleAttendance = (id: string) => {
-    setStudents(
-      students.map((student) => {
-        if (student.id === id) {
+    setStudentDetails(
+      studentDetails.map((student) => {
+        if (student._id === id) {
           const nextStatus: { [key in AttendanceStatus]: AttendanceStatus } = {
             present: "half-day",
             "half-day": "absent",
@@ -110,7 +143,8 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
           };
           return {
             ...student,
-            attendanceStatus: nextStatus[student.attendanceStatus],
+            attendanceStatus:
+              nextStatus[student.attendanceStatus as AttendanceStatus],
           };
         }
         return student;
@@ -118,9 +152,39 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
     );
   };
 
-  const handleSaveAttendance = () => {
-    console.log("Saving attendance for", new Date().toDateString(), students);
-    navigation.goBack();
+  const handleSaveAttendance = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+
+    const attendanceData = {
+      attendanceDate: new Date().toISOString(),
+      classId: classId,
+      teacherId: "66f6dd407c56fe0bb7ab7a58",
+      studentsAttendance: studentDetails.map((student) => ({
+        studentId: student._id,
+        status:
+          student.attendanceStatus === "half-day"
+            ? "halfday"
+            : student.attendanceStatus,
+        remark: student.comment || "",
+      })),
+    };
+
+    try {
+      await saveAttendance(attendanceData);
+
+      const today = formatDate(new Date());
+      
+      const cacheKey = `attendance_${classId}_${today}`;
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(studentDetails));
+      setIsCachedData(false);
+      await handleToast("Attendance saved successfully", "success");
+    } catch (error) {
+      await handleToast("Error saving attendance", "error");
+      setSaveError("Failed to save attendance. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getAttendanceIcon = (status: AttendanceStatus) => {
@@ -135,7 +199,7 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   };
 
   const openCommentModal = (studentId: string) => {
-    const student = students.find((s) => s.id === studentId);
+    const student = studentDetails.find((s) => s._id === studentId);
     setSelectedStudentId(studentId);
     setComment(student?.comment || "");
     setCommentModalVisible(true);
@@ -143,9 +207,9 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
 
   const saveComment = () => {
     if (selectedStudentId) {
-      setStudents(
-        students.map((student) =>
-          student.id === selectedStudentId ? { ...student, comment } : student
+      setStudentDetails(
+        studentDetails.map((student) =>
+          student._id === selectedStudentId ? { ...student, comment } : student
         )
       );
     }
@@ -153,12 +217,15 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   };
 
   const bulkMarkAttendance = (status: AttendanceStatus) => {
-    setStudents(
-      students.map((student) => ({ ...student, attendanceStatus: status }))
+    setStudentDetails(
+      studentDetails.map((student) => ({
+        ...student,
+        attendanceStatus: status as AttendanceStatus,
+      }))
     );
   };
 
-  const renderStudentItem = ({ item }: { item: Student }) => {
+  const renderStudentItem = ({ item }: { item: IStudent }) => {
     const icon = getAttendanceIcon(item.attendanceStatus);
     return (
       <TouchableOpacity
@@ -167,13 +234,15 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
           styles[
             `${item.attendanceStatus}Student` as keyof typeof styles
           ] as any,
-        ]} // Type assertion added
-        onPress={() => toggleAttendance(item.id)}
+        ]}
+        onPress={() => toggleAttendance(item._id)}
       >
         <View style={styles.studentInfo}>
-          <Text style={styles.studentName}>{item.name}</Text>
+          <Text style={styles.studentName}>
+            {`${item.studentDetails?.firstName} ${item.studentDetails?.lastName}`}
+          </Text>
           <Text style={styles.studentRollNumber}>
-            Roll No: {item.rollNumber}
+            Enrollment No: {item.studentDetails?.enrollmentNumber}
           </Text>
           {item.comment && (
             <Text style={styles.studentComment}>{item.comment}</Text>
@@ -181,7 +250,7 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
         </View>
         <View style={styles.studentActions}>
           <TouchableOpacity
-            onPress={() => openCommentModal(item.id)}
+            onPress={() => openCommentModal(item._id)}
             style={styles.commentButton}
           >
             <Icon name="edit" size={20} color="#001529" />
@@ -203,7 +272,26 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
           <View style={{ width: 24 }} />
         </View>
 
+        <View style={styles.searchContainer}>
+          <Icon name="search1" size={20} color="#001529" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name or roll number"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
         <ScrollView style={styles.contentContainer}>
+          {isCachedData && (
+            <View style={styles.cachedDataWarning}>
+              <Icon name="infocirlce" size={20} color="#faad14" />
+              <Text style={styles.cachedDataWarningText}>
+                Showing cached attendance data. Save to update.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryTitle}>Attendance Summary</Text>
             <View style={styles.summaryContent}>
@@ -264,32 +352,30 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.searchContainer}>
-            <Icon name="search1" size={20} color="#001529" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search by name or roll number"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
           <View style={styles.studentListContainer}>
             <Text style={styles.sectionTitle}>Class Attendance</Text>
             <FlatList
               data={filteredStudents}
               renderItem={renderStudentItem}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item._id}
               scrollEnabled={false}
             />
           </View>
 
           <TouchableOpacity
             onPress={handleSaveAttendance}
-            style={styles.saveButton}
+            style={[styles.saveButton, isSaving && styles.disabledButton]}
+            disabled={isSaving}
           >
-            <Text style={styles.saveButtonText}>Save Attendance</Text>
+            <Text style={styles.saveButtonText}>
+              {isSaving
+                ? "Saving..."
+                : isCachedData
+                ? "Update Attendance"
+                : "Save Attendance"}
+            </Text>
           </TouchableOpacity>
+          {saveError && <Text style={styles.errorText}>{saveError}</Text>}
         </ScrollView>
 
         <Modal
@@ -326,6 +412,14 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
             </View>
           </View>
         </Modal>
+
+        <Toast
+          isVisible={isVisible}
+          message={toastProps.message}
+          type={toastProps.type}
+          duration={toastProps.duration}
+          onClose={hideToast}
+        />
       </SafeAreaView>
     </Animated.View>
   );
@@ -357,7 +451,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginTop: 80,
+    marginTop: 140, // Increased to accommodate the search bar
     padding: 20,
   },
   studentListContainer: {
@@ -410,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 40, // Increased from 20 to 40
   },
   saveButtonText: {
     color: "#ffffff",
@@ -469,6 +563,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 20,
+    position: "absolute",
+    top: 90, // Positioned below the header
+    left: 20,
+    right: 20,
+    zIndex: 1000,
   },
   searchInput: {
     flex: 1,
@@ -555,6 +654,27 @@ const styles = StyleSheet.create({
   bulkActionButtonText: {
     color: "#ffffff",
     fontWeight: "bold",
+  },
+  disabledButton: {
+    backgroundColor: "#ccc",
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  cachedDataWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fffbe6",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 20,
+  },
+  cachedDataWarningText: {
+    marginLeft: 10,
+    color: "#faad14",
+    fontSize: 14,
   },
 });
 

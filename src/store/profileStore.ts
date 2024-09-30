@@ -22,19 +22,36 @@ export interface ProfileState {
   schoolId: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
-  qualifications: Array<{
+  qualifications?: Array<{
     degree: string;
     fieldOfStudy: string;
     instituteName: string;
     yearOfPass: number;
     gradePercentage: string;
   }>;
-  previousEmployments: Array<{
+  previousEmployments?: Array<{
     instituteName: string;
     role: string;
     joinedDate: string;
     revealedDate: string;
   }>;
+  classroom?: {
+    _id: string;
+    name: string;
+    academicYear: {
+      _id: string;
+      startDate: string;
+      endDate: string;
+    };
+    classTeacherId: string;
+    isActive: boolean;
+    schoolId: string;
+    subjects: string[];
+  };
+  enrollmentNumber?: string;
+  state?: string;
+  tcDocument?: string;
+  tcNumber?: string;
 }
 
 interface ProfileStore {

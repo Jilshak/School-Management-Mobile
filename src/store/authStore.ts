@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { loginUser } from "../Services/Login/LoginServices";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { jwtDecode } from "jwt-decode";
 import useProfileStore, { ProfileState } from "./profileStore";
 import { fetchUserProfile } from "../Services/Profile/ProfileServices";
 
@@ -29,9 +28,7 @@ const useAuthStore = create<AuthState>((set) => ({
   },
   decodeAndSaveToken: async (token: string) => {
     try {
-      const decodedToken: any = jwtDecode(token);
       const profile = await fetchUserProfile();
-
       const profileData: ProfileState = {
         _id: profile._id,
         userId: profile.userId,
@@ -54,6 +51,11 @@ const useAuthStore = create<AuthState>((set) => ({
         emergencyContactNumber: profile.emergencyContactNumber,
         qualifications: profile.qualifications,
         previousEmployments: profile.previousEmployments,
+        classroom: profile?.classroom,
+        enrollmentNumber: profile?.enrollmentNumber,
+        state: profile?.state,
+        tcDocument: profile?.tcDocument,
+        tcNumber: profile?.tcNumber,
       };
 
       useProfileStore.getState().setProfile(profileData);
