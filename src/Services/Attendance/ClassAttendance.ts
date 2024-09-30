@@ -32,8 +32,7 @@ export const markAttendance = async (classId: string, date: string, attendanceRe
 
 export const fetchAttendanceForClass = async (classId: string): Promise<AttendanceRecord[]> => {
   try {
-    const response = await api.get(`/classroom/66f6dcfd7c56fe0bb7ab7a53`);
-    console.log(response.data)
+    const response = await api.get(`/classroom/${classId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching attendance for class:", error);
@@ -44,7 +43,6 @@ export const fetchAttendanceForClass = async (classId: string): Promise<Attendan
 export const saveAttendance = async (attendanceData: any) => {
   try {
     const response = await api.post("/attendance", attendanceData);
-    console.log(response.data)
     return response.data;
   } catch (error) {
     console.error("Error saving attendance:", error);

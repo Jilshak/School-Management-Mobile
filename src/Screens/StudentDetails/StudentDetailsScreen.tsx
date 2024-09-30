@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -7,16 +7,21 @@ import {
   ScrollView,
   Animated,
   Dimensions,
-} from 'react-native';
-import { Text, Progress, Tag } from '@ant-design/react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/AntDesign';
-import { LineChart } from 'react-native-chart-kit';
+} from "react-native";
+import { Text, Progress, Tag } from "@ant-design/react-native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RouteProp } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/AntDesign";
+import { LineChart } from "react-native-chart-kit";
+import { getUserDetails, User } from "../../Services/User/UserService";
+import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 
 type StudentDetailsScreenProps = {
-  navigation: StackNavigationProp<any, 'StudentDetails'>;
-  route: RouteProp<{ StudentDetails: { studentId: string; student: Student } }, 'StudentDetails'>;
+  navigation: StackNavigationProp<any, "StudentDetails">;
+  route: RouteProp<
+    { StudentDetails: { studentId: string; student: Student } },
+    "StudentDetails"
+  >;
 };
 
 interface Student {
@@ -25,7 +30,6 @@ interface Student {
   rollNumber: string;
   performance: number;
   attendance: number;
-  // Add more fields as needed
   dateOfBirth: string;
   gender: string;
   contactNumber: string;
@@ -33,38 +37,67 @@ interface Student {
   address: string;
   parentName: string;
   parentContact: string;
+  academicYear: string;
+  class: string;
+  section: string;
+  classTeacher: string;
+  admissionDate: string;
+  bloodGroup?: string;
 }
 
-const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation, route }) => {
-  const { student } = route.params;
+const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
+  navigation,
+  route,
+}) => {
+  const { studentId } = route.params;
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [userDetails, setUserDetails] = useState<User | any>(null);
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const response = await getUserDetails(studentId);
+        console.log(response.parentsDetails, "this is the response");
+        setUserDetails(response);
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+      }
+    };
+    fetchUserDetails();
+  }, []);
 
   const renderPerformanceChart = () => (
     <View style={styles.chartContainer}>
       <Text style={styles.sectionTitle}>Performance Trend</Text>
       <LineChart
         data={{
-          labels: ['Term 1', 'Term 2', 'Term 3'],
-          datasets: [{
-            data: [student.performance - 5, student.performance, student.performance + 2]
-          }]
+          labels: ["Term 1", "Term 2", "Term 3"],
+          datasets: [
+            {
+              data: [
+                userDetails?.performance ?? 5 - 5,
+                userDetails?.performance ?? 0,
+                userDetails?.performance ?? 0 + 2,
+              ],
+            },
+          ],
         }}
-        width={Dimensions.get('window').width - 40}
+        width={Dimensions.get("window").width - 40}
         height={220}
         chartConfig={{
-          backgroundColor: '#ffffff',
-          backgroundGradientFrom: '#ffffff',
-          backgroundGradientTo: '#ffffff',
+          backgroundColor: "#ffffff",
+          backgroundGradientFrom: "#ffffff",
+          backgroundGradientTo: "#ffffff",
           decimalPlaces: 0,
           color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
           style: {
-            borderRadius: 16
-          }
+            borderRadius: 16,
+          },
         }}
         bezier
         style={{
           marginVertical: 8,
-          borderRadius: 16
+          borderRadius: 16,
         }}
       />
     </View>
@@ -73,14 +106,22 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation,
   const renderSubjectPerformance = () => (
     <View style={styles.subjectsContainer}>
       <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
-      {['Mathematics', 'Science', 'English', 'Social Studies', 'Physical Education'].map((subject, index) => (
+      {[
+        "Mathematics",
+        "Science",
+        "English",
+        "Social Studies",
+        "Physical Education",
+      ].map((subject, index) => (
         <View key={index} style={styles.subjectItem}>
           <View style={styles.subjectInfo}>
             <Text style={styles.subjectName}>{subject}</Text>
             <Text style={styles.subjectGrade}>A</Text>
           </View>
           <View style={styles.percentageBar}>
-            <View style={[styles.percentageFill, { width: `${85 + index * 2}%` }]} />
+            <View
+              style={[styles.percentageFill, { width: `${85 + index * 2}%` }]}
+            />
           </View>
           <Text style={styles.percentageText}>{85 + index * 2}%</Text>
         </View>
@@ -90,7 +131,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation,
 
   const renderDetailItem = (label: string, value: string | number) => (
     <View style={styles.detailItem}>
-      <Text style={styles.detailLabel}>{label}:</Text>
+      <Text style={styles.detailLabel}>{label}: </Text>
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
@@ -99,8 +140,16 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation,
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Extra-Curricular Activities</Text>
       <View style={styles.activitiesContainer}>
-        {['Football Team', 'Debate Club', 'Science Olympiad', 'Chess Club', 'Art Society'].map((activity, index) => (
-          <Tag key={index} style={styles.activityTag}>{activity}</Tag>
+        {[
+          "Football Team",
+          "Debate Club",
+          "Science Olympiad",
+          "Chess Club",
+          "Art Society",
+        ].map((activity, index) => (
+          <Tag key={index} style={styles.activityTag}>
+            {activity}
+          </Tag>
         ))}
       </View>
     </View>
@@ -129,30 +178,44 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation,
             <Icon name="user" size={30} color="#ffffff" />
           </View>
           <View style={styles.studentDetails}>
-            <Text style={styles.studentName}>{student.name}</Text>
-            <Text style={styles.studentClass}>Roll No: {student.rollNumber}</Text>
-            <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
+            <Text style={styles.studentName}>
+              {userDetails?.firstName} {userDetails?.lastName}
+            </Text>
+            <Text style={styles.studentClass}>
+              Roll No: {userDetails?.enrollmentNumber}
+            </Text>
+            <Text style={styles.academicYear}>
+              Academic Year:{" "}
+              {formatDateToYear(
+                userDetails?.classroom?.academicYear?.startDate
+              )}
+              -{formatDateToYear(userDetails?.classroom?.academicYear?.endDate)}
+            </Text>
           </View>
         </View>
 
         <View style={styles.summaryContainer}>
-          <View style={[styles.summaryItem, { alignItems: 'center' }]}>
+          <View style={[styles.summaryItem, { alignItems: "center" }]}>
             <Icon name="linechart" size={20} color="#001529" />
             <Text style={styles.summaryTitle}>Performance</Text>
-            <Text style={styles.summaryValue}>{student.performance}%</Text>
+            <Text style={styles.summaryValue}>
+              {userDetails?.performance ?? 0}%
+            </Text>
           </View>
-          <View style={[styles.summaryItem, { alignItems: 'center' }]}>
+          <View style={[styles.summaryItem, { alignItems: "center" }]}>
             <Icon name="calendar" size={20} color="#001529" />
             <Text style={styles.summaryTitle}>Attendance</Text>
-            <Text style={styles.summaryValue}>{student.attendance}%</Text>
+            <Text style={styles.summaryValue}>
+              {userDetails?.attendance ?? 0}%
+            </Text>
           </View>
         </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Contact Information</Text>
-          {renderDetailItem('Phone', '+1 234 567 8900')}
-          {renderDetailItem('Email', 'student@example.com')}
-          {renderDetailItem('Address', '123 School St, Cityville, State 12345')}
+          {renderDetailItem("Phone", userDetails?.contactNumber ?? "N/A")}
+          {renderDetailItem("Email", userDetails?.email ?? "N/A")}
+          {renderDetailItem("Address", userDetails?.address ?? "N/A")}
         </View>
 
         {renderPerformanceChart()}
@@ -161,40 +224,64 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation,
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          {renderDetailItem('Date of Birth', '15 September 2005')}
-          {renderDetailItem('Blood Group', 'O+')}
+          {renderDetailItem(
+            "Date of Birth",
+            formatDate(userDetails?.dateOfBirth || "") ?? "N/A"
+          )}
+          {renderDetailItem("Blood Group", userDetails?.bloodGroup ?? "N/A")}
         </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Parent/Guardian Information</Text>
-          {renderDetailItem('Father\'s Name', 'John Doe')}
-          {renderDetailItem('Father\'s Occupation', 'Engineer')}
-          {renderDetailItem('Father\'s Contact', '+1 234 567 8901')}
-          {renderDetailItem('Mother\'s Name', 'Jane Doe')}
-          {renderDetailItem('Mother\'s Occupation', 'Doctor')}
-          {renderDetailItem('Mother\'s Contact', '+1 234 567 8902')}
+          {renderDetailItem(
+            "Father's Name",
+            userDetails?.parentsDetails?.guardianName ?? "N/A"
+          )}
+          {renderDetailItem(
+            "Father's Contact",
+            userDetails?.parentsDetails?.guardianContactNumber ?? "N/A"
+          )}
+          {renderDetailItem(
+            "Emergency Contact Name",
+            userDetails?.emergencyContactName ?? "N/A"
+          )}
+          {renderDetailItem(
+            "Emergency Contact Number",
+            userDetails?.emergencyContactNumber ?? "N/A"
+          )}
         </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Academic Information</Text>
-          {renderDetailItem('Class', 'X-A')}
-          {renderDetailItem('Section', 'A')}
-          {renderDetailItem('Class Teacher', 'Mr. Smith')}
-          {renderDetailItem('Admission Date', '1 June 2020')}
-          {renderDetailItem('Previous School', 'ABC School')}
+          {renderDetailItem("Class", userDetails?.classroom?.name ?? "N/A")}
+          {renderDetailItem(
+            "Class Teacher",
+            userDetails?.classroom?.classTeacher ?? "N/A"
+          )}
+          {renderDetailItem(
+            "Admission Date",
+            formatDate(userDetails?.joinDate) ?? "N/A"
+          )}
         </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Achievements</Text>
-          <Text style={styles.achievementItem}>• First place in Inter-school Science Fair 2023</Text>
-          <Text style={styles.achievementItem}>• Best Debater Award in Regional Debate Competition</Text>
-          <Text style={styles.achievementItem}>• Captain of the school Football Team</Text>
+          {/* <Text style={styles.achievementItem}>
+            • First place in Inter-school Science Fair 2023
+          </Text>
+          <Text style={styles.achievementItem}>
+            • Best Debater Award in Regional Debate Competition
+          </Text>
+          <Text style={styles.achievementItem}>
+            • Captain of the school Football Team
+          </Text> */}
+          <Text style={styles.achievementItem}>N/A</Text>
         </View>
 
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, styles.remarksContainer]}>
           <Text style={styles.sectionTitle}>Remarks</Text>
           <Text style={styles.remarksText}>
-            {student.name} is a diligent and enthusiastic student who consistently demonstrates a strong work ethic and a passion for learning. Their active participation in both academic and extra-curricular activities is commendable.
+           N/A
           </Text>
         </View>
       </ScrollView>
@@ -205,16 +292,16 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({ navigation,
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: "#f0f2f5",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#001529',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#001529",
     padding: 15,
     borderRadius: 10,
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     left: 20,
     right: 20,
@@ -222,9 +309,9 @@ const styles = StyleSheet.create({
     height: 60,
   },
   headerTitle: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   contentContainer: {
     flex: 1,
@@ -232,20 +319,20 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   studentInfoCard: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   studentAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#001529',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#001529",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 15,
   },
   studentDetails: {
@@ -253,50 +340,50 @@ const styles = StyleSheet.create({
   },
   studentName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#001529',
+    fontWeight: "bold",
+    color: "#001529",
   },
   studentClass: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginTop: 5,
   },
   academicYear: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginTop: 5,
   },
   summaryContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
   },
   summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   summaryTitle: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginLeft: 5,
   },
   summaryValue: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#001529',
+    fontWeight: "bold",
+    color: "#001529",
     marginLeft: 5,
   },
   chartContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
   },
   subjectsContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
@@ -305,37 +392,37 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   subjectInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 5,
   },
   subjectName: {
     fontSize: 16,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
   },
   subjectGrade: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#001529',
+    fontWeight: "bold",
+    color: "#001529",
   },
   percentageBar: {
     height: 10,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     borderRadius: 5,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   percentageFill: {
-    height: '100%',
-    backgroundColor: '#001529',
+    height: "100%",
+    backgroundColor: "#001529",
   },
   percentageText: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginTop: 5,
-    textAlign: 'right',
+    textAlign: "right",
   },
   detailsContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
@@ -343,28 +430,28 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#001529',
+    fontWeight: "bold",
+    color: "#001529",
     marginTop: 20,
     marginBottom: 10,
   },
   detailItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
   detailLabel: {
     fontSize: 16,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
   },
   detailValue: {
     fontSize: 16,
-    color: '#001529',
-    fontWeight: '500',
+    color: "#001529",
+    fontWeight: "500",
   },
   actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 20,
   },
   actionButton: {
@@ -372,14 +459,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   sectionContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
   },
+  remarksContainer: {
+    marginBottom: 40, // Increased bottom margin for the entire remarks section
+  },
   activitiesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   activityTag: {
     marginRight: 8,
@@ -387,12 +477,12 @@ const styles = StyleSheet.create({
   },
   achievementItem: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginBottom: 5,
   },
   remarksText: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     lineHeight: 20,
   },
 });

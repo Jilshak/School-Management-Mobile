@@ -9,96 +9,101 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
-import { Text } from '@ant-design/react-native';
+import { Text, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/AntDesign';
+import { fetchClassroomById } from '../../Services/Classroom/ClassroomService';
+import { logJSON } from '../../utils/logger';
+import { ClassroomStudent } from '../../Services/Classroom/Interfaces/IClassroomService';
 
 type StudentListScreenProps = {
   navigation: StackNavigationProp<any, 'StudentList'>;
   route: RouteProp<{ StudentList: { classId: string } }, 'StudentList'>;
 };
 
-interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  performance: number;
-  attendance: number;
-}
-
 const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route }) => {
   const { classId } = route.params;
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<ClassroomStudent[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [filterPerformance, setFilterPerformance] = useState<string | null>(null);
-  const [filterAttendance, setFilterAttendance] = useState<string | null>(null);
+  const [filterOptions, setFilterOptions] = useState({
+    gender: '',
+    performanceRange: '',
+  });
 
   useEffect(() => {
     const fetchStudents = async () => {
-      const mockStudents: Student[] = [
-        { id: '1', name: 'Alice Johnson', rollNumber: '001', performance: 85, attendance: 95 },
-        { id: '2', name: 'Bob Smith', rollNumber: '002', performance: 78, attendance: 88 },
-        { id: '3', name: 'Charlie Brown', rollNumber: '003', performance: 92, attendance: 98 },
-        { id: '4', name: 'Diana Prince', rollNumber: '004', performance: 65, attendance: 75 },
-        { id: '5', name: 'Ethan Hunt', rollNumber: '005', performance: 88, attendance: 92 },
-      ];
-      setStudents(mockStudents);
+      const classroom = await fetchClassroomById(classId);
+      console.log(classroom)
+      setStudents(Object.values(classroom));
     };
 
     fetchStudents();
   }, [classId]);
 
-  const getPerformanceRange = (performance: number): string => {
-    if (performance < 60) return 'Below 60%';
-    if (performance < 80) return '60% - 79%';
-    return '80% and above';
+  const filteredStudents = students?.filter((student) => {
+    if (!student.studentDetails) return false;
+
+    const nameMatch =
+      student.studentDetails.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.studentDetails.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.studentDetails.enrollmentNumber.includes(searchQuery);
+
+    const genderMatch =
+      filterOptions.gender === '' || student.studentDetails.gender === filterOptions.gender;
+
+    const performance = student.studentDetails.performance || 0;
+    const performanceMatch =
+      filterOptions.performanceRange === '' ||
+      (filterOptions.performanceRange === 'high' && performance >= 80) ||
+      (filterOptions.performanceRange === 'medium' && performance >= 50 && performance < 80) ||
+      (filterOptions.performanceRange === 'low' && performance < 50);
+
+    return nameMatch && genderMatch && performanceMatch;
+  });
+
+  const applyFilters = () => {
+    setFilterModalVisible(false);
+    // The filteredStudents will automatically update based on the new filterOptions
   };
-
-  const getAttendanceRange = (attendance: number): string => {
-    if (attendance < 75) return 'Below 75%';
-    if (attendance < 90) return '75% - 89%';
-    return '90% and above';
-  };
-
-  const filteredStudents = students.filter(
-    (student) =>
-      (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNumber.includes(searchQuery)) &&
-      (filterPerformance === null || getPerformanceRange(student.performance) === filterPerformance) &&
-      (filterAttendance === null || getAttendanceRange(student.attendance) === filterAttendance)
-  );
-
-  const performanceRanges = ['Below 60%', '60% - 79%', '80% and above'];
-  const attendanceRanges = ['Below 75%', '75% - 89%', '90% and above'];
 
   const resetFilters = () => {
-    setFilterPerformance(null);
-    setFilterAttendance(null);
+    setFilterOptions({
+      gender: '',
+      performanceRange: '',
+    });
+    setFilterModalVisible(false);
   };
 
-  const renderStudentItem = ({ item }: { item: Student }) => (
-    <TouchableOpacity
-      style={styles.studentItem}
-      onPress={() => navigation.navigate('StudentDetails', { studentId: item.id, student: item })}
-    >
-      <View>
-        <Text style={styles.studentName}>{item.name}</Text>
-        <Text style={styles.studentRollNumber}>Roll No: {item.rollNumber}</Text>
-      </View>
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Icon name="barchart" size={16} color="#001529" />
-          <Text style={styles.statText}>{item.performance}%</Text>
+  const renderStudentItem = ({ item }: { item: ClassroomStudent }) => {
+    if (!item.studentDetails) return null;
+    
+    const performance = item.studentDetails.performance || 0;
+    const attendance = item.studentDetails.attendance || 0;
+    
+    return (
+      <TouchableOpacity
+        style={styles.studentItem}
+        onPress={() => navigation.navigate('StudentDetails', { studentId: item._id })}
+      >
+        <View>
+          <Text style={styles.studentName}>{`${item.studentDetails.firstName} ${item.studentDetails.lastName}`}</Text>
+          <Text style={styles.studentRollNumber}>Roll No: {item.studentDetails.enrollmentNumber}</Text>
         </View>
-        <View style={styles.statItem}>
-          <Icon name="calendar" size={16} color="#001529" />
-          <Text style={styles.statText}>{item.attendance}%</Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Icon name="star" size={16} color="#000000" />
+            <Text style={styles.statText}>{performance}%</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Icon name="calendar" size={16} color="#000000" />
+            <Text style={styles.statText}>{attendance}%</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,86 +115,94 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.contentContainer}>
-        <View style={styles.searchContainer}>
-          <Icon name="search1" size={20} color="#001529" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or roll number"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterButton}>
-            <Icon name="filter" size={24} color="#001529" />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.searchContainer}>
+        <Icon name="search1" size={20} color="#001529" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name or roll number"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterButton}>
+          <Icon name="filter" size={24} color="#001529" />
+        </TouchableOpacity>
+      </View>
 
+      <ScrollView style={styles.contentContainer}>
         <View style={styles.studentListContainer}>
           <Text style={styles.sectionTitle}>Students</Text>
           <FlatList
             data={filteredStudents}
             renderItem={renderStudentItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item._id}
             scrollEnabled={false}
           />
         </View>
       </ScrollView>
 
       <Modal
+        visible={filterModalVisible}
         animationType="slide"
         transparent={true}
-        visible={filterModalVisible}
         onRequestClose={() => setFilterModalVisible(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Filter Students</Text>
-            
-            <Text style={styles.filterLabel}>Performance Range:</Text>
+
+            <Text style={styles.filterLabel}>Gender</Text>
             <View style={styles.filterOptions}>
-              <TouchableOpacity
-                style={[styles.filterOption, filterPerformance === null && styles.filterOptionActive]}
-                onPress={() => setFilterPerformance(null)}
-              >
-                <Text style={[styles.filterOptionText, filterPerformance === null && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {performanceRanges.map(range => (
+              {['Male', 'Female', 'Other'].map((gender) => (
                 <TouchableOpacity
-                  key={range}
-                  style={[styles.filterOption, filterPerformance === range && styles.filterOptionActive]}
-                  onPress={() => setFilterPerformance(range)}
+                  key={gender}
+                  style={[
+                    styles.filterOption,
+                    filterOptions.gender === gender && styles.filterOptionActive,
+                  ]}
+                  onPress={() => setFilterOptions({ ...filterOptions, gender })}
                 >
-                  <Text style={[styles.filterOptionText, filterPerformance === range && styles.filterOptionTextActive]}>{range}</Text>
+                  <Text
+                    style={[
+                      styles.filterOptionText,
+                      filterOptions.gender === gender && styles.filterOptionTextActive,
+                    ]}
+                  >
+                    {gender}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.filterLabel}>Attendance Range:</Text>
+            <Text style={styles.filterLabel}>Performance</Text>
             <View style={styles.filterOptions}>
-              <TouchableOpacity
-                style={[styles.filterOption, filterAttendance === null && styles.filterOptionActive]}
-                onPress={() => setFilterAttendance(null)}
-              >
-                <Text style={[styles.filterOptionText, filterAttendance === null && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {attendanceRanges.map(range => (
+              {['High', 'Medium', 'Low'].map((range) => (
                 <TouchableOpacity
                   key={range}
-                  style={[styles.filterOption, filterAttendance === range && styles.filterOptionActive]}
-                  onPress={() => setFilterAttendance(range)}
+                  style={[
+                    styles.filterOption,
+                    filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionActive,
+                  ]}
+                  onPress={() => setFilterOptions({ ...filterOptions, performanceRange: range.toLowerCase() })}
                 >
-                  <Text style={[styles.filterOptionText, filterAttendance === range && styles.filterOptionTextActive]}>{range}</Text>
+                  <Text
+                    style={[
+                      styles.filterOptionText,
+                      filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionTextActive,
+                    ]}
+                  >
+                    {range}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={resetFilters}>
-                <Text style={styles.modalButtonText}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={() => setFilterModalVisible(false)}>
-                <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
-              </TouchableOpacity>
+              <Button onPress={resetFilters} style={styles.modalButton}>
+                Reset
+              </Button>
+              <Button onPress={applyFilters} style={[styles.modalButton, styles.applyButton]} type="primary">
+                Apply
+              </Button>
             </View>
           </View>
         </View>
@@ -222,11 +235,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  contentContainer: {
-    flex: 1,
-    marginTop: 80,
-    padding: 20,
-  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -234,11 +242,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 20,
+    position: 'absolute',
+    top: 90,
+    left: 20,
+    right: 20,
+    zIndex: 999,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
+  },
+  contentContainer: {
+    flex: 1,
+    marginTop: 150, // Adjusted to accommodate header and search bar
+    padding: 20,
   },
   studentListContainer: {
     backgroundColor: '#ffffff',
@@ -270,21 +288,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4a4a4a',
   },
-  performanceContainer: {
-    backgroundColor: '#f0f2f5',
-    borderRadius: 15,
-    padding: 8,
-  },
-  performanceText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#001529',
-  },
-  filterButton: {
-    padding: 5,
-  },
   statsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
   },
   statItem: {
     flexDirection: 'row',
@@ -295,6 +301,9 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14,
     color: '#4a4a4a',
+  },
+  filterButton: {
+    padding: 5,
   },
   modalContainer: {
     flex: 1,

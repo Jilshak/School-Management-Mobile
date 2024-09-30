@@ -6,3 +6,8 @@ export const formatDate = (dateString: string) => {
     day: "numeric",
   });
 };
+
+export const formatDateToYear = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.getFullYear().toString();
+};

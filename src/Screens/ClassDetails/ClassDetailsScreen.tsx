@@ -8,10 +8,13 @@ import {
   FlatList,
   TextInput,
   Modal,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Text } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/AntDesign';
+import { fetchAllClassrooms } from '../../Services/Classroom/ClassroomService';
 
 type ClassDetailsScreenProps = {
   navigation: StackNavigationProp<any, 'ClassDetails'>;
@@ -26,17 +29,58 @@ interface ClassInfo {
 }
 
 const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) => {
-  const [classes, setClasses] = useState<ClassInfo[]>([
-    { id: '1', name: 'Class 1A', teacher: 'John Doe', studentCount: 30, averagePerformance: 85 },
-    { id: '2', name: 'Class 2B', teacher: 'Jane Smith', studentCount: 28, averagePerformance: 78 },
-    { id: '3', name: 'Class 3C', teacher: 'Mike Johnson', studentCount: 32, averagePerformance: 92 },
-    // Add more sample data as needed
-  ]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredClasses, setFilteredClasses] = useState<ClassInfo[]>(classes);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterTeacher, setFilterTeacher] = useState<string | null>(null);
   const [filterPerformance, setFilterPerformance] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadClassrooms();
+  }, []);
+
+  const loadClassrooms = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const classrooms = await fetchAllClassrooms();
+      
+      if (!classrooms.classrooms || !Array.isArray(classrooms.classrooms)) {
+        throw new Error('Invalid response from server');
+      }
+
+      const formattedClasses: ClassInfo[] = classrooms.classrooms.map(classroom => ({
+        id: classroom._id,
+        name: classroom.name,
+        teacher: classroom.classTeacherDetails.name,
+        studentCount: classroom.studentCount - 1,
+        averagePerformance: 0,
+      }));
+      setClasses(formattedClasses);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load classrooms. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    loadClassrooms();
+  };
+
+  const showErrorAlert = () => {
+    Alert.alert(
+      "Error",
+      error || "An unexpected error occurred.",
+      [
+        { text: "OK", onPress: () => console.log("OK Pressed") },
+        { text: "Retry", onPress: handleRetry }
+      ]
+    );
+  };
 
   useEffect(() => {
     setFilteredClasses(
@@ -84,6 +128,27 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#001529" />
+        <Text style={styles.loadingText}>Loading classes...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Icon name="exclamationcircleo" size={50} color="#FF4D4F" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -91,7 +156,9 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
           <Icon name="arrowleft" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Class Details</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={showErrorAlert}>
+          <Icon name="infocirlceo" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.contentContainer}>
@@ -110,12 +177,16 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
 
         <View style={styles.classListContainer}>
           <Text style={styles.sectionTitle}>Classes</Text>
-          <FlatList
-            data={filteredClasses}
-            renderItem={renderClassCard}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
+          {classes.length > 0 ? (
+            <FlatList
+              data={filteredClasses}
+              renderItem={renderClassCard}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+            />
+          ) : (
+            <Text style={styles.noClassesText}>No classes found.</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -336,6 +407,39 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: 'white',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f2f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#001529',
+  },
+  errorText: {
+    color: '#FF4D4F',
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 16,
+  },
+  retryButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#001529',
+    borderRadius: 5,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+  },
+  noClassesText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#4a4a4a',
+    marginTop: 20,
   },
 });
 

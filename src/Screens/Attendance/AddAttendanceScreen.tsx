@@ -20,7 +20,7 @@ import {
   saveAttendance,
 } from "../../Services/Attendance/ClassAttendance";
 import { AttendanceStatus, IStudent } from "./Interfaces/AttendanceInterfaces";
-import useAuthStore from "../../store/authStore";
+import useProfileStore from "../../store/profileStore";
 import Toast from "../../Components/common/Toast";
 import { useToast } from '../../hooks/useToast';
 
@@ -35,13 +35,15 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [studentDetails, setStudentDetails] = useState<any[]>([]);
-  const classId = route.params?.classId || "66f6dcfd7c56fe0bb7ab7a53";
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [isCachedData, setIsCachedData] = useState(false);
 
   const { isVisible, toastProps, showToast, hideToast } = useToast();
+
+  const { profile } = useProfileStore();
+  const classId = profile?.classroom?._id;
 
   const handleToast = async (message: string, type: "success" | "error") => {
     showToast({
@@ -56,6 +58,12 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   };
 
   const fetchStudents = async () => {
+    if (!classId) {
+      console.error("Class ID is not available");
+      await handleToast("Class ID is not available", "error");
+      return;
+    }
+
     const today = formatDate(new Date());
     const cacheKey = `attendance_${classId}_${today}`;
     const cachedData = await AsyncStorage.getItem(cacheKey);
@@ -66,7 +74,6 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
       setIsCachedData(true);
     } else {
       const students = await fetchStudentsInClass(classId);
-      console.log("Raw students data:", students);
 
       const formattedStudents = students
         .filter((student: any) => student && student.studentDetails)
@@ -88,7 +95,11 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
       duration: 500,
       useNativeDriver: true,
     }).start();
-    fetchStudents();
+    if (classId) {
+      fetchStudents();
+    } else {
+      handleToast("Class ID is not available", "error");
+    }
   }, [fadeAnim, classId]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,13 +164,19 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   };
 
   const handleSaveAttendance = async () => {
+    if (!classId) {
+      console.error("Class ID is not available");
+      await handleToast("Class ID is not available", "error");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
     const attendanceData = {
       attendanceDate: new Date().toISOString(),
       classId: classId,
-      teacherId: "66f6dd407c56fe0bb7ab7a58",
+      teacherId: profile?._id,
       studentsAttendance: studentDetails.map((student) => ({
         studentId: student._id,
         status:
@@ -672,6 +689,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   cachedDataWarningText: {
+    flex: 1,
     marginLeft: 10,
     color: "#faad14",
     fontSize: 14,
