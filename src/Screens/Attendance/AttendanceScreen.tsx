@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal } from 'react-native';
 import { Text, Icon as AntIcon, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,69 +20,70 @@ interface AttendanceRecord {
 const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedDate, setSelectedDate] = useState('');
-  const [attendanceData, setAttendanceData] = useState<{ [key: string]: AttendanceRecord }>({});
   const [isRegularizeModalVisible, setIsRegularizeModalVisible] = useState(false);
   const [regularizationReason, setRegularizationReason] = useState('');
+  const [attendanceData, setAttendanceData] = useState<{ [key: string]: AttendanceRecord }>({});
 
-  const handleFetchAttendance = async () => {
+  const attendanceDataRef = useRef<{ [key: string]: { [key: string]: AttendanceRecord } }>({});
+
+  const handleFetchAttendance = useCallback(async (month: string) => {
     try {
-      const response = await getAttendance("66f9498bee48b9f4e88c191e");
-      console.log(response.data);
+      const [year, monthStr] = month.split('-');
+      const monthIndex = parseInt(monthStr) - 1; // Convert to 0-11 range
+      const response = await getAttendance(parseInt(year), monthIndex);
+      if (response && response.attendanceReport) {
+        const newAttendanceData: { [key: string]: AttendanceRecord } = {};
+        response.attendanceReport.forEach((record: any) => {
+          const date = new Date(record.date).toISOString().split('T')[0];
+          newAttendanceData[date] = { status: record.status as AttendanceStatus };
+        });
+        attendanceDataRef.current[month] = newAttendanceData;
+        setAttendanceData(newAttendanceData);
+      } else {
+        attendanceDataRef.current[month] = {};
+        setAttendanceData({});
+      }
     } catch (error) {
-      console.error(error);
+      console.error('Error in handleFetchAttendance:', error);
+      attendanceDataRef.current[month] = {};
+      setAttendanceData({});
     }
-  };
+  }, []);
 
   useEffect(() => {
-    generateCurrentMonthAttendance();
-    handleFetchAttendance();
-  }, [selectedMonth]);
+    handleFetchAttendance(selectedMonth);
+  }, [selectedMonth, handleFetchAttendance]);
 
-  const generateCurrentMonthAttendance = () => {
-    const year = parseInt(selectedMonth.split('-')[0]);
-    const month = parseInt(selectedMonth.split('-')[1]) - 1;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const newAttendanceData: { [key: string]: AttendanceRecord } = {};
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateString = date.toISOString().split('T')[0];
-      
-      if (date.getDay() === 1) {
-        newAttendanceData[dateString] = { status: 'holiday' };
-      } else {
-        newAttendanceData[dateString] = {
-          status: Math.random() < 0.7 ? 'present' : (Math.random() < 0.5 ? 'halfDay' : 'absent')
-        };
-      }
-    }
-    
-    setAttendanceData(newAttendanceData);
-  };
+  // Add this new useEffect for initial load
+  useEffect(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    handleFetchAttendance(currentMonth);
+  }, []);
 
-  const markedDates = Object.keys(attendanceData).reduce((acc, date) => {
-    const status = attendanceData[date].status;
-    acc[date] = {
-      selected: true,
-      selectedColor: 
-        status === 'present' ? '#4CAF50' : 
-        status === 'halfDay' ? '#FFA726' : 
-        status === 'holiday' ? '#A9A9A9' : '#FF6B6B', // Darker red color
-      customTextStyle: {
-        color: status === 'holiday' ? 'black' : 'white',
-        fontWeight: 'bold',
-      },
-    };
-    return acc;
-  }, {} as any);
+  const markedDates = React.useMemo(() => {
+    return Object.keys(attendanceData).reduce((acc, date) => {
+      const status = attendanceData[date].status;
+      acc[date] = {
+        selected: true,
+        selectedColor: 
+          status === 'present' ? '#4CAF50' : 
+          status === 'halfDay' ? '#FFA726' : 
+          status === 'holiday' ? '#A9A9A9' : '#FF6B6B',
+        customTextStyle: {
+          color: status === 'holiday' ? 'black' : 'white',
+          fontWeight: 'bold',
+        },
+      };
+      return acc;
+    }, {} as any);
+  }, [attendanceData]);
 
   const calculateAttendance = () => {
     const totalDays = Object.keys(attendanceData).length;
     const presentDays = Object.values(attendanceData).filter(day => day.status === 'present').length;
     const halfDays = Object.values(attendanceData).filter(day => day.status === 'halfDay').length;
     const absentDays = Object.values(attendanceData).filter(day => day.status === 'absent').length;
-    const attendancePercentage = ((presentDays + halfDays * 0.5) / totalDays) * 100;
+    const attendancePercentage = totalDays > 0 ? ((presentDays + halfDays * 0.5) / totalDays) * 100 : 0;
     return {
       totalDays,
       presentDays,
@@ -94,16 +95,49 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
 
   const { totalDays, presentDays, halfDays, absentDays, attendancePercentage } = calculateAttendance();
 
-  const chartData = {
-    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-    datasets: [
-      {
-        data: [80, 90, 85, 95],
-        color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`, // Changed to #001529
-        strokeWidth: 2
+  const calculateWeeklyAttendance = useCallback(() => {
+    const weeks: { [key: string]: { present: number; total: number } } = {
+      'Week 1': { present: 0, total: 0 },
+      'Week 2': { present: 0, total: 0 },
+      'Week 3': { present: 0, total: 0 },
+      'Week 4': { present: 0, total: 0 },
+      'Week 5': { present: 0, total: 0 },
+    };
+
+    Object.entries(attendanceData).forEach(([date, record]) => {
+      const dayOfMonth = new Date(date).getDate();
+      const weekNumber = Math.ceil(dayOfMonth / 7);
+      const weekKey = `Week ${weekNumber}`;
+
+      if (weeks[weekKey]) {
+        weeks[weekKey].total++;
+        if (record.status === 'present') {
+          weeks[weekKey].present++;
+        } else if (record.status === 'halfDay') {
+          weeks[weekKey].present += 0.5;
+        }
       }
-    ]
-  };
+    });
+
+    return Object.entries(weeks).map(([week, data]) => {
+      const percentage = data.total > 0 ? (data.present / data.total) * 100 : 0;
+      return { week, percentage: Math.round(percentage) };
+    });
+  }, [attendanceData]);
+
+  const chartData = React.useMemo(() => {
+    const weeklyData = calculateWeeklyAttendance();
+    return {
+      labels: weeklyData.map(item => item.week),
+      datasets: [
+        {
+          data: weeklyData.map(item => item.percentage),
+          color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+          strokeWidth: 2
+        }
+      ]
+    };
+  }, [calculateWeeklyAttendance]);
 
   const handleDayPress = (day: DateData) => {
     setSelectedDate(day.dateString);
@@ -116,11 +150,9 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
   const handleRegularizeRequest = () => {
     console.log(`Regularization requested for ${selectedDate}. Reason: ${regularizationReason}`);
     setIsRegularizeModalVisible(false);
-    setAttendanceData(prev => ({
-      ...prev,
-      [selectedDate]: { ...prev[selectedDate], regularizationRequested: true }
-    }));
+    attendanceData[selectedDate] = { ...attendanceData[selectedDate], regularizationRequested: true };
     setRegularizationReason('');
+    setAttendanceData({ ...attendanceData });
   };
 
   const renderRegularizeModal = () => (
@@ -178,22 +210,14 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
           <Calendar
             current={selectedMonth}
             onMonthChange={(month: DateData) => {
-              setSelectedMonth(month.dateString);
+              const newSelectedMonth = month.dateString.slice(0, 7);
+              console.log('Month changed to:', newSelectedMonth);
+              setSelectedMonth(newSelectedMonth);
               setSelectedDate('');
+              handleFetchAttendance(newSelectedMonth);  // Add this line
             }}
             onDayPress={handleDayPress}
-            markedDates={{
-              ...markedDates,
-              [selectedDate]: {
-                ...markedDates[selectedDate],
-                selected: true,
-                selectedColor: '#1976D2',
-                customTextStyle: {
-                  color: 'black',
-                  fontWeight: 'bold',
-                },
-              },
-            }}
+            markedDates={markedDates}
             markingType={'custom'}
             theme={{
               backgroundColor: '#ffffff',
@@ -271,12 +295,12 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
               backgroundGradientFrom: '#ffffff',
               backgroundGradientTo: '#ffffff',
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`, // Changed to #001529
-              labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`, // Added for consistent label color
+              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
               propsForDots: {
                 r: "6",
                 strokeWidth: "2",
-                stroke: "#001529" // Added for consistent dot color
+                stroke: "#001529"
               },
               style: {
                 borderRadius: 16,
@@ -287,6 +311,11 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
               marginVertical: 8,
               borderRadius: 16,
             }}
+            yAxisLabel=""
+            yAxisSuffix="%"
+            yAxisInterval={1}
+            fromZero
+            segments={5}
           />
         </View>
 

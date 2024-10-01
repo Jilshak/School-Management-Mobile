@@ -13,37 +13,14 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/AntDesign";
 import { LineChart } from "react-native-chart-kit";
-import { getUserDetails, User } from "../../Services/User/UserService";
+import { getUserDetails } from "../../Services/User/UserService";
 import { formatDate, formatDateToYear } from "../../utils/DateUtil";
+import { IUser } from "../../Services/User/IUserService";
 
 type StudentDetailsScreenProps = {
   navigation: StackNavigationProp<any, "StudentDetails">;
-  route: RouteProp<
-    { StudentDetails: { studentId: string; student: Student } },
-    "StudentDetails"
-  >;
+  route: RouteProp<{ StudentDetails: { studentId: string } }, "StudentDetails">;
 };
-
-interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  performance: number;
-  attendance: number;
-  dateOfBirth: string;
-  gender: string;
-  contactNumber: string;
-  email: string;
-  address: string;
-  parentName: string;
-  parentContact: string;
-  academicYear: string;
-  class: string;
-  section: string;
-  classTeacher: string;
-  admissionDate: string;
-  bloodGroup?: string;
-}
 
 const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   navigation,
@@ -51,12 +28,13 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
 }) => {
   const { studentId } = route.params;
   const scrollY = useRef(new Animated.Value(0)).current;
-  const [userDetails, setUserDetails] = useState<User | any>(null);
+  const [userDetails, setUserDetails] = useState<IUser | null>(null);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
         const response = await getUserDetails(studentId);
+        console.log(response);
         setUserDetails(response);
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -139,11 +117,13 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Extra-Curricular Activities</Text>
       <View style={styles.activitiesContainer}>
-        {userDetails?.extraCurricular?.map((activity: string, index: number) => (
-          <Tag key={index} style={styles.activityTag}>
-            {activity}
-          </Tag>
-        ))}
+        {userDetails?.extraCurricular?.map(
+          (activity: string, index: number) => (
+            <Tag key={index} style={styles.activityTag}>
+              {activity}
+            </Tag>
+          )
+        )}
       </View>
     </View>
   );
@@ -179,8 +159,11 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
             </Text>
             <Text style={styles.academicYear}>
               Academic Year:{" "}
-              {formatDateToYear(userDetails?.classroom?.academicYear?.startDate)}
-              -{formatDateToYear(userDetails?.classroom?.academicYear?.endDate)}
+              {formatDateToYear(
+                userDetails?.classroom?.academicYear?.startDate!
+              )}
+              -
+              {formatDateToYear(userDetails?.classroom?.academicYear?.endDate!)}
             </Text>
           </View>
         </View>
@@ -239,32 +222,27 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
           {renderDetailItem("Class", userDetails?.classroom?.name ?? "N/A")}
           {renderDetailItem(
             "Class Teacher",
-            userDetails?.classroom.classTeacher[0].firstName + " " + userDetails?.classroom.classTeacher[0].lastName ?? "N/A"
+            userDetails?.classroom?.classTeacher[0]?.firstName +
+              " " +
+              userDetails?.classroom?.classTeacher[0]?.lastName ?? "N/A"
           )}
           {renderDetailItem(
             "Admission Date",
-            formatDate(userDetails?.joinDate) ?? "N/A"
+            formatDate(userDetails?.joinDate!) ?? "N/A"
           )}
         </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Achievements</Text>
-          {/* <Text style={styles.achievementItem}>
-            • First place in Inter-school Science Fair 2023
-          </Text>
-          <Text style={styles.achievementItem}>
-            • Best Debater Award in Regional Debate Competition
-          </Text>
-          <Text style={styles.achievementItem}>
-            • Captain of the school Football Team
-          </Text> */}
-          <Text style={styles.achievementItem}>N/A</Text>
+          {userDetails?.achievements?.length ? userDetails?.achievements?.map((item: string, index: number) => {
+            return <Text key={index} style={styles.achievementItem}>• {item}</Text>;
+          }) : <Text>N/A</Text>}
         </View>
 
         <View style={[styles.sectionContainer, styles.remarksContainer]}>
           <Text style={styles.sectionTitle}>Remarks</Text>
           <Text style={styles.remarksText}>
-           {userDetails?.remarks ?? "N/A"}
+            {userDetails?.remarks ?? "N/A"}
           </Text>
         </View>
       </ScrollView>

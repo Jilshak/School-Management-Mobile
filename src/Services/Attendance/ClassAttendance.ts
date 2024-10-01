@@ -1,4 +1,4 @@
-import api from '../axios';
+import api from "../axios";
 
 interface Student {
   _id: string;
@@ -11,7 +11,9 @@ interface AttendanceRecord {
   present: boolean;
 }
 
-export const fetchStudentsInClass = async (classId: string): Promise<Student[]> => {
+export const fetchStudentsInClass = async (
+  classId: string
+): Promise<Student[]> => {
   try {
     const response = await api.get(`/classroom/${classId}`);
     return response.data.students;
@@ -21,7 +23,11 @@ export const fetchStudentsInClass = async (classId: string): Promise<Student[]> 
   }
 };
 
-export const markAttendance = async (classId: string, date: string, attendanceRecords: AttendanceRecord[]): Promise<void> => {
+export const markAttendance = async (
+  classId: string,
+  date: string,
+  attendanceRecords: AttendanceRecord[]
+): Promise<void> => {
   try {
     await api.post(`/attendance/${classId}`, { date, attendanceRecords });
   } catch (error) {
@@ -30,7 +36,9 @@ export const markAttendance = async (classId: string, date: string, attendanceRe
   }
 };
 
-export const fetchAttendanceForClass = async (classId: string): Promise<AttendanceRecord[]> => {
+export const fetchAttendanceForClass = async (
+  classId: string
+): Promise<AttendanceRecord[]> => {
   try {
     const response = await api.get(`/classroom/${classId}`);
     return response.data;
@@ -50,9 +58,11 @@ export const saveAttendance = async (attendanceData: any) => {
   }
 };
 
-export const getAttendance = async (id: string) => {
+export const getAttendance = async (year: number, month: number) => {
   try {
-    const response = await api.get(`/attendance/student-attendance/`);
+    const response = await api.get(`/attendance/student-attendance/`, {
+      params: { year, month },
+    });
     return response.data;
   } catch (error) {
     console.error("Error fetching attendance:", error);
