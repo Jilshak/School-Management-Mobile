@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { LineChart } from 'react-native-chart-kit';
 import { getAttendance } from '../../Services/Attendance/ClassAttendance';
+import { useToast } from '../../hooks/useToast';
 
 type AttendanceScreenProps = {
   navigation: StackNavigationProp<any, 'Attendance'>;
@@ -26,16 +27,23 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
 
   const attendanceDataRef = useRef<{ [key: string]: { [key: string]: AttendanceRecord } }>({});
 
+  const { showToast } = useToast();
+
   const handleFetchAttendance = useCallback(async (month: string) => {
     try {
       const [year, monthStr] = month.split('-');
       const monthIndex = parseInt(monthStr) - 1; // Convert to 0-11 range
+      if (isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+        throw new Error('Invalid month');
+      }
       const response = await getAttendance(parseInt(year), monthIndex);
       if (response && response.attendanceReport) {
         const newAttendanceData: { [key: string]: AttendanceRecord } = {};
         response.attendanceReport.forEach((record: any) => {
-          const date = new Date(record.date).toISOString().split('T')[0];
-          newAttendanceData[date] = { status: record.status as AttendanceStatus };
+          if (record && record.date && record.status) {
+            const date = new Date(record.date).toISOString().split('T')[0];
+            newAttendanceData[date] = { status: record.status as AttendanceStatus };
+          }
         });
         attendanceDataRef.current[month] = newAttendanceData;
         setAttendanceData(newAttendanceData);
@@ -45,10 +53,14 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error in handleFetchAttendance:', error);
+      showToast({
+        message: 'Failed to fetch attendance data. Please try again.',
+        type: 'error',
+      });
       attendanceDataRef.current[month] = {};
       setAttendanceData({});
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     handleFetchAttendance(selectedMonth);
@@ -62,18 +74,20 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
 
   const markedDates = React.useMemo(() => {
     return Object.keys(attendanceData).reduce((acc, date) => {
-      const status = attendanceData[date].status;
-      acc[date] = {
-        selected: true,
-        selectedColor: 
-          status === 'present' ? '#4CAF50' : 
-          status === 'halfDay' ? '#FFA726' : 
-          status === 'holiday' ? '#A9A9A9' : '#FF6B6B',
-        customTextStyle: {
-          color: status === 'holiday' ? 'black' : 'white',
-          fontWeight: 'bold',
-        },
-      };
+      const status = attendanceData[date]?.status;
+      if (status) {
+        acc[date] = {
+          selected: true,
+          selectedColor: 
+            status === 'present' ? '#4CAF50' : 
+            status === 'halfDay' ? '#FFA726' : 
+            status === 'holiday' ? '#A9A9A9' : '#FF6B6B',
+          customTextStyle: {
+            color: status === 'holiday' ? 'black' : 'white',
+            fontWeight: 'bold',
+          },
+        };
+      }
       return acc;
     }, {} as any);
   }, [attendanceData]);
@@ -140,19 +154,34 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
   }, [calculateWeeklyAttendance]);
 
   const handleDayPress = (day: DateData) => {
-    setSelectedDate(day.dateString);
-    const status = attendanceData[day.dateString]?.status;
-    if (status === 'absent' || status === 'halfDay') {
-      setIsRegularizeModalVisible(true);
+    if (day && day.dateString) {
+      setSelectedDate(day.dateString);
+      const status = attendanceData[day.dateString]?.status;
+      if (status === 'absent' || status === 'halfDay') {
+        setIsRegularizeModalVisible(true);
+      }
     }
   };
 
   const handleRegularizeRequest = () => {
-    console.log(`Regularization requested for ${selectedDate}. Reason: ${regularizationReason}`);
-    setIsRegularizeModalVisible(false);
-    attendanceData[selectedDate] = { ...attendanceData[selectedDate], regularizationRequested: true };
-    setRegularizationReason('');
-    setAttendanceData({ ...attendanceData });
+    if (selectedDate && regularizationReason.trim()) {
+      console.log(`Regularization requested for ${selectedDate}. Reason: ${regularizationReason}`);
+      setIsRegularizeModalVisible(false);
+      setAttendanceData(prevData => ({
+        ...prevData,
+        [selectedDate]: { ...prevData[selectedDate], regularizationRequested: true }
+      }));
+      setRegularizationReason('');
+      showToast({
+        message: 'Regularization request submitted successfully.',
+        type: 'success',
+      });
+    } else {
+      showToast({
+        message: 'Please provide a reason for regularization.',
+        type: 'error',
+      });
+    }
   };
 
   const renderRegularizeModal = () => (
@@ -210,11 +239,13 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
           <Calendar
             current={selectedMonth}
             onMonthChange={(month: DateData) => {
-              const newSelectedMonth = month.dateString.slice(0, 7);
-              console.log('Month changed to:', newSelectedMonth);
-              setSelectedMonth(newSelectedMonth);
-              setSelectedDate('');
-              handleFetchAttendance(newSelectedMonth);  // Add this line
+              if (month && month.dateString) {
+                const newSelectedMonth = month.dateString.slice(0, 7);
+                console.log('Month changed to:', newSelectedMonth);
+                setSelectedMonth(newSelectedMonth);
+                setSelectedDate('');
+                handleFetchAttendance(newSelectedMonth);
+              }
             }}
             onDayPress={handleDayPress}
             markedDates={markedDates}
@@ -263,67 +294,74 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
         <View style={styles.summaryContainer}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Total Days</Text>
-            <Text style={styles.summaryValue}>{totalDays}</Text>
+            <Text style={styles.summaryValue}>{totalDays || 0}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Present</Text>
-            <Text style={styles.summaryValue}>{presentDays}</Text>
+            <Text style={styles.summaryValue}>{presentDays || 0}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Half Day</Text>
-            <Text style={styles.summaryValue}>{halfDays}</Text>
+            <Text style={styles.summaryValue}>{halfDays || 0}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Absent</Text>
-            <Text style={styles.summaryValue}>{absentDays}</Text>
+            <Text style={styles.summaryValue}>{absentDays || 0}</Text>
           </View>
         </View>
 
         <View style={styles.attendancePercentage}>
           <Text style={styles.attendancePercentageLabel}>Attendance Percentage</Text>
-          <Text style={styles.attendancePercentageValue}>{attendancePercentage}%</Text>
+          <Text style={styles.attendancePercentageValue}>{attendancePercentage || '0.00'}%</Text>
         </View>
 
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Monthly Attendance Trend</Text>
-          <LineChart
-            data={chartData}
-            width={Dimensions.get('window').width - 60}
-            height={220}
-            chartConfig={{
-              backgroundColor: '#ffffff',
-              backgroundGradientFrom: '#ffffff',
-              backgroundGradientTo: '#ffffff',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-              propsForDots: {
-                r: "6",
-                strokeWidth: "2",
-                stroke: "#001529"
-              },
-              style: {
+          {chartData.labels.length > 0 ? (
+            <LineChart
+              data={chartData}
+              width={Dimensions.get('window').width - 60}
+              height={220}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+                propsForDots: {
+                  r: "6",
+                  strokeWidth: "2",
+                  stroke: "#001529"
+                },
+                style: {
+                  borderRadius: 16,
+                },
+              }}
+              bezier
+              style={{
+                marginVertical: 8,
                 borderRadius: 16,
-              },
-            }}
-            bezier
-            style={{
-              marginVertical: 8,
-              borderRadius: 16,
-            }}
-            yAxisLabel=""
-            yAxisSuffix="%"
-            yAxisInterval={1}
-            fromZero
-            segments={5}
-          />
+              }}
+              yAxisLabel=""
+              yAxisSuffix="%"
+              yAxisInterval={1}
+              fromZero
+              segments={5}
+            />
+          ) : (
+            <Text style={styles.noDataText}>No data available for the selected month</Text>
+          )}
         </View>
 
         <View style={styles.reportButtonContainer}>
           <TouchableOpacity
             style={styles.reportButton}
             onPress={() => {
-              // Handle generating report
+              showToast({
+                message: 'Detailed report generation is not implemented yet.',
+                type: 'info',
+              });
             }}
           >
             <Text style={styles.reportButtonText}>Generate Detailed Report</Text>
@@ -527,6 +565,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#4a4a4a',
+    textAlign: 'center',
+    marginVertical: 20,
   },
 });
 
