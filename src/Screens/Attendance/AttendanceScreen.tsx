@@ -66,7 +66,6 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
     handleFetchAttendance(selectedMonth);
   }, [selectedMonth, handleFetchAttendance]);
 
-  // Add this new useEffect for initial load
   useEffect(() => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     handleFetchAttendance(currentMonth);

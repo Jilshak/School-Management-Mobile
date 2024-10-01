@@ -4,6 +4,7 @@ import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
+import { AntDesign } from '@expo/vector-icons';
 
 type MarksheetScreenProps = {
   navigation: StackNavigationProp<any, 'Marksheet'>;
@@ -157,32 +158,17 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   const renderExamList = () => {
     const sections = [
       {
-        title: 'Student Info',
-        data: ['info'],
-        renderItem: () => (
-          <View style={styles.studentInfoCard}>
-            <Image
-              source={{ uri: 'https://example.com/student-avatar.jpg' }}
-              style={styles.studentAvatar}
-            />
-            <View style={styles.studentDetails}>
-              <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
-              <Text style={styles.studentClass}>Class: UKG</Text>
-              <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
-            </View>
-          </View>
-        )
-      },
-      {
         title: 'Summary',
         data: ['summary'],
         renderItem: () => (
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
+              <AntDesign name="linechart" size={24} color="#001529" />
               <Text style={styles.summaryTitle}>Average Score</Text>
               <Text style={styles.summaryValue}>90%</Text>
             </View>
             <View style={styles.summaryItem}>
+              <AntDesign name="calendar" size={24} color="#001529" />
               <Text style={styles.summaryTitle}>Exams Taken</Text>
               <Text style={styles.summaryValue}>2/3</Text>
             </View>
@@ -485,7 +471,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     backgroundColor: '#ffffff',
     borderRadius: 10,
-    padding: 15,
+    padding: 20,
     marginBottom: 20,
   },
   summaryItem: {
@@ -494,6 +480,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 14,
     color: '#4a4a4a',
+    marginTop: 10,
   },
   summaryValue: {
     fontSize: 18,
