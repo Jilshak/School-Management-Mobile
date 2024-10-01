@@ -49,3 +49,13 @@ export const saveAttendance = async (attendanceData: any) => {
     throw error;
   }
 };
+
+export const getAttendance = async (id: string) => {
+  try {
+    const response = await api.get(`/attendance/student-attendance/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    throw error;
+  }
+};

@@ -4,6 +4,7 @@ import { Text, Icon as AntIcon, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { LineChart } from 'react-native-chart-kit';
+import { getAttendance } from '../../Services/Attendance/ClassAttendance';
 
 type AttendanceScreenProps = {
   navigation: StackNavigationProp<any, 'Attendance'>;
@@ -23,8 +24,18 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ navigation }) => {
   const [isRegularizeModalVisible, setIsRegularizeModalVisible] = useState(false);
   const [regularizationReason, setRegularizationReason] = useState('');
 
+  const handleFetchAttendance = async () => {
+    try {
+      const response = await getAttendance("66f9498bee48b9f4e88c191e");
+      console.log(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     generateCurrentMonthAttendance();
+    handleFetchAttendance();
   }, [selectedMonth]);
 
   const generateCurrentMonthAttendance = () => {

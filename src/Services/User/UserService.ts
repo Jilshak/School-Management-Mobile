@@ -1,4 +1,4 @@
-import api from '../axios';
+import api from "../axios";
 
 export interface User {
   _id: string;
@@ -18,8 +18,19 @@ export interface User {
   schoolId: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
-  qualifications: { degree: string; fieldOfStudy: string; instituteName: string; yearOfPass: number; gradePercentage: string; }[];
-  previousEmployments: { instituteName: string; role: string; joinedDate: string; revealedDate: string; }[];
+  qualifications: {
+    degree: string;
+    fieldOfStudy: string;
+    instituteName: string;
+    yearOfPass: number;
+    gradePercentage: string;
+  }[];
+  previousEmployments: {
+    instituteName: string;
+    role: string;
+    joinedDate: string;
+    revealedDate: string;
+  }[];
   id: string;
   username: string;
   name: string;
@@ -33,16 +44,22 @@ export interface User {
     academicYear: {
       startDate: string;
       endDate: string;
-    }
-  }
+    };
+    classTeacher?: {
+      firstName: string;
+      lastName: string;
+    }[];
+  };
+  remarks?: string;
+  extraCurricular?: string[]
   parentsDetails?: {
-    guardianName: string,
-    guardianContactNumber: string,
-    relationshipToStudent: string,
-  }
+    guardianName: string;
+    guardianContactNumber: string;
+    relationshipToStudent: string;
+  };
 }
 
-export const getUserDetails = async (id:string): Promise<User> => {
+export const getUserDetails = async (id: string): Promise<User> => {
   try {
     const response = await api.get(`/user/${id}`);
     return response.data;
@@ -51,4 +68,3 @@ export const getUserDetails = async (id:string): Promise<User> => {
     throw error;
   }
 };
-

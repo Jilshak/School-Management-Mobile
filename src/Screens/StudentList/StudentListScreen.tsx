@@ -35,7 +35,6 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
   useEffect(() => {
     const fetchStudents = async () => {
       const classroom = await fetchClassroomById(classId);
-      console.log(classroom)
       setStudents(Object.values(classroom));
     };
 

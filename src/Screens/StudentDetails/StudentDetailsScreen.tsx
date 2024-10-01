@@ -57,7 +57,6 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     const fetchUserDetails = async () => {
       try {
         const response = await getUserDetails(studentId);
-        console.log(response.parentsDetails, "this is the response");
         setUserDetails(response);
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -140,13 +139,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Extra-Curricular Activities</Text>
       <View style={styles.activitiesContainer}>
-        {[
-          "Football Team",
-          "Debate Club",
-          "Science Olympiad",
-          "Chess Club",
-          "Art Society",
-        ].map((activity, index) => (
+        {userDetails?.extraCurricular?.map((activity: string, index: number) => (
           <Tag key={index} style={styles.activityTag}>
             {activity}
           </Tag>
@@ -182,13 +175,11 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
               {userDetails?.firstName} {userDetails?.lastName}
             </Text>
             <Text style={styles.studentClass}>
-              Roll No: {userDetails?.enrollmentNumber}
+              Roll No: {userDetails?.enrollmentNumber ?? "N/A"}
             </Text>
             <Text style={styles.academicYear}>
               Academic Year:{" "}
-              {formatDateToYear(
-                userDetails?.classroom?.academicYear?.startDate
-              )}
+              {formatDateToYear(userDetails?.classroom?.academicYear?.startDate)}
               -{formatDateToYear(userDetails?.classroom?.academicYear?.endDate)}
             </Text>
           </View>
@@ -234,14 +225,6 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Parent/Guardian Information</Text>
           {renderDetailItem(
-            "Father's Name",
-            userDetails?.parentsDetails?.guardianName ?? "N/A"
-          )}
-          {renderDetailItem(
-            "Father's Contact",
-            userDetails?.parentsDetails?.guardianContactNumber ?? "N/A"
-          )}
-          {renderDetailItem(
             "Emergency Contact Name",
             userDetails?.emergencyContactName ?? "N/A"
           )}
@@ -256,7 +239,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
           {renderDetailItem("Class", userDetails?.classroom?.name ?? "N/A")}
           {renderDetailItem(
             "Class Teacher",
-            userDetails?.classroom?.classTeacher ?? "N/A"
+            userDetails?.classroom.classTeacher[0].firstName + " " + userDetails?.classroom.classTeacher[0].lastName ?? "N/A"
           )}
           {renderDetailItem(
             "Admission Date",
@@ -281,7 +264,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
         <View style={[styles.sectionContainer, styles.remarksContainer]}>
           <Text style={styles.sectionTitle}>Remarks</Text>
           <Text style={styles.remarksText}>
-           N/A
+           {userDetails?.remarks ?? "N/A"}
           </Text>
         </View>
       </ScrollView>
