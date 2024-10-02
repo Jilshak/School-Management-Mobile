@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { Text, Icon } from "@ant-design/react-native";
 import useAuthStore from "../../store/authStore";
-import useProfileStore from "../../store/profileStore";
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";

@@ -1,27 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { Text, Icon as AntIcon } from '@ant-design/react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { Calendar, DateData } from 'react-native-calendars';
-import { createLeaveRequest } from '../../Services/Leave/Leave';
-import { Alert } from 'react-native';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+} from "react-native";
+import { Text, Icon as AntIcon } from "@ant-design/react-native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { Calendar, DateData } from "react-native-calendars";
+import { createLeaveRequest } from "../../Services/Leave/Leave";
+import { useToast } from "../../contexts/ToastContext";
 
 type LeaveRequestScreenProps = {
-  navigation: StackNavigationProp<any, 'LeaveRequest'>;
+  navigation: StackNavigationProp<any, "LeaveRequest">;
 };
 
-const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) => {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [reason, setReason] = useState('');
-  const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
+const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
+  navigation,
+}) => {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reason, setReason] = useState("");
+  const [markedDates, setMarkedDates] = useState<{ [key: string]: any }>({});
+  const { showToast } = useToast();
 
   const handleDayPress = (day: DateData) => {
     if (!startDate || (startDate && endDate)) {
       setStartDate(day.dateString);
-      setEndDate('');
+      setEndDate("");
       setMarkedDates({
-        [day.dateString]: { startingDay: true, color: '#50cebb', textColor: 'white' }
+        [day.dateString]: {
+          startingDay: true,
+          color: "#50cebb",
+          textColor: "white",
+        },
       });
     } else {
       let start = new Date(startDate);
@@ -29,36 +43,47 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) =
       if (start > end) {
         [start, end] = [end, start];
       }
-      let range: {[key: string]: any} = {};
+      let range: { [key: string]: any } = {};
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        let dateString = d.toISOString().split('T')[0];
-        if (dateString === start.toISOString().split('T')[0]) {
-          range[dateString] = { startingDay: true, color: '#50cebb', textColor: 'white' };
-        } else if (dateString === end.toISOString().split('T')[0]) {
-          range[dateString] = { endingDay: true, color: '#50cebb', textColor: 'white' };
+        let dateString = d.toISOString().split("T")[0];
+        if (dateString === start.toISOString().split("T")[0]) {
+          range[dateString] = {
+            startingDay: true,
+            color: "#50cebb",
+            textColor: "white",
+          };
+        } else if (dateString === end.toISOString().split("T")[0]) {
+          range[dateString] = {
+            endingDay: true,
+            color: "#50cebb",
+            textColor: "white",
+          };
         } else {
-          range[dateString] = { color: '#70d7c7', textColor: 'white' };
+          range[dateString] = { color: "#70d7c7", textColor: "white" };
         }
       }
-      setStartDate(start.toISOString().split('T')[0]);
-      setEndDate(end.toISOString().split('T')[0]);
+      setStartDate(start.toISOString().split("T")[0]);
+      setEndDate(end.toISOString().split("T")[0]);
       setMarkedDates(range);
     }
   };
 
   const validateLeaveRequest = (): boolean => {
     if (!startDate || !endDate) {
-      Alert.alert('Error', 'Please select both start and end dates for your leave.');
+      showToast(
+        "Please select both start and end dates for your leave.",
+        "error"
+      );
       return false;
     }
 
     if (new Date(startDate) > new Date(endDate)) {
-      Alert.alert('Error', 'End date cannot be earlier than start date.');
+      showToast("End date cannot be earlier than start date.", "error");
       return false;
     }
 
     if (!reason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for your leave request.');
+      showToast("Please provide a reason for your leave request.", "error");
       return false;
     }
 
@@ -69,33 +94,61 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) =
     if (!validateLeaveRequest()) {
       return;
     }
-
     try {
-      const leaveRequest = await handleCreateLeaveRequest();
-      console.log('Leave request submitted:', leaveRequest);
-      Alert.alert('Success', 'Your leave request has been submitted successfully.');
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error submitting leave request:', error);
-      Alert.alert('Error', 'Failed to submit leave request. Please try again.');
+      await handleCreateLeaveRequest();
+      showToast(
+        "Your leave request has been submitted successfully.",
+        "success"
+      );
+    } catch (error: any) {
+      console.error("Error submitting leave request:", error);
+      if (error.message && typeof error.message === 'object' && error.message.message) {
+        if (error.message.message === "Leave request already exists") {
+          showToast("A leave request for these dates already exists.", "error", 5000);
+        } else {
+          showToast(error.message.message, "error");
+        }
+      } else if (error instanceof Error) {
+        showToast("Server error. Please try again later.", "error");
+      } else {
+        showToast("Failed to submit leave request. Please try again.", "error");
+      }
     }
   };
 
   const handleCreateLeaveRequest = async () => {
     try {
-      const leaveRequest = await createLeaveRequest({ startDate, endDate, reason });
-      console.log(leaveRequest, "This is the leave request");
+      const leaveRequest = await createLeaveRequest({
+        startDate,
+        endDate,
+        reason,
+      });
       return leaveRequest;
     } catch (error) {
-      console.error(error);
+      console.error("Error creating leave request:", error);
       throw error;
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return `${
+      months[date.getMonth()]
+    } ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   const getDaysDifference = () => {
@@ -118,36 +171,39 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) =
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.contentContainer} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.contentContainer}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.formContainer}>
           <Text style={styles.sectionTitle}>Select Leave Dates</Text>
-          
+
           <Calendar
             style={styles.calendar}
             onDayPress={handleDayPress}
             markedDates={markedDates}
-            markingType={'period'}
-            minDate={new Date().toISOString().split('T')[0]}
+            markingType={"period"}
+            minDate={new Date().toISOString().split("T")[0]}
             theme={{
-              backgroundColor: '#ffffff',
-              calendarBackground: '#ffffff',
-              textSectionTitleColor: '#b6c1cd',
-              selectedDayBackgroundColor: '#001529',
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: '#001529',
-              dayTextColor: '#2d4150',
-              textDisabledColor: '#d9e1e8',
-              dotColor: '#001529',
-              selectedDotColor: '#ffffff',
-              arrowColor: '#001529',
-              monthTextColor: '#001529',
-              indicatorColor: '#001529',
-              textDayFontWeight: '300',
-              textMonthFontWeight: 'bold',
-              textDayHeaderFontWeight: '300',
+              backgroundColor: "#ffffff",
+              calendarBackground: "#ffffff",
+              textSectionTitleColor: "#b6c1cd",
+              selectedDayBackgroundColor: "#001529",
+              selectedDayTextColor: "#ffffff",
+              todayTextColor: "#001529",
+              dayTextColor: "#2d4150",
+              textDisabledColor: "#d9e1e8",
+              dotColor: "#001529",
+              selectedDotColor: "#ffffff",
+              arrowColor: "#001529",
+              monthTextColor: "#001529",
+              indicatorColor: "#001529",
+              textDayFontWeight: "300",
+              textMonthFontWeight: "bold",
+              textDayHeaderFontWeight: "300",
               textDayFontSize: 16,
               textMonthFontSize: 16,
-              textDayHeaderFontSize: 16
+              textDayHeaderFontSize: 16,
             }}
           />
 
@@ -158,14 +214,15 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) =
                   {formatDate(startDate)} - {formatDate(endDate)}
                 </Text>
                 <Text style={styles.daysSelectedText}>
-                  {getDaysDifference()} day{getDaysDifference() > 1 ? 's' : ''} selected
+                  {getDaysDifference()} day{getDaysDifference() > 1 ? "s" : ""}{" "}
+                  selected
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.clearDatesButton}
                 onPress={() => {
-                  setStartDate('');
-                  setEndDate('');
+                  setStartDate("");
+                  setEndDate("");
                   setMarkedDates({});
                 }}
               >
@@ -218,16 +275,16 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: "#f0f2f5",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#001529',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#001529",
     padding: 15,
     borderRadius: 10,
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     left: 20,
     right: 20,
@@ -235,9 +292,9 @@ const styles = StyleSheet.create({
     height: 60,
   },
   headerTitle: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   contentContainer: {
     flex: 1,
@@ -247,98 +304,98 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   formContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 20,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#001529',
+    fontWeight: "bold",
+    color: "#001529",
     marginBottom: 15,
   },
   calendar: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 10,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 20,
   },
   dateDisplay: {
     marginVertical: 15,
     padding: 15,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: "#f0f2f5",
     borderRadius: 10,
   },
   label: {
     fontSize: 16,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginBottom: 10,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dateRange: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   dateBox: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 8,
     padding: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   dateLabel: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
     marginBottom: 5,
   },
   dateText: {
     fontSize: 16,
-    color: '#001529',
-    fontWeight: '500',
+    color: "#001529",
+    fontWeight: "500",
   },
   dateSeparator: {
     width: 20,
     height: 2,
-    backgroundColor: '#001529',
+    backgroundColor: "#001529",
     marginHorizontal: 10,
   },
   noDateText: {
     fontSize: 16,
-    color: '#999',
-    fontStyle: 'italic',
+    color: "#999",
+    fontStyle: "italic",
   },
   reasonContainer: {
     marginBottom: 20,
   },
   reasonInput: {
     borderWidth: 1,
-    borderColor: '#d9d9d9',
+    borderColor: "#d9d9d9",
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
-    color: '#001529',
-    textAlignVertical: 'top',
+    color: "#001529",
+    textAlignVertical: "top",
     minHeight: 100,
   },
   submitButton: {
-    backgroundColor: '#001529',
+    backgroundColor: "#001529",
     padding: 15,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   submitButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   dateRangeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#e6f7ff',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#e6f7ff",
     borderRadius: 10,
     padding: 15,
     marginVertical: 15,
@@ -348,21 +405,21 @@ const styles = StyleSheet.create({
   },
   dateRangeText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#001529',
+    fontWeight: "600",
+    color: "#001529",
     marginBottom: 5,
   },
   daysSelectedText: {
     fontSize: 14,
-    color: '#4a4a4a',
+    color: "#4a4a4a",
   },
   clearDatesButton: {
-    backgroundColor: '#001529',
+    backgroundColor: "#001529",
     borderRadius: 20,
     width: 30,
     height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

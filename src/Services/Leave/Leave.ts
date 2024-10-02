@@ -13,9 +13,13 @@ export const fetchLeaveRequests = async (): Promise<LeaveRequest[]> => {
 export const createLeaveRequest = async (leaveData: Partial<LeaveRequest>) => {
   try {
     const response = await api.post('/attendance/leave-request', leaveData);
-    return response.data;
-  } catch (error) {
-    throw error;
+    return { status: response.status, data: response.data };
+  } catch (error: any) {
+    if (error.response) {
+      throw { status: error.response.status, message: error.response.data };
+    } else {
+      throw { status: 500, message: 'An unexpected error occurred' };
+    }
   }
 };
 

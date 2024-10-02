@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import Toast from '../Components/common/Toast';
+import React, { createContext, useContext, useState, useCallback } from "react";
+import Toast from "../Components/common/Toast";
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = "success" | "error" | "info";
 
 interface ToastContextType {
   showToast: (message: string, type?: ToastType, duration?: number) => void;
@@ -9,12 +9,21 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toast, setToast] = useState<{ message: string; type: ToastType; duration: number } | null>(null);
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [toast, setToast] = useState<{
+    message: string;
+    type: ToastType;
+    duration: number;
+  } | null>(null);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3000) => {
-    setToast({ message, type, duration });
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastType = "info", duration: number = 3000) => {
+      setToast({ message, type, duration });
+    },
+    []
+  );
 
   const hideToast = useCallback(() => {
     setToast(null);
@@ -25,6 +34,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       {toast && (
         <Toast
+          isVisible={true}
           message={toast.message}
           type={toast.type}
           duration={toast.duration}
@@ -38,7 +48,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (context === undefined) {
-    throw new Error('useToast must be used within a ToastProvider');
+    throw new Error("useToast must be used within a ToastProvider");
   }
   return context;
 };
