@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
+import { createLeaveRequest } from '../../Services/Leave/Leave';
+import { Alert } from 'react-native';
 
 type LeaveRequestScreenProps = {
   navigation: StackNavigationProp<any, 'LeaveRequest'>;
@@ -44,9 +46,50 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({ navigation }) =
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Leave request submitted', { startDate, endDate, reason });
-    // Add logic here to send the request to the backend
+  const validateLeaveRequest = (): boolean => {
+    if (!startDate || !endDate) {
+      Alert.alert('Error', 'Please select both start and end dates for your leave.');
+      return false;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      Alert.alert('Error', 'End date cannot be earlier than start date.');
+      return false;
+    }
+
+    if (!reason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for your leave request.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateLeaveRequest()) {
+      return;
+    }
+
+    try {
+      const leaveRequest = await handleCreateLeaveRequest();
+      console.log('Leave request submitted:', leaveRequest);
+      Alert.alert('Success', 'Your leave request has been submitted successfully.');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error submitting leave request:', error);
+      Alert.alert('Error', 'Failed to submit leave request. Please try again.');
+    }
+  };
+
+  const handleCreateLeaveRequest = async () => {
+    try {
+      const leaveRequest = await createLeaveRequest({ startDate, endDate, reason });
+      console.log(leaveRequest, "This is the leave request");
+      return leaveRequest;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   };
 
   const formatDate = (dateString: string) => {

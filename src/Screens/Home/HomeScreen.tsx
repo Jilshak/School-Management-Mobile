@@ -40,6 +40,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'book', text: 'Library', route: 'Library' },
     { icon: 'user-switch', text: 'Leave Request', route: 'LeaveRequest' },
     { icon: 'check-circle', text: 'Leave Approve', route: 'LeaveApprove' },
+    { icon: 'check-circle', text: 'Leave Request List', route: 'LeaveRequestList' },
     { icon: 'book', text: 'Syllabus', route: 'Syllabus' },
     { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook' },
     { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },

@@ -34,6 +34,7 @@ import FlashCardsLogicScreen from "../Screens/FlashCards/FlashCardsLogicScreen";
 import FlashCardChapterListScreen from "../Screens/FlashCards/FlashCardChapterListScreen";
 import { ToastProvider } from "../contexts/ToastContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import LeaveRequestListScreen from "../Screens/Attendance/LeaveRequestListScreen";
 
 const Stack = createStackNavigator();
 
@@ -82,6 +83,10 @@ const AppNavigator: React.FC = () => {
               <Stack.Screen
                 name="LeaveRequest"
                 component={LeaveRequestScreen}
+              />
+              <Stack.Screen
+                name="LeaveRequestList"
+                component={LeaveRequestListScreen}
               />
               <Stack.Screen
                 name="LeaveApprove"
