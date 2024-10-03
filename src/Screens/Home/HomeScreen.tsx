@@ -15,8 +15,9 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import BottomNavBar from "../../Components/BottomNavBar";
 import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
 import useProfileStore from "../../store/profileStore";
+import { capitalizeText } from "../../utils/StringUtil";
 
-type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar" | "test";
+type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar" | "test" | "chat";
 
 type HomeScreenProps = {
   navigation: StackNavigationProp<any, "Home">;
@@ -47,6 +48,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection' },
     { icon: 'book', text: 'MCQ Stats', route: 'MCQStats' },
     { icon: 'test', text: 'Flash Cards', route: 'FlashCardScreen' },
+    { icon: 'chat', text: 'Chat', route: 'Chat' },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -77,7 +79,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Text style={styles.greeting}>Welcome back,</Text>
               <Text style={styles.userName}>{profile.firstName} {profile.lastName}</Text>
               <View style={styles.gradeBadge}>
-                <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => role)}</Text>
+                <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => capitalizeText(role))}</Text>
               </View>
             </View>
             <Image

@@ -3,7 +3,7 @@ import { LeaveRequest } from './ILeave';
 
 export const fetchLeaveRequests = async (): Promise<LeaveRequest[]> => {
   try {
-    const response = await api.get(`/attendance/leave-request/`);
+    const response = await api.get(`/attendance/leave-request/student`);
     return response.data;
   } catch (error) {
     throw error;
@@ -23,11 +23,16 @@ export const createLeaveRequest = async (leaveData: Partial<LeaveRequest>) => {
   }
 };
 
-export const updateLeaveRequest = async (id: string, updates: Partial<LeaveRequest>): Promise<LeaveRequest> => {
+export const updateLeaveRequest = async (
+  id: string,
+  leaveRequestData: Partial<LeaveRequest>
+): Promise<LeaveRequest> => {
   try {
-    const response = await api.patch(`/attendance/leave-request/${id}`, updates);
+    console.log(id, leaveRequestData);
+    const response = await api.patch(`/attendance/leave-request/edit/${id}`, leaveRequestData);
     return response.data;
   } catch (error) {
+    console.error('Error updating leave request:', error);
     throw error;
   }
 };

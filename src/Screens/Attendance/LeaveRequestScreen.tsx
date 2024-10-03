@@ -100,6 +100,13 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
         "Your leave request has been submitted successfully.",
         "success"
       );
+      // Clear states
+      setStartDate("");
+      setEndDate("");
+      setReason("");
+      setMarkedDates({});
+      // Navigate to LeaveRequestList screen
+      navigation.navigate("LeaveRequestList");
     } catch (error: any) {
       console.error("Error submitting leave request:", error);
       if (error.message && typeof error.message === 'object' && error.message.message) {

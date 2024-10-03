@@ -35,6 +35,7 @@ import FlashCardChapterListScreen from "../Screens/FlashCards/FlashCardChapterLi
 import { ToastProvider } from "../contexts/ToastContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LeaveRequestListScreen from "../Screens/Attendance/LeaveRequestListScreen";
+import ChatScreen from "../Screens/Chat/ChatScreen";
 
 const Stack = createStackNavigator();
 
@@ -141,6 +142,7 @@ const AppNavigator: React.FC = () => {
                 name="FlashCardScreen"
                 component={FlashCardScreen as React.ComponentType<any>}
               />
+              <Stack.Screen name="Chat" component={ChatScreen} />
               <Stack.Screen name="FlashCards" component={FlashCardScreen} />
               <Stack.Screen
                 name="FlashCardChapterList"
