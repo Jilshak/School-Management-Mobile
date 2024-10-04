@@ -16,6 +16,7 @@ import BottomNavBar from "../../Components/BottomNavBar";
 import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
 import useProfileStore from "../../store/profileStore";
 import { capitalizeText } from "../../utils/StringUtil";
+import { UserRole } from "../../utils/roles";
 
 type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar" | "test" | "chat";
 
@@ -28,27 +29,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const scrollViewRef = useRef<GestureHandlerScrollView>(null);
   const profile =  useProfileStore((state: any) => state.profile);
 
-  const mainCards: { icon: IconName; text: string; route: string }[] = [
-    { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance' },
-    { icon: 'dollar', text: 'Payments', route: 'Payment' },
-    { icon: 'book', text: 'Class Details', route: 'ClassDetails' },
+  const mainCards: { icon: IconName; text: string; route: string,roles:string[] }[] = [
+    { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance',roles:[UserRole.TEACHER] },
+    { icon: 'dollar', text: 'Payments', route: 'Payment',roles:[UserRole.STUDENT] },
+    { icon: 'file-text', text: 'Marksheet', route: 'Marksheet',roles:[UserRole.STUDENT] },
+    { icon: 'schedule', text: 'Time Table', route: 'Timetable',roles:[UserRole.STUDENT] },
+    { icon: 'book', text: 'Class Details', route: 'ClassDetails',roles:[UserRole.TEACHER,UserRole.ADMIN] },
   ];
 
-  const academicCards: { icon: IconName; text: string; route: string }[] = [
-    { icon: 'file-text', text: 'Marksheet', route: 'Marksheet' },
-    { icon: 'schedule', text: 'Time Table', route: 'Timetable' },
-    { icon: 'schedule', text: 'Teacher Table', route: 'TeacherTimetable' },
-    { icon: 'book', text: 'Library', route: 'Library' },
-    { icon: 'user-switch', text: 'Leave Request', route: 'LeaveRequest' },
-    { icon: 'check-circle', text: 'Leave Approve', route: 'LeaveApprove' },
-    { icon: 'check-circle', text: 'Leave Request List', route: 'LeaveRequestList' },
-    { icon: 'book', text: 'Syllabus', route: 'Syllabus' },
-    { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook' },
-    { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },
-    { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection' },
-    { icon: 'book', text: 'MCQ Stats', route: 'MCQStats' },
-    { icon: 'test', text: 'Flash Cards', route: 'FlashCardScreen' },
-    { icon: 'chat', text: 'Chat', route: 'Chat' },
+  const academicCards: { icon: IconName; text: string; route: string,roles:string[] }[] = [
+    { icon: 'schedule', text: 'Teacher Table', route: 'TeacherTimetable',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'book', text: 'Library', route: 'Library',roles:[] },
+    { icon: 'user-switch', text: 'Leave Request', route: 'LeaveRequest',roles:[UserRole.STUDENT] },
+    { icon: 'check-circle', text: 'Leave Approve', route: 'LeaveApprove',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'check-circle', text: 'Leave Request List', route: 'LeaveRequestList',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'book', text: 'Syllabus', route: 'Syllabus',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection',roles:[] },
+    { icon: 'book', text: 'MCQ Stats', route: 'MCQStats',roles:[] },
+    { icon: 'test', text: 'Flash Cards', route: 'FlashCardScreen',roles:[] },
+    { icon: 'chat', text: 'Chat', route: 'Chat',roles:[] },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -120,7 +121,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               snapToInterval={Dimensions.get('window').width * 0.45 + 15}
               snapToAlignment="center"
             >
-              {mainCards.map((card, index) => (
+              {mainCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((card, index) => (
                 <TouchableOpacity
                   key={index}
                   style={styles.horizontalCard}
@@ -133,7 +134,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <View style={{ width: Dimensions.get('window').width * 0.275 }} />
             </GestureHandlerScrollView>
             <View style={styles.scrollIndicator}>
-              {mainCards.map((_, index) => (
+              {mainCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((_, index) => (
                 <View
                   key={index}
                   style={[
@@ -148,7 +149,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.academicsSection}>
             <Text style={styles.sectionTitle}>Academics</Text>
             <View style={styles.academicsCards}>
-              {academicCards.map((card, index) => (
+              {academicCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((card, index) => (
                 <TouchableOpacity
                   key={index}
                   style={styles.academicCard}
