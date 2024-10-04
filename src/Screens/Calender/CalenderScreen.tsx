@@ -5,79 +5,92 @@ import { Ionicons } from '@expo/vector-icons';
 import BottomNavBar from '../../Components/BottomNavBar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
+import useEventStore from '../../store/eventStore';
+import { getEvents } from '../../Services/Event/eventServices';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import isBetween from 'dayjs/plugin/isBetween';
+
+dayjs.extend(utc);
+dayjs.extend(isBetween);
 
 interface Event {
-  id: string;
-  date: string;
-  type: string;
+  _id: string;
+  title: string;
   description: string;
+  startDate: string;
+  endDate: string;
 }
 
 const CalendarScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<any, 'Calendar'>>();
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
   const [selectedDate, setSelectedDate] = useState('');
-  const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  const { events, setEvents } = useEventStore();
 
   useEffect(() => {
     fetchEvents();
   }, []);
 
-  type HomeScreenProps = {
-    navigation: StackNavigationProp<any, 'Home'>;
-  };
+  useEffect(() => {
+    updateMarkedDates();
+  }, [events]);
 
   const fetchEvents = async () => {
-    const fetchedEvents: Event[] = [
-      { id: '1', date: '2024-09-15', type: 'holiday', description: 'School Holiday' },
-      { id: '2', date: '2024-09-20', type: 'event', description: 'Parent-Teacher Meeting' },
-      { id: '3', date: '2024-09-25', type: 'exam', description: 'Math Exam' },
-      { id: '4', date: '2024-09-28', type: 'event', description: 'School Sports Day' },
-      { id: '5', date: '2024-09-01', type: 'holiday', description: 'Summer Break Begins' },
-    ];
+    try {
+      const fetchedEvents = await getEvents();
+      setEvents(fetchedEvents);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    }
+  };
 
-    setEvents(fetchedEvents);
-
+  const updateMarkedDates = () => {
     const newMarkedDates: {[key: string]: any} = {};
-    fetchedEvents.forEach(event => {
-      newMarkedDates[event.date] = {
-        marked: true,
-        dotColor: getEventColor(event.type),
-      };
-    });
+    events.forEach(event => {
+      const startDate = dayjs(event.startDate).utc();
+      const endDate = dayjs(event.endDate).utc();
+      let currentDate = startDate;
 
+      while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
+        const dateString = currentDate.format('YYYY-MM-DD');
+        newMarkedDates[dateString] = {
+          marked: true,
+          dotColor: getEventColor(event),
+        };
+        currentDate = currentDate.add(1, 'day');
+      }
+    });
     setMarkedDates(newMarkedDates);
   };
 
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case 'holiday':
-        return '#FF6B6B';
-      case 'event':
-        return '#4ECDC4';
-      case 'exam':
-        return '#FFA500';
-      default:
-        return '#95A5A6';
-    }
+  const getEventColor = (event: Event) => {
+    // You can implement your own logic to determine event colors
+    return '#4ECDC4';
   };
 
   const onDayPress = (day: {dateString: string}) => {
     setSelectedDate(day.dateString);
-    const eventForDay = events.find(event => event.date === day.dateString);
-    setSelectedEvent(eventForDay || null);
-
-    const newMarkedDates: {[key: string]: any} = {};
-    events.forEach(event => {
-      newMarkedDates[event.date] = {
-        marked: true,
-        dotColor: getEventColor(event.type),
-      };
+    const eventsForDay = events.filter(event => {
+      const startDate = dayjs(event.startDate).utc();
+      const endDate = dayjs(event.endDate).utc();
+      const selectedDay = dayjs(day.dateString).utc();
+      
+      // Check if dayjs has the isBetween method
+      if (typeof selectedDay.isBetween === 'function') {
+        return selectedDay.isBetween(startDate, endDate, 'day', '[]');
+      } else {
+        // Fallback if isBetween is not available
+        return selectedDay.isSameOrAfter(startDate) && selectedDay.isSameOrBefore(endDate);
+      }
     });
+    setSelectedEvent(eventsForDay.length > 0 ? eventsForDay[0] : null);
 
-    if (eventForDay) {
+    const newMarkedDates = { ...markedDates };
+    if (eventsForDay.length > 0) {
       newMarkedDates[day.dateString] = {
         ...newMarkedDates[day.dateString],
         selected: true,
@@ -89,19 +102,21 @@ const CalendarScreen: React.FC = () => {
   };
 
   const renderEventItem = (event: Event) => (
-    <TouchableOpacity key={event.id} style={styles.eventItem}>
-      <View style={[styles.eventDot, { backgroundColor: getEventColor(event.type) }]} />
+    <TouchableOpacity key={event._id} style={styles.eventItem}>
+      <View style={[styles.eventDot, { backgroundColor: getEventColor(event) }]} />
       <View style={styles.eventContent}>
-        <Text style={styles.eventDate}>{event.date}</Text>
-        <Text style={styles.eventDescription}>{event.description}</Text>
+        <Text style={styles.eventDate}>
+          {dayjs(event.startDate).utc().format('MMM D, YYYY')} - {dayjs(event.endDate).utc().format('MMM D, YYYY')}
+        </Text>
+        <Text style={styles.eventDescription}>{event.title}</Text>
       </View>
       <Ionicons name="chevron-forward" size={24} color="#95A5A6" />
     </TouchableOpacity>
   );
 
   const filteredEvents = events.filter(event => 
-    event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.date.includes(searchQuery)
+    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dayjs(event.startDate).utc().format('YYYY-MM-DD').includes(searchQuery)
   );
 
   return (
@@ -145,10 +160,10 @@ const CalendarScreen: React.FC = () => {
             {selectedEvent && (
               <View style={[
                 styles.tooltip, 
-                { backgroundColor: getEventColor(selectedEvent.type) }
+                { backgroundColor: getEventColor(selectedEvent) }
               ]}>
-                <Text style={styles.tooltipDate}>{selectedEvent.date}</Text>
-                <Text style={styles.tooltipDescription}>{selectedEvent.description}</Text>
+                <Text style={styles.tooltipDate}>{new Date(selectedEvent.startDate).toLocaleDateString()}</Text>
+                <Text style={styles.tooltipDescription}>{selectedEvent.title}</Text>
               </View>
             )}
           </View>
