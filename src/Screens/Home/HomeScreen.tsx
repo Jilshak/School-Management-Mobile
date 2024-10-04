@@ -206,11 +206,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       <View style={styles.eventsSection}>
         <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        {events.filter((event) => dayjs(event.startDate).utc().isAfter(dayjs().utc())).length > 0 ? (
+        {events.filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc())).length > 0 ? (
           <FlatList
             data={events
-              .filter((event) => dayjs(event.startDate).utc().isAfter(dayjs().utc()))
-              .sort((a, b) => dayjs(a.startDate).utc().diff(dayjs(b.startDate).utc()))}
+              .filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc()))
+              .sort((a, b) => dayjs(a.endDate).utc().diff(dayjs(b.startDate).utc()))}
             renderItem={renderEventItem}
             keyExtractor={(item) => item._id}
             style={styles.eventList}
@@ -232,11 +232,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+      <GestureHandlerScrollView contentContainerStyle={styles.scrollContent}>
+
+
         <FlatList
           data={[{ key: 'content' }]}
           renderItem={() => renderContent()}
           showsVerticalScrollIndicator={false}
-        />
+          />
+          </GestureHandlerScrollView>
         <BottomNavBar />
       </SafeAreaView>
     </View>
