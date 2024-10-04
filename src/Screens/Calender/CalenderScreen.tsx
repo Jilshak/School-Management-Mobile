@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, FlatList } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNavBar from '../../Components/BottomNavBar';
@@ -31,14 +31,13 @@ const CalendarScreen: React.FC = () => {
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
   const [selectedDate, setSelectedDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
 
   const { events, setEvents } = useEventStore();
 
   useEffect(() => {
     fetchEvents();
   }, []);
-
 
   useEffect(() => {
     updateMarkedDates();
@@ -76,8 +75,6 @@ const CalendarScreen: React.FC = () => {
     // You can implement your own logic to determine event colors
     return '#4ECDC4';
   };
-
-  const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
 
   const onDayPress = (day: {dateString: string}) => {
     setSelectedDate(day.dateString);
@@ -120,6 +117,65 @@ const CalendarScreen: React.FC = () => {
     dayjs(event.startDate).format('YYYY-MM-DD').includes(searchQuery)
   );
 
+  const renderHeader = () => (
+    <>
+      <View style={styles.calendarContainer}>
+        <Calendar
+          markedDates={markedDates}
+          onDayPress={onDayPress}
+          theme={{
+            backgroundColor: '#ffffff',
+            calendarBackground: '#ffffff',
+            textSectionTitleColor: '#b6c1cd',
+            selectedDayBackgroundColor: 'rgba(0, 21, 41, 0.1)',
+            selectedDayTextColor: '#001529',
+            todayTextColor: '#001529',
+            dayTextColor: '#2d4150',
+            textDisabledColor: '#d9e1e8',
+            dotColor: '#001529',
+            selectedDotColor: '#ffffff',
+            arrowColor: '#001529',
+            monthTextColor: '#001529',
+            indicatorColor: '#001529',
+            textDayFontWeight: '300',
+            textMonthFontWeight: 'bold',
+            textDayHeaderFontWeight: '300',
+            textDayFontSize: 16,
+            textMonthFontSize: 18,
+            textDayHeaderFontSize: 14,
+          }}
+        />
+        {selectedEvents.length > 0 && (
+          <View style={styles.selectedEventsContainer}>
+            <Text style={styles.selectedDateText}>
+              Events for {dayjs(selectedDate).format('MMMM D, YYYY')}
+            </Text>
+            <FlatList
+              data={selectedEvents}
+              renderItem={renderEventItem}
+              keyExtractor={(item) => item._id}
+              style={styles.selectedEventsList}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.upcomingEventsContainer}>
+        <Text style={styles.sectionTitle}>Upcoming Events</Text>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#001529" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -131,62 +187,14 @@ const CalendarScreen: React.FC = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView style={styles.contentContainer}>
-          <View style={styles.calendarContainer}>
-            <Calendar
-              markedDates={markedDates}
-              onDayPress={onDayPress}
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#b6c1cd',
-                selectedDayBackgroundColor: 'rgba(0, 21, 41, 0.1)',
-                selectedDayTextColor: '#001529',
-                todayTextColor: '#001529',
-                dayTextColor: '#2d4150',
-                textDisabledColor: '#d9e1e8',
-                dotColor: '#001529',
-                selectedDotColor: '#ffffff',
-                arrowColor: '#001529',
-                monthTextColor: '#001529',
-                indicatorColor: '#001529',
-                textDayFontWeight: '300',
-                textMonthFontWeight: 'bold',
-                textDayHeaderFontWeight: '300',
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 14,
-              }}
-            />
-            {selectedEvents.length > 0 && (
-              <View style={styles.selectedEventsContainer}>
-                <Text style={styles.selectedDateText}>
-                  Events for {dayjs(selectedDate).format('MMMM D, YYYY')}
-                </Text>
-                <FlatList
-                  data={selectedEvents}
-                  renderItem={renderEventItem}
-                  keyExtractor={(item) => item._id}
-                  style={styles.selectedEventsList}
-                />
-              </View>
-            )}
-          </View>
+        <FlatList
+          data={filteredEvents}
+          renderItem={renderEventItem}
+          keyExtractor={(item) => item._id}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={styles.contentContainer}
+        />
 
-          <View style={styles.upcomingEventsContainer}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#001529" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search events..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-            {filteredEvents.map((event) => renderEventItem({ item: event }))}
-          </View>
-        </ScrollView>
         <BottomNavBar />
       </SafeAreaView>
     </View>
@@ -222,8 +230,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   contentContainer: {
-    flex: 1,
-    marginTop: 80,
+    paddingBottom: 20,
   },
   calendarContainer: {
     backgroundColor: '#ffffff',

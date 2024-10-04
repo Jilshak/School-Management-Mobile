@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { getTeacherTimetable } from '../../Services/TimeTable/timetableServices';
 
 type WeekDay = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
 
@@ -58,6 +59,12 @@ const TeacherTimetableScreen: React.FC<TeacherTimetableScreenProps> = ({ navigat
       { time: '14:00 - 15:00', subject: 'Mathematics', class: 'LKG-B' },
     ],
   };
+
+  useEffect(()=>{
+    getTeacherTimetable().then((res)=>{
+      console.log(res)
+    })
+  },[])
 
   return (
     <SafeAreaView style={styles.container}>
