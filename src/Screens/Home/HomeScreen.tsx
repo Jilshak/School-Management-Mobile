@@ -113,41 +113,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   };
 
-  const renderContent = () => (
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.greeting}>Welcome back,</Text>
+        <Text style={styles.userName}>{profile.firstName} {profile.lastName}</Text>
+        <View style={styles.gradeBadge}>
+          <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => capitalizeText(role))}</Text>
+        </View>
+      </View>
+      <Image
+        source={{ uri: "https://example.com/profile-pic.jpg" }}
+        style={styles.profilePic}
+      />
+    </View>
+  );
+
+  const renderAttendanceSection = () => (
+    <View style={styles.attendanceSection}>
+      <Text style={styles.sectionTitle}>Attendance</Text>
+      <View style={styles.attendanceProgress}>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: '85%' }]} />
+        </View>
+        <Text style={styles.attendanceText}>85% Present</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.attendanceButton}
+        onPress={() => navigation.navigate("Attendance")}
+      >
+        <AntIcon name="check-circle" size={24} color="#ffffff" />
+        <Text style={styles.attendanceButtonText}>
+          View Attendance Details
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderQuickActions = () => (
     <>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>{profile.firstName} {profile.lastName}</Text>
-          <View style={styles.gradeBadge}>
-            <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => capitalizeText(role))}</Text>
-          </View>
-        </View>
-        <Image
-          source={{ uri: "https://example.com/profile-pic.jpg" }}
-          style={styles.profilePic}
-        />
-      </View>
-
-      <View style={styles.attendanceSection}>
-        <Text style={styles.sectionTitle}>Attendance</Text>
-        <View style={styles.attendanceProgress}>
-          <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBar, { width: '85%' }]} />
-          </View>
-          <Text style={styles.attendanceText}>85% Present</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.attendanceButton}
-          onPress={() => navigation.navigate("Attendance")}
-        >
-          <AntIcon name="check-circle" size={24} color="#ffffff" />
-          <Text style={styles.attendanceButtonText}>
-            View Attendance Details
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.quickActionsContainer}>
         <GestureHandlerScrollView
@@ -185,62 +189,81 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           ))}
         </View>
       </View>
-
-      <View style={styles.academicsSection}>
-        <Text style={styles.sectionTitle}>Academics</Text>
-        <View style={styles.academicsCards}>
-          {academicCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((card, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.academicCard}
-              onPress={() => navigation.navigate(card.route)}
-            >
-              <View style={styles.academicCardIcon}>
-                <AntIcon name={card.icon as any} size={24} color="#ffffff" />
-              </View>
-              <Text style={styles.academicCardText}>{card.text}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.eventsSection}>
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        {events.filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc())).length > 0 ? (
-          <FlatList
-            data={events
-              .filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc()))
-              .sort((a, b) => dayjs(a.endDate).utc().diff(dayjs(b.startDate).utc()))}
-            renderItem={renderEventItem}
-            keyExtractor={(item) => item._id}
-            style={styles.eventList}
-            scrollEnabled={false}
-          />
-        ) : (
-          <Text style={styles.noEventsText}>No upcoming events</Text>
-        )}
-        <TouchableOpacity
-          style={styles.viewAllButton}
-          onPress={() => navigation.navigate("Calendar")}
-        >
-          <Text style={styles.viewAllButtonText}>View All Events</Text>
-        </TouchableOpacity>
-      </View>
     </>
   );
+
+  const renderAcademicsSection = () => (
+    <View style={styles.academicsSection}>
+      <Text style={styles.sectionTitle}>Academics</Text>
+      <View style={styles.academicsCards}>
+        {academicCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((card, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.academicCard}
+            onPress={() => navigation.navigate(card.route)}
+          >
+            <View style={styles.academicCardIcon}>
+              <AntIcon name={card.icon as any} size={24} color="#ffffff" />
+            </View>
+            <Text style={styles.academicCardText}>{card.text}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderEventsSection = () => (
+    <View style={styles.eventsSection}>
+      <Text style={styles.sectionTitle}>Upcoming Events</Text>
+      {events.filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc())).length > 0 ? (
+        <FlatList
+          data={events
+            .filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc()))
+            .sort((a, b) => dayjs(a.endDate).utc().diff(dayjs(b.startDate).utc()))}
+          renderItem={renderEventItem}
+          keyExtractor={(item) => item._id}
+          style={styles.eventList}
+          scrollEnabled={false}
+        />
+      ) : (
+        <Text style={styles.noEventsText}>No upcoming events</Text>
+      )}
+      <TouchableOpacity
+        style={styles.viewAllButton}
+        onPress={() => navigation.navigate("Calendar")}
+      >
+        <Text style={styles.viewAllButtonText}>View All Events</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderItem = ({ item }: { item: string }) => {
+    switch (item) {
+      case 'header':
+        return renderHeader();
+      case 'attendance':
+        return renderAttendanceSection();
+      case 'quickActions':
+        return renderQuickActions();
+      case 'academics':
+        return renderAcademicsSection();
+      case 'events':
+        return renderEventsSection();
+      default:
+        return null;
+    }
+  };
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-      <GestureHandlerScrollView contentContainerStyle={styles.scrollContent}>
-
-
         <FlatList
-          data={[{ key: 'content' }]}
-          renderItem={() => renderContent()}
+          data={['header', 'attendance', 'quickActions', 'academics', 'events']}
+          renderItem={renderItem}
+          keyExtractor={(item) => item}
           showsVerticalScrollIndicator={false}
-          />
-          </GestureHandlerScrollView>
+          contentContainerStyle={styles.scrollContent}
+        />
         <BottomNavBar />
       </SafeAreaView>
     </View>
