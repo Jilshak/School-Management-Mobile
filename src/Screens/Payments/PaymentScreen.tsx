@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, SectionList, RefreshControl, Dimensions, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, SectionList, RefreshControl, Dimensions, Modal, ScrollView, Alert } from 'react-native';
 import { Text, Icon as AntIcon, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LineChart } from 'react-native-chart-kit';
 import PaymentFilter from '../../Components/PaymentFilter';
 import Icon from 'react-native-vector-icons/AntDesign';
+import { getAccountsReport } from '../../Services/Payments/paymentServices';
 
 type PaymentScreenProps = {
   navigation: StackNavigationProp<any, 'Payment'>;
@@ -27,6 +28,43 @@ interface SectionData {
   renderItem: ({ item, index }: { item: string | Payment; index: number }) => React.ReactElement | null;
 }
 
+// Add these interfaces to define the structure of the API response
+interface Fee {
+  name: string;
+  amount: number;
+  quantity?: number;
+  description?: string;
+}
+
+interface Account {
+  _id: string;
+  studentId: string;
+  fees: Fee[];
+  paymentDate: string;
+  paymentMode: string;
+  createdAt: string;
+}
+
+interface FeeDetail {
+  name: string;
+  amount: number;
+  paidAmount: number;
+  remainingBalance: number;
+}
+
+interface PaymentDue {
+  _id: string;
+  name: string;
+  feeDetails: FeeDetail[];
+  dueDate: string;
+  totalRemainingBalance: number;
+}
+
+interface AccountsReportResponse {
+  accounts: Account[];
+  paymentDues: PaymentDue[];
+}
+
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
@@ -38,20 +76,45 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
   const [filterStartDate, setFilterStartDate] = useState<string | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null);
 
-  const payments: Payment[] = [
-    { id: '1', name: 'Tuition Fee', date: '2023-09-01', status: 'Paid', amount: 5000 },
-    { id: '2', name: 'Library Fee', date: '2023-10-15', status: 'Pending', amount: 500, dueDate: '2023-10-30' },
-    { id: '3', name: 'Sports Fee', date: '2023-11-01', status: 'Paid', amount: 1000 },
-    { id: '4', name: 'Exam Fee', date: '2024-01-10', status: 'Upcoming', amount: 1500, dueDate: '2024-01-20' },
-    // Add more payments as needed
-  ];
+  const [accountsReport, setAccountsReport] = useState<AccountsReportResponse | null>(null);
+
+  useEffect(() => {
+    fetchAccountsReport();
+  }, []);
+
+  const fetchAccountsReport = async () => {
+    try {
+      const response = await getAccountsReport();
+      console.log('API Response:', JSON.stringify(response, null, 2)); // Log the response
+      setAccountsReport(response);
+      const processedPayments = processAccountsData(response.accounts);
+      setFilteredPayments(processedPayments);
+    } catch (error) {
+      console.error('Error fetching accounts report:', error);
+      Alert.alert('Error', 'Failed to fetch accounts report. Please try again.');
+    }
+  };
+
+  const processAccountsData = (accounts: Account[]): Payment[] => {
+    if (!Array.isArray(accounts)) {
+      console.error('Accounts is not an array:', accounts);
+      return [];
+    }
+    return accounts.map(account => ({
+      id: account._id,
+      name: account.fees[0]?.name || 'Unknown Payment',
+      date: new Date(account.paymentDate).toISOString().split('T')[0],
+      status: 'Paid',
+      amount: account.fees.reduce((sum, fee) => sum + fee.amount, 0),
+    }));
+  };
 
   useEffect(() => {
     filterAndSortPayments();
   }, [searchQuery, selectedStatus, sortOrder]);
 
   const filterAndSortPayments = () => {
-    let filtered = payments;
+    let filtered = filteredPayments;
     if (selectedStatus !== 'All') {
       filtered = filtered.filter(payment => payment.status === selectedStatus);
     }
@@ -76,30 +139,54 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
     }, 1000);
   };
 
-  const totalPaid = payments.reduce((sum, payment) => payment.status === 'Paid' ? sum + payment.amount : sum, 0);
-  const totalPending = payments.reduce((sum, payment) => payment.status === 'Pending' ? sum + payment.amount : sum, 0);
-  const totalUpcoming = payments.reduce((sum, payment) => payment.status === 'Upcoming' ? sum + payment.amount : sum, 0);
+  const renderPaymentSummary = () => {
+    if (!accountsReport) return null;
 
-  const renderPaymentSummary = () => (
-    <View style={styles.summaryContainer}>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryTitle}>Total Paid</Text>
-        <Text style={[styles.summaryValue, { color: '#52c41a' }]}>₹{totalPaid}</Text>
+    const totalPaid = accountsReport.accounts.reduce((sum, account) => 
+      sum + account.fees.reduce((feeSum, fee) => feeSum + fee.amount, 0), 0);
+    const totalPending = accountsReport.paymentDues.reduce((sum, due) => sum + due.totalRemainingBalance, 0);
+
+    return (
+      <View style={styles.summaryContainer}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryTitle}>Total Paid</Text>
+          <Text style={[styles.summaryValue, { color: '#52c41a' }]}>₹{totalPaid.toFixed(2)}</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryTitle}>Pending</Text>
+          <Text style={[styles.summaryValue, { color: '#faad14' }]}>₹{totalPending.toFixed(2)}</Text>
+        </View>
       </View>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryTitle}>Pending</Text>
-        <Text style={[styles.summaryValue, { color: '#faad14' }]}>₹{totalPending}</Text>
+    );
+  };
+
+  const renderPaymentDues = () => {
+    if (!accountsReport || !Array.isArray(accountsReport.paymentDues) || accountsReport.paymentDues.length === 0) return null;
+
+    return (
+      <View style={styles.duesContainer}>
+        <Text style={styles.sectionTitle}>Payment Dues</Text>
+        {accountsReport.paymentDues.map((due) => (
+          <View key={due._id} style={styles.dueItem}>
+            <Text style={styles.dueName}>{due.name}</Text>
+            <Text style={styles.dueDate}>Due: {new Date(due.dueDate).toLocaleDateString()}</Text>
+            <Text style={styles.dueAmount}>Total Due: ₹{due.totalRemainingBalance.toFixed(2)}</Text>
+            {due.feeDetails.map((fee, index) => (
+              <View key={index} style={styles.feeDetail}>
+                <Text>{fee.name}: ₹{fee.remainingBalance.toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        ))}
       </View>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryTitle}>Upcoming</Text>
-        <Text style={[styles.summaryValue, { color: '#1890ff' }]}>₹{totalUpcoming}</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderPaymentChart = () => {
+    if (filteredPayments.length === 0) return null;
+
     // Sort payments by date
-    const sortedPayments = [...payments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sortedPayments = [...filteredPayments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     // Prepare data for the line chart
     const labels = sortedPayments.map(payment => {
@@ -257,16 +344,21 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
       {
         title: 'Overview',
         data: ['summary', 'controls'] as (string | Payment)[],
-        renderItem: ({ item, index }: { item: string | Payment; index: number }) => { 
+        renderItem: ({ item }) => { 
           if (item === 'summary') return renderPaymentSummary();
           if (item === 'controls') return renderPaymentChart();
           return null;
         }
       },
       {
+        title: 'Payment Dues',
+        data: ['dues'],
+        renderItem: () => renderPaymentDues()
+      },
+      {
         title: 'Payment History',
         data: ['controls', ...filteredPayments],
-        renderItem: ({ item, index }: { item: string | Payment; index: number }) => {
+        renderItem: ({ item, index }) => {
           if (index === 0) {
             return renderSearchAndFilter();
           }
@@ -280,7 +372,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
         sections={sections}
         keyExtractor={(item, index) => {
           if (typeof item === 'string') return item;
-          return item.id || index.toString();
+          return (item as Payment).id || index.toString();
         }}
         renderItem={({ item, section, index }) => section.renderItem({ item, index })}
         renderSectionHeader={({ section: { title } }) => 
@@ -506,6 +598,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ff4d4f',
     marginTop: 2,
+  },
+  duesContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  dueItem: {
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingBottom: 10,
+  },
+  dueName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
+  dueDate: {
+    fontSize: 14,
+    color: '#4a4a4a',
+    marginTop: 2,
+  },
+  dueAmount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ff4d4f',
+    marginTop: 5,
+  },
+  feeDetail: {
+    marginTop: 5,
   },
 });
 
