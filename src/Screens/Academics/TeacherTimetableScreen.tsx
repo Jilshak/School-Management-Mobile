@@ -1,15 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { getTeacherTimetable } from '../../Services/TimeTable/timetableServices';
 
-type WeekDay = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
+type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
 
 type Period = {
-  time: string;
-  subject: string;
-  class: string;
+  period: number;
+  startTime: number;
+  endTime: number;
+  className: string;
+  subject: {
+    _id: string;
+    name: string;
+    code: string;
+    schoolId: string;
+  };
 };
 
 type TeacherTimetable = {
@@ -21,50 +28,19 @@ type TeacherTimetableScreenProps = {
 };
 
 const TeacherTimetableScreen: React.FC<TeacherTimetableScreenProps> = ({ navigation }) => {
-  const weekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const teacherTimetable: TeacherTimetable = {
-    Monday: [
-      { time: '09:00 - 10:00', subject: 'Mathematics', class: 'UKG-A' },
-      { time: '10:00 - 11:00', subject: 'English', class: 'LKG-B' },
-      { time: '11:15 - 12:15', subject: 'Science', class: 'UKG-B' },
-      { time: '13:00 - 14:00', subject: 'Mathematics', class: 'LKG-A' },
-      { time: '14:00 - 15:00', subject: 'English', class: 'UKG-C' },
-    ],
-    Tuesday: [
-      { time: '09:00 - 10:00', subject: 'Science', class: 'UKG-B' },
-      { time: '10:00 - 11:00', subject: 'Mathematics', class: 'LKG-B' },
-      { time: '11:15 - 12:15', subject: 'English', class: 'UKG-A' },
-      { time: '13:00 - 14:00', subject: 'Science', class: 'LKG-A' },
-      { time: '14:00 - 15:00', subject: 'Mathematics', class: 'UKG-C' },
-    ],
-    Wednesday: [
-      { time: '09:00 - 10:00', subject: 'English', class: 'LKG-A' },
-      { time: '10:00 - 11:00', subject: 'Science', class: 'UKG-C' },
-      { time: '11:15 - 12:15', subject: 'Mathematics', class: 'UKG-B' },
-      { time: '13:00 - 14:00', subject: 'English', class: 'LKG-B' },
-      { time: '14:00 - 15:00', subject: 'Science', class: 'UKG-A' },
-    ],
-    Thursday: [
-      { time: '09:00 - 10:00', subject: 'Mathematics', class: 'LKG-B' },
-      { time: '10:00 - 11:00', subject: 'Science', class: 'UKG-A' },
-      { time: '11:15 - 12:15', subject: 'English', class: 'LKG-A' },
-      { time: '13:00 - 14:00', subject: 'Mathematics', class: 'UKG-C' },
-      { time: '14:00 - 15:00', subject: 'Science', class: 'UKG-B' },
-    ],
-    Friday: [
-      { time: '09:00 - 10:00', subject: 'English', class: 'UKG-C' },
-      { time: '10:00 - 11:00', subject: 'Mathematics', class: 'LKG-A' },
-      { time: '11:15 - 12:15', subject: 'Science', class: 'UKG-B' },
-      { time: '13:00 - 14:00', subject: 'English', class: 'UKG-A' },
-      { time: '14:00 - 15:00', subject: 'Mathematics', class: 'LKG-B' },
-    ],
-  };
+  const [timetable, setTimetable] = useState<TeacherTimetable | null>(null);
+  const weekDays: WeekDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-  useEffect(()=>{
-    getTeacherTimetable().then((res)=>{
-      console.log(res)
-    })
-  },[])
+  useEffect(() => {
+    getTeacherTimetable().then((res) => {
+      setTimetable(res);
+    });
+  }, []);
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -79,25 +55,30 @@ const TeacherTimetableScreen: React.FC<TeacherTimetableScreenProps> = ({ navigat
       <View style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.teacherInfo}>
-            <Text style={styles.teacherName}>Mrs. Sarah Johnson</Text>
-            <Text style={styles.teacherSubject}>Subjects: Mathematics, English, Science</Text>
+            <Text style={styles.teacherName}>Teacher Name</Text>
             <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
           </View>
 
-          {weekDays.map((day, index) => (
+          {timetable && weekDays.map((day, index) => (
             <View key={index} style={styles.dayContainer}>
-              <Text style={styles.dayTitle}>{day}</Text>
-              {teacherTimetable[day].map((period: Period, periodIndex: number) => (
-                <View key={periodIndex} style={styles.periodItem}>
-                  <View style={styles.timeContainer}>
-                    <Text style={styles.timeText}>{period.time}</Text>
+              <Text style={styles.dayTitle}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
+              {timetable[day].length > 0 ? (
+                timetable[day].map((period: Period, periodIndex: number) => (
+                  <View key={periodIndex} style={styles.periodItem}>
+                    <View style={styles.timeContainer}>
+                      <Text style={styles.timeText}>
+                        {`${formatTime(period.startTime)} - ${formatTime(period.endTime)}`}
+                      </Text>
+                    </View>
+                    <View style={styles.classInfoContainer}>
+                      <Text style={styles.subjectText}>{period.subject.name}</Text>
+                      <Text style={styles.classText}>{`Class ${period.className}`}</Text>
+                    </View>
                   </View>
-                  <View style={styles.classInfoContainer}>
-                    <Text style={styles.subjectText}>{period.subject}</Text>
-                    <Text style={styles.classText}>{period.class}</Text>
-                  </View>
-                </View>
-              ))}
+                ))
+              ) : (
+                <Text style={styles.noClassText}>No classes scheduled</Text>
+              )}
             </View>
           ))}
 
@@ -221,6 +202,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  noClassText: {
+    fontSize: 16,
+    color: '#4a4a4a',
+    fontStyle: 'italic',
   },
 });
 
