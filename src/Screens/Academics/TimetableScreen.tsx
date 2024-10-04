@@ -1,51 +1,84 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { getTimetableForStudent } from '../../Services/TimeTable/timetableServices';
 
 type TimetableScreenProps = {
   navigation: StackNavigationProp<any, 'Timetable'>;
 };
 
-const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
-  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const timetable = {
-    Monday: [
-      { time: '09:00 - 10:00', subject: 'Mathematics' },
-      { time: '10:00 - 11:00', subject: 'English' },
-      { time: '11:15 - 12:15', subject: 'Science' },
-      { time: '13:00 - 14:00', subject: 'Social Studies' },
-      { time: '14:00 - 15:00', subject: 'Physical Education' },
-    ],
-    Tuesday: [
-      { time: '09:00 - 10:00', subject: 'Science' },
-      { time: '10:00 - 11:00', subject: 'Mathematics' },
-      { time: '11:15 - 12:15', subject: 'English' },
-      { time: '13:00 - 14:00', subject: 'Art' },
-      { time: '14:00 - 15:00', subject: 'Music' },
-    ],
-    Wednesday: [
-      { time: '09:00 - 10:00', subject: 'English' },
-      { time: '10:00 - 11:00', subject: 'Social Studies' },
-      { time: '11:15 - 12:15', subject: 'Mathematics' },
-      { time: '13:00 - 14:00', subject: 'Science' },
-      { time: '14:00 - 15:00', subject: 'Computer' },
-    ],
-    Thursday: [
-      { time: '09:00 - 10:00', subject: 'Social Studies' },
-      { time: '10:00 - 11:00', subject: 'Science' },
-      { time: '11:15 - 12:15', subject: 'Mathematics' },
-      { time: '13:00 - 14:00', subject: 'English' },
-      { time: '14:00 - 15:00', subject: 'Art' },
-    ],
-    Friday: [
-      { time: '09:00 - 10:00', subject: 'Mathematics' },
-      { time: '10:00 - 11:00', subject: 'English' },
-      { time: '11:15 - 12:15', subject: 'Science' },
-      { time: '13:00 - 14:00', subject: 'Physical Education' },
-      { time: '14:00 - 15:00', subject: 'Music' },
-    ],
+interface TimetableData {
+  classroomDetails: {
+    name: string;
+    academicYear: {
+      startDate: string;
+      endDate: string;
+    };
   };
+  monday: Period[];
+  tuesday: Period[];
+  wednesday: Period[];
+  thursday: Period[];
+  friday: Period[];
+  // Add other days if needed
+}
+
+interface Period {
+  startTime: number;
+  endTime: number;
+  subject: {
+    name: string;
+  };
+  teacher: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
+  const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
+
+  useEffect(() => {
+    getTimetableForStudent().then((res) => {
+      setTimetableData(res);
+    });
+  }, []);
+
+  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const renderPeriods = (day: keyof TimetableData) => {
+    if (!timetableData || !timetableData[day]) return null;
+
+    return timetableData[day].map((period, index) => (
+      <View key={index} style={styles.periodItem}>
+        <View style={styles.timeContainer}>
+          <Text style={styles.timeText}>
+            {formatTime(period.startTime)} - {formatTime(period.endTime)}
+          </Text>
+        </View>
+        <View style={styles.subjectContainer}>
+          <Text style={styles.subjectText}>{period.subject.name}</Text>
+          <Text style={styles.teacherText}>
+            {period.teacher.firstName} {period.teacher.lastName}
+          </Text>
+        </View>
+      </View>
+    ));
+  };
+
+  if (!timetableData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -60,24 +93,17 @@ const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
       <View style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.studentInfo}>
-            <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
-            <Text style={styles.studentClass}>Class: UKG</Text>
-            <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
+            <Text style={styles.studentName}>Class: {timetableData.classroomDetails.name}</Text>
+            <Text style={styles.academicYear}>
+              Academic Year: {new Date(timetableData.classroomDetails.academicYear.startDate).getFullYear()} - 
+              {new Date(timetableData.classroomDetails.academicYear.endDate).getFullYear()}
+            </Text>
           </View>
 
           {weekDays.map((day, index) => (
             <View key={index} style={styles.dayContainer}>
               <Text style={styles.dayTitle}>{day}</Text>
-              {timetable[day as keyof typeof timetable]?.map((period, periodIndex) => (
-                <View key={periodIndex} style={styles.periodItem}>
-                  <View style={styles.timeContainer}>
-                    <Text style={styles.timeText}>{period.time}</Text>
-                  </View>
-                  <View style={styles.subjectContainer}>
-                    <Text style={styles.subjectText}>{period.subject}</Text>
-                  </View>
-                </View>
-              ))}
+              {renderPeriods(day.toLowerCase() as keyof TimetableData)}
             </View>
           ))}
 
@@ -197,6 +223,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  teacherText: {
+    color: '#4a4a4a',
+    fontSize: 14,
+    marginTop: 2,
   },
 });
 
