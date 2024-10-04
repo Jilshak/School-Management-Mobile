@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, FlatList } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNavBar from '../../Components/BottomNavBar';
@@ -9,10 +9,14 @@ import useEventStore from '../../store/eventStore';
 import { getEvents } from '../../Services/Event/eventServices';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import isBetween from 'dayjs/plugin/isBetween';
+import timezone from 'dayjs/plugin/timezone';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
 dayjs.extend(utc);
-dayjs.extend(isBetween);
+dayjs.extend(timezone);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 interface Event {
   _id: string;
@@ -35,6 +39,7 @@ const CalendarScreen: React.FC = () => {
     fetchEvents();
   }, []);
 
+
   useEffect(() => {
     updateMarkedDates();
   }, [events]);
@@ -51,8 +56,8 @@ const CalendarScreen: React.FC = () => {
   const updateMarkedDates = () => {
     const newMarkedDates: {[key: string]: any} = {};
     events.forEach(event => {
-      const startDate = dayjs(event.startDate).utc();
-      const endDate = dayjs(event.endDate).utc();
+      const startDate = dayjs(event.startDate).startOf('day');
+      const endDate = dayjs(event.endDate).endOf('day');
       let currentDate = startDate;
 
       while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
@@ -72,22 +77,18 @@ const CalendarScreen: React.FC = () => {
     return '#4ECDC4';
   };
 
+  const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
+
   const onDayPress = (day: {dateString: string}) => {
     setSelectedDate(day.dateString);
     const eventsForDay = events.filter(event => {
-      const startDate = dayjs(event.startDate).utc();
-      const endDate = dayjs(event.endDate).utc();
-      const selectedDay = dayjs(day.dateString).utc();
+      const startDate = dayjs(event.startDate).startOf('day');
+      const endDate = dayjs(event.endDate).endOf('day');
+      const selectedDay = dayjs(day.dateString).startOf('day');
       
-      // Check if dayjs has the isBetween method
-      if (typeof selectedDay.isBetween === 'function') {
-        return selectedDay.isBetween(startDate, endDate, 'day', '[]');
-      } else {
-        // Fallback if isBetween is not available
-        return selectedDay.isSameOrAfter(startDate) && selectedDay.isSameOrBefore(endDate);
-      }
+      return selectedDay.isSameOrAfter(startDate) && selectedDay.isSameOrBefore(endDate);
     });
-    setSelectedEvent(eventsForDay.length > 0 ? eventsForDay[0] : null);
+    setSelectedEvents(eventsForDay);
 
     const newMarkedDates = { ...markedDates };
     if (eventsForDay.length > 0) {
@@ -101,22 +102,22 @@ const CalendarScreen: React.FC = () => {
     setMarkedDates(newMarkedDates);
   };
 
-  const renderEventItem = (event: Event) => (
-    <TouchableOpacity key={event._id} style={styles.eventItem}>
-      <View style={[styles.eventDot, { backgroundColor: getEventColor(event) }]} />
+  const renderEventItem = ({ item }: { item: Event }) => (
+    <TouchableOpacity style={styles.eventItem}>
+      <View style={[styles.eventDot, { backgroundColor: getEventColor(item) }]} />
       <View style={styles.eventContent}>
+        <Text style={styles.eventTitle}>{item.title}</Text>
         <Text style={styles.eventDate}>
-          {dayjs(event.startDate).utc().format('MMM D, YYYY')} - {dayjs(event.endDate).utc().format('MMM D, YYYY')}
+          {dayjs(item.startDate).format('h:mm A')} - {dayjs(item.endDate).format('h:mm A')}
         </Text>
-        <Text style={styles.eventDescription}>{event.title}</Text>
+        <Text style={styles.eventDescription}>{item.description}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#95A5A6" />
     </TouchableOpacity>
   );
 
   const filteredEvents = events.filter(event => 
     event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    dayjs(event.startDate).utc().format('YYYY-MM-DD').includes(searchQuery)
+    dayjs(event.startDate).format('YYYY-MM-DD').includes(searchQuery)
   );
 
   return (
@@ -157,13 +158,17 @@ const CalendarScreen: React.FC = () => {
                 textDayHeaderFontSize: 14,
               }}
             />
-            {selectedEvent && (
-              <View style={[
-                styles.tooltip, 
-                { backgroundColor: getEventColor(selectedEvent) }
-              ]}>
-                <Text style={styles.tooltipDate}>{new Date(selectedEvent.startDate).toLocaleDateString()}</Text>
-                <Text style={styles.tooltipDescription}>{selectedEvent.title}</Text>
+            {selectedEvents.length > 0 && (
+              <View style={styles.selectedEventsContainer}>
+                <Text style={styles.selectedDateText}>
+                  Events for {dayjs(selectedDate).format('MMMM D, YYYY')}
+                </Text>
+                <FlatList
+                  data={selectedEvents}
+                  renderItem={renderEventItem}
+                  keyExtractor={(item) => item._id}
+                  style={styles.selectedEventsList}
+                />
               </View>
             )}
           </View>
@@ -179,7 +184,7 @@ const CalendarScreen: React.FC = () => {
                 onChangeText={setSearchQuery}
               />
             </View>
-            {filteredEvents.map(renderEventItem)}
+            {filteredEvents.map((event) => renderEventItem({ item: event }))}
           </View>
         </ScrollView>
         <BottomNavBar />
@@ -257,10 +262,10 @@ const styles = StyleSheet.create({
   eventItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
+    padding: 10,
+    marginBottom: 8,
   },
   eventDot: {
     width: 12,
@@ -271,14 +276,20 @@ const styles = StyleSheet.create({
   eventContent: {
     flex: 1,
   },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
   eventDate: {
     fontSize: 14,
     color: '#95A5A6',
-    marginBottom: 4,
+    marginTop: 2,
   },
   eventDescription: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#001529',
+    marginTop: 4,
   },
   tooltip: {
     borderRadius: 8,
@@ -294,6 +305,21 @@ const styles = StyleSheet.create({
   tooltipDescription: {
     color: '#ffffff',
     fontSize: 16,
+  },
+  selectedEventsContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 8,
+  },
+  selectedDateText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginBottom: 10,
+  },
+  selectedEventsList: {
+    maxHeight: 200,
   },
 });
 
