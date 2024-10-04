@@ -55,7 +55,7 @@ const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
   const renderPeriods = (day: keyof TimetableData) => {
     if (!timetableData || !timetableData[day]) return null;
 
-    return timetableData[day].map((period, index) => (
+    return Array.isArray(timetableData[day]) ? timetableData[day].map((period, index) => (
       <View key={index} style={styles.periodItem}>
         <View style={styles.timeContainer}>
           <Text style={styles.timeText}>
@@ -69,7 +69,7 @@ const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
           </Text>
         </View>
       </View>
-    ));
+    )) : null;
   };
 
   if (!timetableData) {
