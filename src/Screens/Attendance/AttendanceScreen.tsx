@@ -4,8 +4,8 @@ import { Text, Icon as AntIcon, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { LineChart } from 'react-native-chart-kit';
-import { getAttendance } from '../../Services/Attendance/ClassAttendance';
 import { useToast } from '../../hooks/useToast';
+import { getAttendance } from '../../Services/Attendance/ClassAttendance';
 
 type AttendanceScreenProps = {
   navigation: StackNavigationProp<any, 'Attendance'>;

@@ -39,7 +39,10 @@ const LoginScreen: React.FC = () => {
         decodeAndSaveToken(token);
         setEmail("");
         setPassword("");
-        navigate.navigate("Home");
+        navigate.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
         showToast('Login successful', 'success');
       } else {
         showToast('Login failed', 'error');
