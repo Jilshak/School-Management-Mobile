@@ -1,60 +1,109 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal } from 'react-native';
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Calendar, DateData } from 'react-native-calendars';
+import { fetchLeaveRequestsByTeacher, teacherUpdateLeaveRequest } from '../../Services/Leave/Leave';
+import { LeaveRequestByTeacher, LeaveStatus } from '../../Services/Leave/ILeave';
+import { formatDate, formatDateToLongFormat } from '../../utils/DateUtil';
 
 type LeaveApproveScreenProps = {
   navigation: StackNavigationProp<any, 'LeaveApprove'>;
 };
 
-type LeaveRequest = {
-  id: string;
-  studentName: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-};
-
 const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) => {
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequestByTeacher[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<LeaveStatus | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingLeave, setEditingLeave] = useState<LeaveRequestByTeacher | null>(null);
+  const [editStatus, setEditStatus] = useState<LeaveStatus>('pending');
+  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+
+  const handleGetLeaveRequests = async () => {
+    const response = await fetchLeaveRequestsByTeacher();
+    setLeaveRequests(response);
+  };
 
   useEffect(() => {
-    setLeaveRequests([
-      { id: '1', studentName: 'John Doe', startDate: '2023-05-10', endDate: '2023-05-12', reason: 'Family function', status: 'pending' },
-      { id: '2', studentName: 'Jane Smith', startDate: '2023-05-15', endDate: '2023-05-15', reason: 'Medical appointment', status: 'pending' },
-      { id: '3', studentName: 'Alice Johnson', startDate: '2023-05-20', endDate: '2023-05-22', reason: 'Personal', status: 'approved' },
-      { id: '4', studentName: 'Bob Brown', startDate: '2023-05-25', endDate: '2023-05-26', reason: 'Family emergency', status: 'rejected' },
-    ]);
+    handleGetLeaveRequests();
   }, []);
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
     setLeaveRequests(leaveRequests.map(request => 
-      request.id === id ? { ...request, status: 'approved' } : request
+      request._id === id ? { ...request, status: 'approved' } : request
     ));
+    await teacherUpdateLeaveRequest(id, 'approved');
   };
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
     setLeaveRequests(leaveRequests.map(request => 
-      request.id === id ? { ...request, status: 'rejected' } : request
+      request._id === id ? { ...request, status: 'rejected' } : request
     ));
+    await teacherUpdateLeaveRequest(id, 'rejected');
   };
 
-  const filteredRequests = leaveRequests.filter(request =>
-    (request.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    request.startDate.includes(searchQuery) ||
-    request.endDate.includes(searchQuery) ||
-    request.reason.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (filterStatus === null || request.status === filterStatus)
-  );
+  const handleEdit = (leave: LeaveRequestByTeacher) => {
+    setEditingLeave(leave);
+    setEditStatus(leave.status);
+    setEditModalVisible(true);
+  };
 
-  const renderLeaveRequest = ({ item }: { item: LeaveRequest }) => (
+  const handleSaveEdit = async () => {
+    if (editingLeave) {
+      const updatedLeave: LeaveRequestByTeacher = {
+        ...editingLeave,
+        status: editStatus,
+      };
+
+      // Update the leave request in the backend
+      await teacherUpdateLeaveRequest(editingLeave._id, editStatus);
+
+      // Update the local state
+      setLeaveRequests(leaveRequests.map(leave =>
+        leave._id === editingLeave._id ? updatedLeave : leave
+      ));
+
+      setEditModalVisible(false);
+      setEditingLeave(null);
+    }
+  };
+
+  const handleFilter = () => {
+    setFilterModalVisible(false);
+  };
+
+  const resetFilters = () => {
+    setFilterStatus(null);
+    setSelectedDate(formatDate(new Date()));
+  };
+
+  const handleDayPress = (day: DateData) => {
+    setSelectedDate(formatDate(new Date(day.dateString)));
+    setCalendarModalVisible(false);
+  };
+
+  const filteredRequests = leaveRequests.filter(request => {
+    const matchesSearch = 
+      request.studentDetails?.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      request.startDate.includes(searchQuery) ||
+      request.endDate.includes(searchQuery) ||
+      request.reason.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus = filterStatus === null || request.status === filterStatus;
+
+    const matchesDate = selectedDate ? 
+      (new Date(request.startDate) <= new Date(selectedDate) && new Date(request.endDate) >= new Date(selectedDate)) : true;
+
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const renderLeaveRequest = ({ item }: { item: LeaveRequestByTeacher }) => (
     <View style={styles.leaveRequestItem}>
       <View style={styles.leaveRequestHeader}>
-        <Text style={styles.studentName}>{item.studentName}</Text>
+        <Text style={styles.studentName}>{item.studentDetails?.firstName} {item.studentDetails?.lastName}</Text>
         <Text style={[
           styles.statusBadge,
           item.status === 'pending' && styles.pendingBadge,
@@ -64,24 +113,26 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
           {item.status.toUpperCase()}
         </Text>
       </View>
-      <Text style={styles.dateRange}>{item.startDate} - {item.endDate}</Text>
+      <Text style={styles.dateRange}>{formatDate(item.startDate)} - {formatDate(item.endDate)}</Text>
       <Text style={styles.reason}>{item.reason}</Text>
-      {item.status === 'pending' && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApprove(item.id)}>
-            <Text style={styles.actionButtonText}>Approve</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleReject(item.id)}>
-            <Text style={styles.actionButtonText}>Reject</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.actionButtons}>
+        {item.status === 'pending' && (
+          <>
+            <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApprove(item._id)}>
+              <Text style={styles.actionButtonText}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleReject(item._id)}>
+              <Text style={styles.actionButtonText}>Reject</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
+          <AntIcon name="edit" size={14} color="#001529" />
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
-
-  const resetFilters = () => {
-    setFilterStatus(null);
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -107,10 +158,19 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity 
+          style={styles.dateButton} 
+          onPress={() => setCalendarModalVisible(true)}
+        >
+          <AntIcon name="calendar" size={20} color="#001529" style={styles.dateIcon} />
+          <Text style={styles.dateButtonText}>{formatDateToLongFormat(selectedDate)}</Text>
+          <AntIcon name="down" size={16} color="#001529" style={styles.dateArrowIcon} />
+        </TouchableOpacity>
+
         <FlatList
           data={filteredRequests}
           renderItem={renderLeaveRequest}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
         />
       </View>
@@ -157,10 +217,103 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
               <TouchableOpacity style={styles.modalButton} onPress={resetFilters}>
                 <Text style={styles.modalButtonText}>Reset</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={() => setFilterModalVisible(false)}>
+              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={handleFilter}>
                 <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modify the Edit Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Leave Request Status</Text>
+            
+            <Text style={styles.filterLabel}>Status:</Text>
+            <View style={styles.filterOptions}>
+              <TouchableOpacity
+                style={[styles.filterOption, editStatus === 'pending' && styles.filterOptionActive]}
+                onPress={() => setEditStatus('pending')}
+              >
+                <Text style={[styles.filterOptionText, editStatus === 'pending' && styles.filterOptionTextActive]}>Pending</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterOption, editStatus === 'approved' && styles.filterOptionActive]}
+                onPress={() => setEditStatus('approved')}
+              >
+                <Text style={[styles.filterOptionText, editStatus === 'approved' && styles.filterOptionTextActive]}>Approved</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterOption, editStatus === 'rejected' && styles.filterOptionActive]}
+                onPress={() => setEditStatus('rejected')}
+              >
+                <Text style={[styles.filterOptionText, editStatus === 'rejected' && styles.filterOptionTextActive]}>Rejected</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalButton} onPress={() => setEditModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={handleSaveEdit}>
+                <Text style={[styles.modalButtonText, styles.applyButtonText]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={calendarModalVisible}
+        onRequestClose={() => setCalendarModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Date</Text>
+            <Calendar
+              current={selectedDate || formatDate(new Date())}
+              onDayPress={handleDayPress}
+              markedDates={{
+                [selectedDate]: { selected: true, selectedColor: '#001529' },
+              }}
+              theme={{
+                backgroundColor: '#ffffff',
+                calendarBackground: '#ffffff',
+                textSectionTitleColor: '#001529',
+                selectedDayBackgroundColor: '#001529',
+                selectedDayTextColor: '#ffffff',
+                todayTextColor: '#001529',
+                dayTextColor: '#333333',
+                textDisabledColor: '#d9e1e8',
+                dotColor: '#001529',
+                selectedDotColor: '#ffffff',
+                arrowColor: '#001529',
+                monthTextColor: '#001529',
+                indicatorColor: '#001529',
+                textDayFontWeight: '400',
+                textMonthFontWeight: 'bold',
+                textDayHeaderFontWeight: '500',
+                textDayFontSize: 16,
+                textMonthFontSize: 18,
+                textDayHeaderFontSize: 14,
+              }}
+              style={styles.calendar}
+            />
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={() => setCalendarModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -211,6 +364,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+    marginRight: 10,
   },
   listContent: {
     paddingBottom: 20,
@@ -353,6 +507,72 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: 'white',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0', // Light gray background
+    borderWidth: 1,
+    borderColor: '#d9d9d9', // Light gray border
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 10,
+  },
+  editButtonText: {
+    fontSize: 12,
+    color: '#001529', // Dark text color (almost black)
+    marginLeft: 4,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff', // White background
+    borderWidth: 1,
+    borderColor: '#d9d9d9', // Light gray border
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  dateIcon: {
+    marginRight: 10,
+    color: '#001529', // Dark color for the icon
+  },
+  dateButtonText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#001529', // Dark text color
+    fontWeight: '500',
+  },
+  dateArrowIcon: {
+    marginLeft: 10,
+    color: '#001529', // Dark color for the arrow icon
+  },
+  calendar: {
+    borderRadius: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  closeButton: {
+    backgroundColor: '#001529',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  closeButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

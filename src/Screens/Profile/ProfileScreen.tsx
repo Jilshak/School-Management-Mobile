@@ -86,12 +86,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   );
 
   const handleLogout = () => {
-    navigation.navigate("Login");
     logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
   };
 
   const isStaff = profile?.roles?.some((role: string) =>
-    ["teacher", "admin", "staff"].includes(role.toLowerCase())
+    ["teacher", "admin", "staff"]?.includes(role.toLowerCase())
   );
 
   const checkUsername = async (username: string) => {
@@ -171,6 +174,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -184,15 +195,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       <ScrollView style={styles.contentContainer}>
         <View style={styles.profileSection}>
           <Image
-            source={{ uri: profile?.profileImage || "https://via.placeholder.com/150" }}
+            source={{ uri: profile.profileImage || "https://via.placeholder.com/150" }}
             style={styles.profileImage}
           />
           <Text style={styles.profileName}>
-            {`${profile?.firstName} ${profile?.lastName}`}
+            {`${profile.firstName} ${profile.lastName}`}
           </Text>
           <View style={styles.infoRow}>
             <View style={styles.roleTagContainer}>
-              {profile?.roles.map((role: string, index: number) => (
+              {profile.roles.map((role: string, index: number) => (
                 <View key={index} style={styles.roleTag}>
                   <Text style={styles.roleTagText}>{capitalizeFirstLetter(role)}</Text>
                 </View>
@@ -200,7 +211,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.usernameContainer}>
               <Icon name="user" size={16} color="#001529" style={styles.usernameIcon} />
-              <Text style={styles.usernameText}>{profile?.username}</Text>
+              <Text style={styles.usernameText}>{profile.username}</Text>
             </View>
           </View>
         </View>

@@ -1,9 +1,20 @@
 import api from "../axios";
-import { LeaveRequest } from "./ILeave";
+import { LeaveRequest, LeaveRequestByTeacher } from "./ILeave";
 
 export const fetchLeaveRequests = async (): Promise<LeaveRequest[]> => {
   try {
     const response = await api.get(`/attendance/leave-request/student`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const fetchLeaveRequestsByTeacher = async (): Promise<
+  LeaveRequestByTeacher[]
+> => {
+  try {
+    const response = await api.get(`/attendance/leave-request/class-teacher`);
     return response.data;
   } catch (error) {
     throw error;
@@ -32,10 +43,22 @@ export const updateLeaveRequest = async (
       `/attendance/leave-request/edit/${id}`,
       leaveRequestData
     );
-    console.log(await response);
     return response.data;
   } catch (error) {
-    console.error("Error updating leave request:", error);
+    throw error;
+  }
+};
+
+export const teacherUpdateLeaveRequest = async (
+  id: string,
+  status: string
+): Promise<LeaveRequest> => {
+  try {
+    const response = await api.patch(`/attendance/leave-request/${id}`, {
+      status,
+    });
+    return response.data;
+  } catch (error) {
     throw error;
   }
 };
