@@ -3,11 +3,26 @@ import { Provider as AntProvider } from "@ant-design/react-native";
 import * as Font from "expo-font";
 import { ActivityIndicator, StatusBar, View } from "react-native";
 import AppNavigator from "./src/Navigation/AppNavigator";
+import * as Notifications from 'expo-notifications';
+
+
+const triggerNotification = async () => {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Local Notification",
+      body: "This is a test notification",
+    },
+    trigger: { seconds: 5 }, // 5 seconds delay
+  });
+};
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-
+Notifications.getPermissionsAsync().then(()=>{
+  triggerNotification()
+})
   useEffect(() => {
+    triggerNotification()
     async function loadFonts() {
       await Font.loadAsync(
         "antoutline",

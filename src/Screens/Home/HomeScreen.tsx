@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   Image,
   SafeAreaView,
   TouchableOpacity,
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  FlatList,
 } from "react-native";
 import { Text, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -16,6 +16,13 @@ import BottomNavBar from "../../Components/BottomNavBar";
 import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
 import useProfileStore from "../../store/profileStore";
 import { capitalizeText } from "../../utils/StringUtil";
+import { UserRole } from "../../utils/roles";
+import useEventStore from "../../store/eventStore";
+import { getEvents } from "../../Services/Event/eventServices";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 type IconName = "file-text" | "schedule" | "book" | "user-switch" | "check-circle" | "dollar" | "test" | "chat";
 
@@ -27,28 +34,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const scrollViewRef = useRef<GestureHandlerScrollView>(null);
   const profile =  useProfileStore((state: any) => state.profile);
+  const { events, setEvents } = useEventStore();
 
-  const mainCards: { icon: IconName; text: string; route: string }[] = [
-    { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance' },
-    { icon: 'dollar', text: 'Payments', route: 'Payment' },
-    { icon: 'book', text: 'Class Details', route: 'ClassDetails' },
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const fetchedEvents = await getEvents();
+        setEvents(fetchedEvents);
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+      }
+    };
+
+    loadEvents();
+  }, []);
+
+  const mainCards: { icon: IconName; text: string; route: string,roles:string[] }[] = [
+    { icon: 'check-circle', text: 'Take Attendance', route: 'AddAttendance',roles:[UserRole.TEACHER] },
+    { icon: 'dollar', text: 'Payments', route: 'Payment',roles:[UserRole.STUDENT] },
+    { icon: 'file-text', text: 'Marksheet', route: 'Marksheet',roles:[UserRole.STUDENT] },
+    { icon: 'schedule', text: 'Time Table', route: 'Timetable',roles:[UserRole.STUDENT] },
+    { icon: 'book', text: 'Class Details', route: 'ClassDetails',roles:[UserRole.TEACHER,UserRole.ADMIN] },
   ];
 
-  const academicCards: { icon: IconName; text: string; route: string }[] = [
-    { icon: 'file-text', text: 'Marksheet', route: 'Marksheet' },
-    { icon: 'schedule', text: 'Time Table', route: 'Timetable' },
-    { icon: 'schedule', text: 'Teacher Table', route: 'TeacherTimetable' },
-    { icon: 'book', text: 'Library', route: 'Library' },
-    { icon: 'user-switch', text: 'Leave Request', route: 'LeaveRequest' },
-    { icon: 'check-circle', text: 'Leave Approve', route: 'LeaveApprove' },
-    { icon: 'check-circle', text: 'Leave Request List', route: 'LeaveRequestList' },
-    { icon: 'book', text: 'Syllabus', route: 'Syllabus' },
-    { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook' },
-    { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek' },
-    { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection' },
-    { icon: 'book', text: 'MCQ Stats', route: 'MCQStats' },
-    { icon: 'test', text: 'Flash Cards', route: 'FlashCardScreen' },
-    { icon: 'chat', text: 'Chat', route: 'Chat' },
+  const academicCards: { icon: IconName; text: string; route: string,roles:string[] }[] = [
+    { icon: 'schedule', text: 'Teacher Table', route: 'TeacherTimetable',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'book', text: 'Library', route: 'Library',roles:[] },
+    { icon: 'user-switch', text: 'Leave Request', route: 'LeaveRequest',roles:[UserRole.STUDENT] },
+    { icon: 'check-circle', text: 'Leave Approve', route: 'LeaveApprove',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'check-circle', text: 'Leave Request List', route: 'LeaveRequestList',roles:[UserRole.STUDENT] },
+    { icon: 'book', text: 'Syllabus', route: 'Syllabus',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'file-text', text: 'Work Done Book', route: 'WorkDoneBook',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'book', text: 'Revisions of the Week', route: 'RevisionsOfTheWeek',roles:[UserRole.TEACHER,UserRole.ADMIN] },
+    { icon: 'file-text', text: 'MCQ', route: 'SubjectSelection',roles:[] },
+    { icon: 'book', text: 'MCQ Stats', route: 'MCQStats',roles:[] },
+    { icon: 'test', text: 'Flash Cards', route: 'FlashCardScreen',roles:[] },
+    { icon: 'chat', text: 'Chat', route: 'Chat',roles:[] },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -70,129 +91,179 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     console.log(profile);
   }, [profile]);
 
+  const renderEventItem = ({ item }: { item: any }) => {
+    const startDate = dayjs(item.startDate).utc();
+    const endDate = dayjs(item.endDate).utc();
+    
+    return (
+      <View style={styles.eventItem}>
+        <View style={styles.eventDate}>
+          <Text style={styles.eventDay}>{startDate.format('D')}</Text>
+          <Text style={styles.eventMonth}>
+            {startDate.format('MMM').toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.eventDetails}>
+          <Text style={styles.eventTitle}>{item.title}</Text>
+          <Text style={styles.eventTime}>
+            {startDate.format('MMM D, YYYY')} - {endDate.format('MMM D, YYYY')}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.greeting}>Welcome back,</Text>
+        <Text style={styles.userName}>{profile.firstName} {profile.lastName}</Text>
+        <View style={styles.gradeBadge}>
+          <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => capitalizeText(role))}</Text>
+        </View>
+      </View>
+      <Image
+        source={{ uri: "https://example.com/profile-pic.jpg" }}
+        style={styles.profilePic}
+      />
+    </View>
+  );
+
+  const renderAttendanceSection = () => (
+    <View style={styles.attendanceSection}>
+      <Text style={styles.sectionTitle}>Attendance</Text>
+      <View style={styles.attendanceProgress}>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: '85%' }]} />
+        </View>
+        <Text style={styles.attendanceText}>85% Present</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.attendanceButton}
+        onPress={() => navigation.navigate("Attendance")}
+      >
+        <AntIcon name="check-circle" size={24} color="#ffffff" />
+        <Text style={styles.attendanceButtonText}>
+          View Attendance Details
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderQuickActions = () => (
+    <>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <View style={styles.quickActionsContainer}>
+        <GestureHandlerScrollView
+          ref={scrollViewRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalCardContainer}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          decelerationRate="fast"
+          snapToInterval={Dimensions.get('window').width * 0.45 + 15}
+          snapToAlignment="center"
+        >
+          {mainCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((card, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.horizontalCard}
+              onPress={() => navigation.navigate(card.route)}
+              >
+              <AntIcon name={card.icon as any} size={40} color="#ffffff" />
+              <Text style={styles.cardText}>{card.text}</Text>
+            </TouchableOpacity>
+          ))}
+          <View style={{ width: Dimensions.get('window').width * 0.275 }} />
+        </GestureHandlerScrollView>
+        <View style={styles.scrollIndicator}>
+          {mainCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.scrollDot,
+                index === activeCardIndex && styles.activeScrollDot,
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    </>
+  );
+
+  const renderAcademicsSection = () => (
+    <View style={styles.academicsSection}>
+      <Text style={styles.sectionTitle}>Academics</Text>
+      <View style={styles.academicsCards}>
+        {academicCards.filter((card) => card.roles.some((role:any) => profile.roles.includes(role))).map((card, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.academicCard}
+            onPress={() => navigation.navigate(card.route)}
+          >
+            <View style={styles.academicCardIcon}>
+              <AntIcon name={card.icon as any} size={24} color="#ffffff" />
+            </View>
+            <Text style={styles.academicCardText}>{card.text}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderEventsSection = () => (
+    <View style={styles.eventsSection}>
+      <Text style={styles.sectionTitle}>Upcoming Events</Text>
+      {events.filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc())).length > 0 ? (
+        <FlatList
+          data={events
+            .filter((event) => dayjs(event.endDate).utc().isAfter(dayjs().utc()))
+            .sort((a, b) => dayjs(a.endDate).utc().diff(dayjs(b.startDate).utc()))}
+          renderItem={renderEventItem}
+          keyExtractor={(item) => item._id}
+          style={styles.eventList}
+          scrollEnabled={false}
+        />
+      ) : (
+        <Text style={styles.noEventsText}>No upcoming events</Text>
+      )}
+      <TouchableOpacity
+        style={styles.viewAllButton}
+        onPress={() => navigation.navigate("Calendar")}
+      >
+        <Text style={styles.viewAllButtonText}>View All Events</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderItem = ({ item }: { item: string }) => {
+    switch (item) {
+      case 'header':
+        return renderHeader();
+      case 'attendance':
+        return renderAttendanceSection();
+      case 'quickActions':
+        return renderQuickActions();
+      case 'academics':
+        return renderAcademicsSection();
+      case 'events':
+        return renderEventsSection();
+      default:
+        return null;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.userName}>{profile.firstName} {profile.lastName}</Text>
-              <View style={styles.gradeBadge}>
-                <Text style={styles.gradeText}>{profile?.roles?.map((role: any) => capitalizeText(role))}</Text>
-              </View>
-            </View>
-            <Image
-              source={{ uri: "https://example.com/profile-pic.jpg" }}
-              style={styles.profilePic}
-            />
-          </View>
-
-          <View style={styles.attendanceSection}>
-            <Text style={styles.sectionTitle}>Attendance</Text>
-            <View style={styles.attendanceProgress}>
-              <View style={styles.progressBarContainer}>
-                <View style={[styles.progressBar, { width: '85%' }]} />
-              </View>
-              <Text style={styles.attendanceText}>85% Present</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.attendanceButton}
-              onPress={() => navigation.navigate("Attendance")}
-            >
-              <AntIcon name="check-circle" size={24} color="#ffffff" />
-              <Text style={styles.attendanceButtonText}>
-                View Attendance Details
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsContainer}>
-            <GestureHandlerScrollView
-              ref={scrollViewRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalCardContainer}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              decelerationRate="fast"
-              snapToInterval={Dimensions.get('window').width * 0.45 + 15}
-              snapToAlignment="center"
-            >
-              {mainCards.map((card, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.horizontalCard}
-                  onPress={() => navigation.navigate(card.route)}
-                  >
-                  <AntIcon name={card.icon as any} size={40} color="#ffffff" />
-                  <Text style={styles.cardText}>{card.text}</Text>
-                </TouchableOpacity>
-              ))}
-              <View style={{ width: Dimensions.get('window').width * 0.275 }} />
-            </GestureHandlerScrollView>
-            <View style={styles.scrollIndicator}>
-              {mainCards.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.scrollDot,
-                    index === activeCardIndex && styles.activeScrollDot,
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.academicsSection}>
-            <Text style={styles.sectionTitle}>Academics</Text>
-            <View style={styles.academicsCards}>
-              {academicCards.map((card, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.academicCard}
-                  onPress={() => navigation.navigate(card.route)}
-                >
-                  <View style={styles.academicCardIcon}>
-                    <AntIcon name={card.icon as any} size={24} color="#ffffff" />
-                  </View>
-                  <Text style={styles.academicCardText}>{card.text}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <View style={styles.eventItem}>
-              <View style={styles.eventDate}>
-                <Text style={styles.eventDay}>15</Text>
-                <Text style={styles.eventMonth}>MAY</Text>
-              </View>
-              <View style={styles.eventDetails}>
-                <Text style={styles.eventTitle}>Annual Sports Day</Text>
-                <Text style={styles.eventTime}>9:00 AM - 4:00 PM</Text>
-              </View>
-            </View>
-            <View style={styles.eventItem}>
-              <View style={styles.eventDate}>
-                <Text style={styles.eventDay}>20</Text>
-                <Text style={styles.eventMonth}>MAY</Text>
-              </View>
-              <View style={styles.eventDetails}>
-                <Text style={styles.eventTitle}>Parent-Teacher Meeting</Text>
-                <Text style={styles.eventTime}>2:00 PM - 5:00 PM</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => navigation.navigate("Calendar")}
-            >
-              <Text style={styles.viewAllButtonText}>View All Events</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+        <FlatList
+          data={['header', 'attendance', 'quickActions', 'academics', 'events']}
+          renderItem={renderItem}
+          keyExtractor={(item) => item}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        />
         <BottomNavBar />
       </SafeAreaView>
     </View>
@@ -347,7 +418,8 @@ const styles = StyleSheet.create({
   academicsCards: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 10,
+    // justifyContent: 'space-between',
   },
   academicCard: {
     width: '31%', // Changed from 30% to 31%
@@ -433,6 +505,15 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  eventList: {
+    maxHeight: 200,
+  },
+  noEventsText: {
+    textAlign: 'center',
+    color: '#808080',
+    fontSize: 16,
+    marginBottom: 15,
   },
 });
 

@@ -57,9 +57,8 @@ const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <ToastProvider>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {isAuthenticated ? (
-            <>
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={isAuthenticated ? "Home" : "Login"}>
+         
               <Stack.Screen name="Staff" component={StaffScreen} />
               <Stack.Screen name="Marksheet" component={MarksheetScreen} />
               <Stack.Screen name="Timetable" component={TimetableScreen} />
@@ -142,7 +141,7 @@ const AppNavigator: React.FC = () => {
                 name="FlashCardScreen"
                 component={FlashCardScreen as React.ComponentType<any>}
               />
-              <Stack.Screen name="Chat" component={ChatScreen} />
+              <Stack.Screen name="Chat" component={ChatScreen as React.ComponentType<any>} />
               <Stack.Screen name="FlashCards" component={FlashCardScreen} />
               <Stack.Screen
                 name="FlashCardChapterList"
@@ -153,13 +152,9 @@ const AppNavigator: React.FC = () => {
               <Stack.Screen
                 name="FlashCardsLogic"
                 component={FlashCardsLogicScreen as React.ComponentType<any>}
-              />
+              />        
             <Stack.Screen name="Login" component={LoginScreen} />
-            </>
-          ) : (<>
-            <Stack.Screen name="Login" component={LoginScreen} />
-          </>
-          )}
+         
           <Stack.Screen name="Home" component={HomeScreen} />
 
         </Stack.Navigator>

@@ -1,83 +1,94 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, FlatList } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNavBar from '../../Components/BottomNavBar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
+import useEventStore from '../../store/eventStore';
+import { getEvents } from '../../Services/Event/eventServices';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 interface Event {
-  id: string;
-  date: string;
-  type: string;
+  _id: string;
+  title: string;
   description: string;
+  startDate: string;
+  endDate: string;
 }
 
 const CalendarScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<any, 'Calendar'>>();
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
   const [selectedDate, setSelectedDate] = useState('');
-  const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
+
+  const { events, setEvents } = useEventStore();
 
   useEffect(() => {
     fetchEvents();
   }, []);
 
-  type HomeScreenProps = {
-    navigation: StackNavigationProp<any, 'Home'>;
-  };
+  useEffect(() => {
+    updateMarkedDates();
+  }, [events]);
 
   const fetchEvents = async () => {
-    const fetchedEvents: Event[] = [
-      { id: '1', date: '2024-09-15', type: 'holiday', description: 'School Holiday' },
-      { id: '2', date: '2024-09-20', type: 'event', description: 'Parent-Teacher Meeting' },
-      { id: '3', date: '2024-09-25', type: 'exam', description: 'Math Exam' },
-      { id: '4', date: '2024-09-28', type: 'event', description: 'School Sports Day' },
-      { id: '5', date: '2024-09-01', type: 'holiday', description: 'Summer Break Begins' },
-    ];
+    try {
+      const fetchedEvents = await getEvents();
+      setEvents(fetchedEvents);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    }
+  };
 
-    setEvents(fetchedEvents);
-
+  const updateMarkedDates = () => {
     const newMarkedDates: {[key: string]: any} = {};
-    fetchedEvents.forEach(event => {
-      newMarkedDates[event.date] = {
-        marked: true,
-        dotColor: getEventColor(event.type),
-      };
-    });
+    events.forEach(event => {
+      const startDate = dayjs(event.startDate).startOf('day');
+      const endDate = dayjs(event.endDate).endOf('day');
+      let currentDate = startDate;
 
+      while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
+        const dateString = currentDate.format('YYYY-MM-DD');
+        newMarkedDates[dateString] = {
+          marked: true,
+          dotColor: getEventColor(event),
+        };
+        currentDate = currentDate.add(1, 'day');
+      }
+    });
     setMarkedDates(newMarkedDates);
   };
 
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case 'holiday':
-        return '#FF6B6B';
-      case 'event':
-        return '#4ECDC4';
-      case 'exam':
-        return '#FFA500';
-      default:
-        return '#95A5A6';
-    }
+  const getEventColor = (event: Event) => {
+    // You can implement your own logic to determine event colors
+    return '#4ECDC4';
   };
 
   const onDayPress = (day: {dateString: string}) => {
     setSelectedDate(day.dateString);
-    const eventForDay = events.find(event => event.date === day.dateString);
-    setSelectedEvent(eventForDay || null);
-
-    const newMarkedDates: {[key: string]: any} = {};
-    events.forEach(event => {
-      newMarkedDates[event.date] = {
-        marked: true,
-        dotColor: getEventColor(event.type),
-      };
+    const eventsForDay = events.filter(event => {
+      const startDate = dayjs(event.startDate).startOf('day');
+      const endDate = dayjs(event.endDate).endOf('day');
+      const selectedDay = dayjs(day.dateString).startOf('day');
+      
+      return selectedDay.isSameOrAfter(startDate) && selectedDay.isSameOrBefore(endDate);
     });
+    setSelectedEvents(eventsForDay);
 
-    if (eventForDay) {
+    const newMarkedDates = { ...markedDates };
+    if (eventsForDay.length > 0) {
       newMarkedDates[day.dateString] = {
         ...newMarkedDates[day.dateString],
         selected: true,
@@ -88,20 +99,81 @@ const CalendarScreen: React.FC = () => {
     setMarkedDates(newMarkedDates);
   };
 
-  const renderEventItem = (event: Event) => (
-    <TouchableOpacity key={event.id} style={styles.eventItem}>
-      <View style={[styles.eventDot, { backgroundColor: getEventColor(event.type) }]} />
+  const renderEventItem = ({ item }: { item: Event }) => (
+    <TouchableOpacity style={styles.eventItem}>
+      <View style={[styles.eventDot, { backgroundColor: getEventColor(item) }]} />
       <View style={styles.eventContent}>
-        <Text style={styles.eventDate}>{event.date}</Text>
-        <Text style={styles.eventDescription}>{event.description}</Text>
+        <Text style={styles.eventTitle}>{item.title}</Text>
+        <Text style={styles.eventDate}>
+          {dayjs(item.startDate).format('h:mm A')} - {dayjs(item.endDate).format('h:mm A')}
+        </Text>
+        <Text style={styles.eventDescription}>{item.description}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#95A5A6" />
     </TouchableOpacity>
   );
 
   const filteredEvents = events.filter(event => 
-    event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.date.includes(searchQuery)
+    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dayjs(event.startDate).format('YYYY-MM-DD').includes(searchQuery)
+  );
+
+  const renderHeader = () => (
+    <>
+      <View style={styles.calendarContainer}>
+        <Calendar
+          markedDates={markedDates}
+          onDayPress={onDayPress}
+          theme={{
+            backgroundColor: '#ffffff',
+            calendarBackground: '#ffffff',
+            textSectionTitleColor: '#b6c1cd',
+            selectedDayBackgroundColor: 'rgba(0, 21, 41, 0.1)',
+            selectedDayTextColor: '#001529',
+            todayTextColor: '#001529',
+            dayTextColor: '#2d4150',
+            textDisabledColor: '#d9e1e8',
+            dotColor: '#001529',
+            selectedDotColor: '#ffffff',
+            arrowColor: '#001529',
+            monthTextColor: '#001529',
+            indicatorColor: '#001529',
+            textDayFontWeight: '300',
+            textMonthFontWeight: 'bold',
+            textDayHeaderFontWeight: '300',
+            textDayFontSize: 16,
+            textMonthFontSize: 18,
+            textDayHeaderFontSize: 14,
+          }}
+        />
+        {selectedEvents.length > 0 && (
+          <View style={styles.selectedEventsContainer}>
+            <Text style={styles.selectedDateText}>
+              Events for {dayjs(selectedDate).format('MMMM D, YYYY')}
+            </Text>
+            <FlatList
+              data={selectedEvents}
+              renderItem={renderEventItem}
+              keyExtractor={(item) => item._id}
+              style={styles.selectedEventsList}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.upcomingEventsContainer}>
+        <Text style={styles.sectionTitle}>Upcoming Events</Text>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#001529" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+    </>
   );
 
   return (
@@ -115,58 +187,14 @@ const CalendarScreen: React.FC = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView style={styles.contentContainer}>
-          <View style={styles.calendarContainer}>
-            <Calendar
-              markedDates={markedDates}
-              onDayPress={onDayPress}
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#b6c1cd',
-                selectedDayBackgroundColor: 'rgba(0, 21, 41, 0.1)',
-                selectedDayTextColor: '#001529',
-                todayTextColor: '#001529',
-                dayTextColor: '#2d4150',
-                textDisabledColor: '#d9e1e8',
-                dotColor: '#001529',
-                selectedDotColor: '#ffffff',
-                arrowColor: '#001529',
-                monthTextColor: '#001529',
-                indicatorColor: '#001529',
-                textDayFontWeight: '300',
-                textMonthFontWeight: 'bold',
-                textDayHeaderFontWeight: '300',
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 14,
-              }}
-            />
-            {selectedEvent && (
-              <View style={[
-                styles.tooltip, 
-                { backgroundColor: getEventColor(selectedEvent.type) }
-              ]}>
-                <Text style={styles.tooltipDate}>{selectedEvent.date}</Text>
-                <Text style={styles.tooltipDescription}>{selectedEvent.description}</Text>
-              </View>
-            )}
-          </View>
+        <FlatList
+          data={filteredEvents}
+          renderItem={renderEventItem}
+          keyExtractor={(item) => item._id}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={styles.contentContainer}
+        />
 
-          <View style={styles.upcomingEventsContainer}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#001529" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search events..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-            {filteredEvents.map(renderEventItem)}
-          </View>
-        </ScrollView>
         <BottomNavBar />
       </SafeAreaView>
     </View>
@@ -202,8 +230,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   contentContainer: {
-    flex: 1,
-    marginTop: 80,
+    paddingBottom: 20,
   },
   calendarContainer: {
     backgroundColor: '#ffffff',
@@ -242,10 +269,10 @@ const styles = StyleSheet.create({
   eventItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
+    padding: 10,
+    marginBottom: 8,
   },
   eventDot: {
     width: 12,
@@ -256,14 +283,20 @@ const styles = StyleSheet.create({
   eventContent: {
     flex: 1,
   },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
   eventDate: {
     fontSize: 14,
     color: '#95A5A6',
-    marginBottom: 4,
+    marginTop: 2,
   },
   eventDescription: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#001529',
+    marginTop: 4,
   },
   tooltip: {
     borderRadius: 8,
@@ -279,6 +312,21 @@ const styles = StyleSheet.create({
   tooltipDescription: {
     color: '#ffffff',
     fontSize: 16,
+  },
+  selectedEventsContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 8,
+  },
+  selectedDateText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginBottom: 10,
+  },
+  selectedEventsList: {
+    maxHeight: 200,
   },
 });
 
