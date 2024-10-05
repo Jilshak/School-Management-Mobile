@@ -1,5 +1,5 @@
-import api from '../axios';
-import { LeaveRequest } from './ILeave';
+import api from "../axios";
+import { LeaveRequest } from "./ILeave";
 
 export const fetchLeaveRequests = async (): Promise<LeaveRequest[]> => {
   try {
@@ -12,13 +12,13 @@ export const fetchLeaveRequests = async (): Promise<LeaveRequest[]> => {
 
 export const createLeaveRequest = async (leaveData: Partial<LeaveRequest>) => {
   try {
-    const response = await api.post('/attendance/leave-request', leaveData);
+    const response = await api.post("/attendance/leave-request", leaveData);
     return { status: response.status, data: response.data };
   } catch (error: any) {
     if (error.response) {
       throw { status: error.response.status, message: error.response.data };
     } else {
-      throw { status: 500, message: 'An unexpected error occurred' };
+      throw { status: 500, message: "An unexpected error occurred" };
     }
   }
 };
@@ -28,24 +28,37 @@ export const updateLeaveRequest = async (
   leaveRequestData: Partial<LeaveRequest>
 ): Promise<LeaveRequest> => {
   try {
-    console.log(id, leaveRequestData);
-    const response = await api.patch(`/attendance/leave-request/edit/${id}`, leaveRequestData);
+    const response = await api.patch(
+      `/attendance/leave-request/edit/${id}`,
+      leaveRequestData
+    );
+    console.log(await response);
     return response.data;
   } catch (error) {
-    console.error('Error updating leave request:', error);
+    console.error("Error updating leave request:", error);
     throw error;
   }
 };
 
-export const deleteLeaveRequest = async (id: string): Promise<void> => {
+export const deleteLeaveRequest = async (
+  leaveRequestId: string
+): Promise<void> => {
   try {
-    await api.delete(`/attendance/leave-request/${id}`);
+    const response = await api.delete(
+      `/attendance/leave-request/${leaveRequestId}`
+    );
+    if (response.status !== 200) {
+      throw new Error("Failed to delete leave request");
+    }
   } catch (error) {
+    console.error("Error deleting leave request:", error);
     throw error;
   }
 };
 
-export const approveLeaveRequest = async (id: string): Promise<LeaveRequest> => {
+export const approveLeaveRequest = async (
+  id: string
+): Promise<LeaveRequest> => {
   try {
     const response = await api.patch(`/attendance/leave-request/${id}/approve`);
     return response.data;
@@ -65,7 +78,7 @@ export const rejectLeaveRequest = async (id: string): Promise<LeaveRequest> => {
 
 export const getLeaveRequests = async () => {
   try {
-    const response = await api.get('/attendance/leave-requests');
+    const response = await api.get("/attendance/leave-requests");
     return response.data;
   } catch (error) {
     throw error;

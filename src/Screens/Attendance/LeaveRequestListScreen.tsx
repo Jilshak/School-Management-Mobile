@@ -18,6 +18,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import {
   fetchLeaveRequests,
   updateLeaveRequest,
+  deleteLeaveRequest,
 } from "../../Services/Leave/Leave";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useToast } from "../../contexts/ToastContext";
@@ -93,12 +94,13 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
   const confirmCancelRequest = async () => {
     if (selectedRequestId) {
       try {
-        // await cancelLeaveRequest(selectedRequestId);
+        await deleteLeaveRequest(selectedRequestId);
         setLeaveRequests((prevRequests) =>
           prevRequests.filter((request) => request._id !== selectedRequestId)
         );
         showToast("Leave request cancelled successfully", "success");
       } catch (error) {
+        console.error("Error cancelling leave request:", error);
         showToast("Failed to cancel leave request", "error");
       }
     }
@@ -168,9 +170,14 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
     if (!editingLeaveRequest) return;
 
     try {
+      const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toISOString();
+      };
+
       const updatedLeaveRequestData = {
-        startDate: editStartDate,
-        endDate: editEndDate,
+        startDate: formatDate(editStartDate),
+        endDate: formatDate(editEndDate),
         reason: editReason,
       };
 
