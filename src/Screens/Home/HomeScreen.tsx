@@ -21,6 +21,7 @@ import useEventStore from "../../store/eventStore";
 import { getEvents } from "../../Services/Event/eventServices";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Ionicons } from "@expo/vector-icons";
 
 dayjs.extend(utc);
 
@@ -32,7 +33,7 @@ type HomeScreenProps = {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const scrollViewRef = useRef<GestureHandlerScrollView>(null);
+  const scrollViewRef = useRef<typeof GestureHandlerScrollView>(null);
   const profile =  useProfileStore((state: any) => state.profile);
   const { events, setEvents } = useEventStore();
 
@@ -226,7 +227,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           scrollEnabled={false}
         />
       ) : (
-        <Text style={styles.noEventsText}>No upcoming events</Text>
+        <View style={styles.noEventsContainer}>
+              <Ionicons name="calendar-outline" size={40} color="#95A5A6" />
+              <Text style={styles.noEventsText}>No events found</Text>
+            </View>
       )}
       <TouchableOpacity
         style={styles.viewAllButton}
@@ -509,11 +513,34 @@ const styles = StyleSheet.create({
   eventList: {
     maxHeight: 200,
   },
-  noEventsText: {
-    textAlign: 'center',
-    color: '#808080',
-    fontSize: 16,
+  noEventsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    borderRadius: 10,
     marginBottom: 15,
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#95A5A6',
+    fontStyle: 'italic',
+    marginTop: 10,
+  },
+  noEventsSubText: {
+    color: '#808080',
+    fontSize: 14,
+    marginTop: 5,
+  },
+  addEventButton: {
+    backgroundColor: '#001529',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 15,
+  },
+  addEventButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
 });
 

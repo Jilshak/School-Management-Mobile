@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { fetchLeaveRequestsByTeacher, teacherUpdateLeaveRequest } from '../../Services/Leave/Leave';
 import { LeaveRequestByTeacher, LeaveStatus } from '../../Services/Leave/ILeave';
-import { formatDate, formatDateToLongFormat } from '../../utils/DateUtil';
+import { formatDate, formatDateTime, formatDateToLongFormat } from '../../utils/DateUtil';
 
 type LeaveApproveScreenProps = {
   navigation: StackNavigationProp<any, 'LeaveApprove'>;
@@ -21,6 +21,7 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
   const [editStatus, setEditStatus] = useState<LeaveStatus>('pending');
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
 
   const handleGetLeaveRequests = async () => {
     const response = await fetchLeaveRequestsByTeacher();
@@ -100,39 +101,54 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const renderLeaveRequest = ({ item }: { item: LeaveRequestByTeacher }) => (
-    <View style={styles.leaveRequestItem}>
-      <View style={styles.leaveRequestHeader}>
-        <Text style={styles.studentName}>{item.studentDetails?.firstName} {item.studentDetails?.lastName}</Text>
-        <Text style={[
-          styles.statusBadge,
-          item.status === 'pending' && styles.pendingBadge,
-          item.status === 'approved' && styles.approvedBadge,
-          item.status === 'rejected' && styles.rejectedBadge,
-        ]}>
-          {item.status.toUpperCase()}
-        </Text>
-      </View>
-      <Text style={styles.dateRange}>{formatDate(item.startDate)} - {formatDate(item.endDate)}</Text>
-      <Text style={styles.reason}>{item.reason}</Text>
-      <View style={styles.actionButtons}>
-        {item.status === 'pending' && (
-          <>
-            <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApprove(item._id)}>
-              <Text style={styles.actionButtonText}>Approve</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleReject(item._id)}>
-              <Text style={styles.actionButtonText}>Reject</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
-          <AntIcon name="edit" size={14} color="#001529" />
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderLeaveRequest = ({ item }: { item: LeaveRequestByTeacher }) => {
+    const isExpanded = expandedCardId === item._id;
+    const timeAgo = formatDateTime(item.createdAt);
+
+    return (
+      <TouchableWithoutFeedback onPress={() => setExpandedCardId(isExpanded ? null : item._id)}>
+        <View style={styles.leaveRequestItem}>
+          <View style={styles.leaveRequestHeader}>
+            <Text style={styles.studentName}>{item.studentDetails?.firstName} {item.studentDetails?.lastName}</Text>
+            <Text style={[
+              styles.statusBadge,
+              item.status === 'pending' && styles.pendingBadge,
+              item.status === 'approved' && styles.approvedBadge,
+              item.status === 'rejected' && styles.rejectedBadge,
+            ]}>
+              {item.status.toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.dateRange}>{formatDate(item.startDate)} - {formatDate(item.endDate)}</Text>
+          <Text 
+            style={styles.reason} 
+            numberOfLines={isExpanded ? undefined : 1} 
+            ellipsizeMode="tail"
+          >
+            {item.reason}
+          </Text>
+          <View style={styles.footerContainer}>
+            <Text style={styles.createdAt}>Requested {timeAgo}</Text>
+            {item.status === 'pending' ? (
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApprove(item._id)}>
+                  <Text style={styles.actionButtonText}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleReject(item._id)}>
+                  <Text style={styles.actionButtonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
+                <AntIcon name="edit" size={14} color="#001529" />
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -239,12 +255,6 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
             <Text style={styles.filterLabel}>Status:</Text>
             <View style={styles.filterOptions}>
               <TouchableOpacity
-                style={[styles.filterOption, editStatus === 'pending' && styles.filterOptionActive]}
-                onPress={() => setEditStatus('pending')}
-              >
-                <Text style={[styles.filterOptionText, editStatus === 'pending' && styles.filterOptionTextActive]}>Pending</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.filterOption, editStatus === 'approved' && styles.filterOptionActive]}
                 onPress={() => setEditStatus('approved')}
               >
@@ -262,8 +272,18 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
               <TouchableOpacity style={styles.modalButton} onPress={() => setEditModalVisible(false)}>
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={handleSaveEdit}>
-                <Text style={[styles.modalButtonText, styles.applyButtonText]}>Save</Text>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.applyButton]} 
+                onPress={handleSaveEdit}
+                disabled={editingLeave?.status === editStatus}
+              >
+                <Text style={[
+                  styles.modalButtonText, 
+                  styles.applyButtonText,
+                  editingLeave?.status === editStatus && styles.disabledButtonText
+                ]}>
+                  Save
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -372,32 +392,37 @@ const styles = StyleSheet.create({
   leaveRequestItem: {
     backgroundColor: '#ffffff',
     borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    elevation: 3,
+    padding: 12,
+    marginBottom: 10,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   leaveRequestHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 5,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   studentName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#001529',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    fontSize: 10,
     fontWeight: 'bold',
     overflow: 'hidden',
+    marginRight: 8, // Add some space between the badge and edit button
   },
   pendingBadge: {
     backgroundColor: '#faad14',
@@ -412,24 +437,23 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   dateRange: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#4a4a4a',
-    marginBottom: 5,
+    marginBottom: 3,
   },
   reason: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#8c8c8c',
-    marginBottom: 10,
+    marginBottom: 8, // Increase bottom margin
   },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
   },
   actionButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 5,
-    marginLeft: 10,
+    marginLeft: 8,
   },
   approveButton: {
     backgroundColor: '#52c41a',
@@ -440,6 +464,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
+    fontSize: 12,
   },
   filterButton: {
     padding: 5,
@@ -511,17 +536,16 @@ const styles = StyleSheet.create({
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0', // Light gray background
+    backgroundColor: '#f0f0f0',
     borderWidth: 1,
-    borderColor: '#d9d9d9', // Light gray border
+    borderColor: '#d9d9d9',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 10,
   },
   editButtonText: {
     fontSize: 12,
-    color: '#001529', // Dark text color (almost black)
+    color: '#001529',
     marginLeft: 4,
   },
   dateButton: {
@@ -573,6 +597,19 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  disabledButtonText: {
+    color: '#999999',
+  },
+  createdAt: {
+    fontSize: 12,
+    color: '#8c8c8c',
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
 });
 

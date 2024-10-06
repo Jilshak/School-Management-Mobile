@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Text, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -23,6 +24,7 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import { useToast } from "../../contexts/ToastContext";
 import { Calendar, DateData } from "react-native-calendars";
+import { formatDateTime } from "../../utils/DateUtil";
 
 type LeaveRequestListScreenProps = {
   navigation: StackNavigationProp<any, "LeaveRequestList">;
@@ -63,6 +65,7 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
   const [editMarkedDates, setEditMarkedDates] = useState<{
     [key: string]: any;
   }>({});
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLeaveRequest();
@@ -211,65 +214,77 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
         request.status.toLowerCase() === filterStatus.toLowerCase())
   );
 
+  const toggleExpandDescription = (id: string) => {
+    setExpandedRequestId(expandedRequestId === id ? null : id);
+  };
+
   const renderLeaveRequestItem = ({ item }: { item: LeaveRequest }) => (
-    <View style={styles.leaveRequestItem}>
-      <TouchableOpacity
-        style={styles.leaveRequestContent}
-        onPress={() =>
-          navigation.navigate("LeaveRequestDetails", { leaveRequest: item })
-        }
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.dateContainer}>
-            <AntIcon
-              name="calendar"
-              size={20}
-              color="#001529"
-              style={styles.calendarIcon}
-            />
-            <Text style={styles.dateText}>
-              {formatDate(item.startDate)}
-              {item.startDate !== item.endDate
-                ? ` - ${formatDate(item.endDate)}`
-                : ""}
-            </Text>
+    <TouchableWithoutFeedback onPress={() => toggleExpandDescription(item._id)}>
+      <View style={styles.leaveRequestItem}>
+        <View style={styles.leaveRequestContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.dateContainer}>
+              <AntIcon
+                name="calendar"
+                size={20}
+                color="#001529"
+                style={styles.calendarIcon}
+              />
+              <Text style={styles.dateText}>
+                {formatDate(item.startDate)}
+                {item.startDate !== item.endDate
+                  ? ` - ${formatDate(item.endDate)}`
+                  : ""}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusContainer,
+                { backgroundColor: getStatusColor(item.status) },
+              ]}
+            >
+              <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+            </View>
           </View>
-          <View
+          <Text
             style={[
-              styles.statusContainer,
-              { backgroundColor: getStatusColor(item.status) },
+              styles.reasonText,
+              expandedRequestId === item._id && styles.expandedReasonText
             ]}
+            numberOfLines={expandedRequestId === item._id ? undefined : 2}
           >
-            <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+            {item.reason}
+          </Text>
+          {(item.status.toLowerCase() === "approved" || item.status.toLowerCase() === "rejected") && (
+            <Text style={styles.updatedAtText}>
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)} on {formatDateTime(item.updatedAt)}
+            </Text>
+          )}
+        </View>
+        {item.status.toLowerCase() === "pending" && (
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEditRequest(item)}
+            >
+              <AntIcon name="edit" size={16} color="#001529" />
+              <Text style={[styles.actionButtonText, styles.editButtonText]}>
+                Edit
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={() => handleCancelRequest(item._id)}
+            >
+              <AntIcon name="close" size={16} color="#001529" />
+              <Text style={[styles.actionButtonText, styles.cancelButtonText]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
-        <Text style={styles.reasonText} numberOfLines={2}>
-          {item.reason}
-        </Text>
-      </TouchableOpacity>
-      {item.status.toLowerCase() === "pending" && (
-        <View style={styles.actionContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => handleEditRequest(item)}
-          >
-            <AntIcon name="edit" size={16} color="#001529" />
-            <Text style={[styles.actionButtonText, styles.editButtonText]}>
-              Edit
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            onPress={() => handleCancelRequest(item._id)}
-          >
-            <AntIcon name="close" size={16} color="#001529" />
-            <Text style={[styles.actionButtonText, styles.cancelButtonText]}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 
   const formatDate = (dateString: string) => {
@@ -743,6 +758,10 @@ const styles = StyleSheet.create({
   reasonText: {
     fontSize: 14,
     color: "#4a4a4a",
+    marginTop: 5,
+  },
+  expandedReasonText: {
+    marginBottom: 10,
   },
   statusContainer: {
     paddingHorizontal: 10,
@@ -1062,6 +1081,12 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  updatedAtText: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
+    marginTop: 5,
   },
 });
 

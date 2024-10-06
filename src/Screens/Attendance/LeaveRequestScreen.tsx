@@ -12,6 +12,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { Calendar, DateData } from "react-native-calendars";
 import { createLeaveRequest } from "../../Services/Leave/Leave";
 import { useToast } from "../../contexts/ToastContext";
+import { isAfter10AM } from "../../utils/DateUtil";
 
 type LeaveRequestScreenProps = {
   navigation: StackNavigationProp<any, "LeaveRequest">;
@@ -27,43 +28,35 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
   const { showToast } = useToast();
 
   const handleDayPress = (day: DateData) => {
+    const selectedDate = day.dateString;
     if (!startDate || (startDate && endDate)) {
-      setStartDate(day.dateString);
+      setStartDate(selectedDate);
       setEndDate("");
       setMarkedDates({
-        [day.dateString]: {
+        [selectedDate]: {
           startingDay: true,
           color: "#50cebb",
           textColor: "white",
         },
       });
     } else {
-      let start = new Date(startDate);
-      let end = new Date(day.dateString);
-      if (start > end) {
-        [start, end] = [end, start];
+      const start = new Date(startDate);
+      const end = new Date(selectedDate);
+      const [rangeStart, rangeEnd] = start <= end ? [start, end] : [end, start];
+  
+      const range: { [key: string]: any } = {};
+      for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+        const dateString = d.toISOString().split("T")[0];
+        range[dateString] = {
+          color: "#70d7c7",
+          textColor: "white",
+          ...(dateString === rangeStart.toISOString().split("T")[0] && { startingDay: true }),
+          ...(dateString === rangeEnd.toISOString().split("T")[0] && { endingDay: true }),
+        };
       }
-      let range: { [key: string]: any } = {};
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        let dateString = d.toISOString().split("T")[0];
-        if (dateString === start.toISOString().split("T")[0]) {
-          range[dateString] = {
-            startingDay: true,
-            color: "#50cebb",
-            textColor: "white",
-          };
-        } else if (dateString === end.toISOString().split("T")[0]) {
-          range[dateString] = {
-            endingDay: true,
-            color: "#50cebb",
-            textColor: "white",
-          };
-        } else {
-          range[dateString] = { color: "#70d7c7", textColor: "white" };
-        }
-      }
-      setStartDate(start.toISOString().split("T")[0]);
-      setEndDate(end.toISOString().split("T")[0]);
+  
+      setStartDate(rangeStart.toISOString().split("T")[0]);
+      setEndDate(rangeEnd.toISOString().split("T")[0]);
       setMarkedDates(range);
     }
   };
@@ -109,9 +102,17 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
       navigation.navigate("LeaveRequestList");
     } catch (error: any) {
       console.error("Error submitting leave request:", error);
-      if (error.message && typeof error.message === 'object' && error.message.message) {
+      if (
+        error.message &&
+        typeof error.message === "object" &&
+        error.message.message
+      ) {
         if (error.message.message === "Leave request already exists") {
-          showToast("A leave request for these dates already exists.", "error", 5000);
+          showToast(
+            "A leave request for these dates already exists.",
+            "error",
+            5000
+          );
         } else {
           showToast(error.message.message, "error");
         }
@@ -168,6 +169,30 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
     return 0;
   };
 
+  const getMinDate = (): string => {
+    const today = new Date();
+    if (isAfter10AM(today)) {
+      today.setDate(today.getDate() + 1);
+    }
+    return today.toISOString().split('T')[0];
+  };
+
+  const isToday = (date: string): boolean => {
+    const today = new Date();
+    return date === today.toISOString().split('T')[0];
+  };
+
+  const getDisabledDates = (): { [key: string]: any } => {
+    const today = new Date();
+    if (isAfter10AM(today)) {
+      const todayString = today.toISOString().split('T')[0];
+      return {
+        [todayString]: { disabled: true, disableTouchEvent: true, textColor: '#d9e1e8' }
+      };
+    }
+    return {};
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -188,9 +213,12 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
           <Calendar
             style={styles.calendar}
             onDayPress={handleDayPress}
-            markedDates={markedDates}
+            markedDates={{
+              ...markedDates,
+              ...getDisabledDates(),
+            }}
             markingType={"period"}
-            minDate={new Date().toISOString().split("T")[0]}
+            minDate={getMinDate()}
             theme={{
               backgroundColor: "#ffffff",
               calendarBackground: "#ffffff",
@@ -211,6 +239,23 @@ const LeaveRequestScreen: React.FC<LeaveRequestScreenProps> = ({
               textDayFontSize: 16,
               textMonthFontSize: 16,
               textDayHeaderFontSize: 16,
+              disabledArrowColor: '#d9e1e8',
+              'stylesheet.day.basic': {
+                base: {
+                  width: 32,
+                  height: 32,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                today: {
+                  backgroundColor: isAfter10AM(new Date()) ? 'transparent' : '#001529',
+                  borderRadius: 16,
+                },
+                todayText: {
+                  color: isAfter10AM(new Date()) ? '#d9e1e8' : '#ffffff',
+                  fontWeight: 'bold',
+                },
+              },
             }}
           />
 

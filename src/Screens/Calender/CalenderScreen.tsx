@@ -145,7 +145,7 @@ const CalendarScreen: React.FC = () => {
             textDayHeaderFontSize: 14,
           }}
         />
-        {selectedEvents.length > 0 && (
+        {selectedEvents.length > 0 ? (
           <View style={styles.selectedEventsContainer}>
             <Text style={styles.selectedDateText}>
               Events for {dayjs(selectedDate).format('MMMM D, YYYY')}
@@ -158,7 +158,12 @@ const CalendarScreen: React.FC = () => {
               scrollEnabled={false}
             />
           </View>
-        )}
+        ) : selectedDate ? (
+          <View style={styles.noEventsContainer}>
+            <Ionicons name="calendar-outline" size={40} color="#95A5A6" />
+            <Text style={styles.noEventsText}>No events for this date</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.upcomingEventsContainer}>
@@ -193,6 +198,12 @@ const CalendarScreen: React.FC = () => {
           keyExtractor={(item) => item._id}
           ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.contentContainer}
+          ListEmptyComponent={
+            <View style={styles.noEventsContainer}>
+              <Ionicons name="calendar-outline" size={40} color="#95A5A6" />
+              <Text style={styles.noEventsText}>No events found</Text>
+            </View>
+          }
         />
 
         <BottomNavBar />
@@ -231,6 +242,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 20,
+    paddingTop: 100, // Add padding to create space between header and calendar
   },
   calendarContainer: {
     backgroundColor: '#ffffff',
@@ -238,6 +250,7 @@ const styles = StyleSheet.create({
     padding: 15,
     margin: 20,
     marginBottom: 0,
+    marginTop: 0, // Adjust top margin
   },
   upcomingEventsContainer: {
     backgroundColor: '#ffffff',
@@ -327,6 +340,17 @@ const styles = StyleSheet.create({
   },
   selectedEventsList: {
     maxHeight: 200,
+  },
+  noEventsContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#95A5A6',
+    fontStyle: 'italic',
+    marginTop: 10,
   },
 });
 
