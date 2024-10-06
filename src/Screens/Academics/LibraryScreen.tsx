@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, SafeAreaView, ScrollView, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -29,6 +29,25 @@ const LibraryScreen: React.FC<LibraryScreenProps> = ({ navigation }) => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterAvailable, setFilterAvailable] = useState<boolean | null>(null);
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate API call
+    const fetchBooks = async () => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+        // Here you would typically fetch the books from an API
+        // For now, we'll use the static data
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching books:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchBooks();
+  }, []);
 
   const filteredBooks = books.filter(book =>
     (book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,6 +84,66 @@ const LibraryScreen: React.FC<LibraryScreenProps> = ({ navigation }) => {
     setFilterAvailable(null);
     setFilterGenre(null);
   };
+
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonSearchBar} />
+      <View style={styles.skeletonSummary}>
+        <View style={styles.skeletonSummaryItem} />
+        <View style={styles.skeletonSummaryItem} />
+        <View style={styles.skeletonSummaryItem} />
+      </View>
+      {[...Array(4)].map((_, index) => (
+        <View key={index} style={styles.skeletonBookItem}>
+          <View style={styles.skeletonBookTitle} />
+          <View style={styles.skeletonBookAuthor} />
+          <View style={styles.skeletonBookFooter} />
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <Icon name="book" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Books Available</Text>
+      <Text style={styles.emptyStateDescription}>There are no books in the library at this time. Check back later for updates.</Text>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Library</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {renderSkeletonLoader()}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (books.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Library</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {renderEmptyState()}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -395,7 +474,70 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: 'white',
   },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonSearchBar: {
+    height: 50,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  skeletonSummaryItem: {
+    width: '25%',
+    height: 60,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+  },
+  skeletonBookItem: {
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+  },
+  skeletonBookTitle: {
+    height: 20,
+    width: '80%',
+    backgroundColor: '#D0D0D0',
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  skeletonBookAuthor: {
+    height: 15,
+    width: '60%',
+    backgroundColor: '#D0D0D0',
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  skeletonBookFooter: {
+    height: 15,
+    width: '40%',
+    backgroundColor: '#D0D0D0',
+    borderRadius: 4,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
+  },
 });
 
 export default LibraryScreen;
-

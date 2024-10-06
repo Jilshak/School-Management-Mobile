@@ -150,6 +150,16 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
     );
   };
 
+  const EmptyListComponent = () => (
+    <View style={styles.emptyListContainer}>
+      <View style={styles.emptyListContent}>
+        <AntIcon name="inbox" size={80} color="#001529" />
+        <Text style={styles.emptyListTitle}>No Leave Requests</Text>
+        <Text style={styles.emptyListDescription}>There are no leave requests matching your current filters.</Text>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -187,7 +197,8 @@ const LeaveApproveScreen: React.FC<LeaveApproveScreenProps> = ({ navigation }) =
           data={filteredRequests}
           renderItem={renderLeaveRequest}
           keyExtractor={item => item._id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, filteredRequests.length === 0 && styles.emptyListContentContainer]}
+          ListEmptyComponent={EmptyListComponent}
         />
       </View>
 
@@ -388,6 +399,30 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+  },
+  emptyListContentContainer: {
+    flexGrow: 1,
+  },
+  emptyListContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyListContent: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyListTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyListDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
   leaveRequestItem: {
     backgroundColor: '#ffffff',

@@ -9,11 +9,11 @@ import {
   Image,
   TextInput,
   SectionList,
+  Dimensions,
 } from "react-native";
 import { Text, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { LineChart, BarChart } from "react-native-chart-kit";
-import { Dimensions } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import { getExamMarksheet, getMarksheet } from "../../Services/Marksheet/markSheetServices";
 
@@ -88,13 +88,25 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   const [filteredExams, setFilteredExams] = useState<Exam[]>([]);
   const [marksheetData, setMarksheetData] = useState<MarksheetData | null>(null);
   const [examResults, setExamResults] = useState<ExamResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getMarksheet().then((res) => {
-      const { attended, total } = calculateAttendedExams();
-      setMarksheetData({ ...res, attended, total });
-      setFilteredExams(res.exams);
-    });
+    const fetchMarksheetData = async () => {
+      try {
+        // Simulate a delay to show the skeleton loader
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const res = await getMarksheet();
+        const { attended, total } = calculateAttendedExams(res);
+        setMarksheetData({ ...res, attended, total });
+        setFilteredExams(res.exams);
+      } catch (error) {
+        console.error("Error fetching marksheet data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMarksheetData();
   }, []);
 
   const fetchExamResult = async (examId: string) => {
@@ -481,17 +493,102 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const calculateAttendedExams = () => {
-    if (!marksheetData) return { attended: 0, total: 0 };
-    const attendedExams = marksheetData.exams.filter(exam => {
+  const calculateAttendedExams = (data: MarksheetData) => {
+    if (!data) return { attended: 0, total: 0 };
+    const attendedExams = data.exams.filter(exam => {
       if (exam.examType === 'Sem Exam') {
         return (exam as SemExam).score > 0;
       } else {
         return (exam as Exam).score !== undefined && (exam as Exam).score! > 0;
       }
     });
-    return { attended: attendedExams.length, total: marksheetData.exams.length };
+    return { attended: attendedExams.length, total: data.exams.length };
   };
+
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonSearchBar} />
+      <View style={styles.skeletonSummary}>
+        <View style={styles.skeletonSummaryItem}>
+          <View style={styles.skeletonSummaryIcon} />
+          <View style={styles.skeletonSummaryText} />
+          <View style={styles.skeletonSummaryValue} />
+        </View>
+        <View style={styles.skeletonSummaryItem}>
+          <View style={styles.skeletonSummaryIcon} />
+          <View style={styles.skeletonSummaryText} />
+          <View style={styles.skeletonSummaryValue} />
+        </View>
+      </View>
+      <View style={styles.skeletonChart} />
+      <View style={styles.skeletonSectionTitle} />
+      <View style={styles.skeletonExamList}>
+        {[...Array(3)].map((_, index) => (
+          <View key={index} style={styles.skeletonExamItem}>
+            <View style={styles.skeletonExamHeader}>
+              <View style={styles.skeletonExamName} />
+              <View style={styles.skeletonExamDate} />
+            </View>
+            <View style={styles.skeletonExamStatus} />
+          </View>
+        ))}
+      </View>
+      <View style={styles.skeletonSectionTitle} />
+      <View style={styles.skeletonExamList}>
+        {[...Array(2)].map((_, index) => (
+          <View key={index} style={styles.skeletonExamItem}>
+            <View style={styles.skeletonExamHeader}>
+              <View style={styles.skeletonExamName} />
+              <View style={styles.skeletonExamDate} />
+            </View>
+            <View style={styles.skeletonExamStatus} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <AntDesign name="filetext1" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Marksheet Available</Text>
+      <Text style={styles.emptyStateDescription}>Your marksheet hasn't been generated yet. Check back later or contact your administrator.</Text>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Marksheet</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderSkeletonLoader()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!marksheetData || marksheetData.exams.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Marksheet</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderEmptyState()}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -835,6 +932,106 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ff4d4f',
     marginBottom: 10,
+  },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonSearchBar: {
+    height: 40,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  skeletonSummaryItem: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+  },
+  skeletonSummaryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E1E9EE',
+    marginBottom: 10,
+  },
+  skeletonSummaryText: {
+    width: '80%',
+    height: 14,
+    backgroundColor: '#E1E9EE',
+    marginBottom: 5,
+  },
+  skeletonSummaryValue: {
+    width: '60%',
+    height: 20,
+    backgroundColor: '#E1E9EE',
+  },
+  skeletonChart: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonSectionTitle: {
+    width: '60%',
+    height: 24,
+    backgroundColor: '#E1E9EE',
+    marginBottom: 15,
+  },
+  skeletonExamList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  skeletonExamItem: {
+    marginBottom: 15,
+  },
+  skeletonExamHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  skeletonExamName: {
+    width: '60%',
+    height: 18,
+    backgroundColor: '#E1E9EE',
+  },
+  skeletonExamDate: {
+    width: '30%',
+    height: 18,
+    backgroundColor: '#E1E9EE',
+  },
+  skeletonExamStatus: {
+    width: '40%',
+    height: 14,
+    backgroundColor: '#E1E9EE',
+    alignSelf: 'flex-end',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 

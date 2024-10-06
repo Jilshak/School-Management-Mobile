@@ -32,6 +32,7 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
   const animatedValue = new Animated.Value(0);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     Animated.timing(animatedValue, {
@@ -39,6 +40,21 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
       duration: 1000,
       useNativeDriver: true,
     }).start();
+
+    // Simulate API call
+    const fetchSubjects = async () => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+        // Here you would typically fetch the subjects from an API
+        // For now, we'll use the static data
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchSubjects();
   }, []);
 
   const handleSubjectSelect = (subject: string) => {
@@ -107,6 +123,65 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
     setFilterAvailable(null);
     setFilterGenre(null);
   };
+
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonSearchBar} />
+      {[...Array(4)].map((_, index) => (
+        <View key={index} style={styles.skeletonSubjectCard}>
+          <View style={styles.skeletonSubjectHeader}>
+            <View style={styles.skeletonIcon} />
+            <View style={styles.skeletonTitle} />
+          </View>
+          <View style={styles.skeletonDescription} />
+          <View style={styles.skeletonTags} />
+          <View style={styles.skeletonProgressBar} />
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <AntIcon name="book" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Subjects Available</Text>
+      <Text style={styles.emptyStateDescription}>There are no subjects to display at this time. Check back later for updates.</Text>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Select Subject</Text>
+          <TouchableOpacity onPress={handleRefresh}>
+            <AntIcon name="reload" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+        {renderSkeletonLoader()}
+      </SafeAreaView>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Select Subject</Text>
+          <TouchableOpacity onPress={handleRefresh}>
+            <AntIcon name="reload" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+        {renderEmptyState()}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -425,6 +500,74 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonSearchBar: {
+    height: 50,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonSubjectCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 20,
+  },
+  skeletonSubjectHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  skeletonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E1E9EE',
+    marginRight: 10,
+  },
+  skeletonTitle: {
+    height: 20,
+    width: '60%',
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+  },
+  skeletonDescription: {
+    height: 15,
+    width: '100%',
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  skeletonTags: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  skeletonProgressBar: {
+    height: 10,
+    width: '100%',
+    backgroundColor: '#E1E9EE',
+    borderRadius: 5,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 

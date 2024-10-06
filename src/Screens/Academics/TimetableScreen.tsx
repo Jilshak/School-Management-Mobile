@@ -38,11 +38,23 @@ interface Period {
 
 const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
   const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getTimetableForStudent().then((res) => {
-      setTimetableData(res);
-    });
+    const fetchTimetable = async () => {
+      try {
+        // Simulate a delay to show the skeleton loader
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const res = await getTimetableForStudent();
+        setTimetableData(res);
+      } catch (error) {
+        console.error('Error fetching timetable:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTimetable();
   }, []);
 
   const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -72,10 +84,61 @@ const TimetableScreen: React.FC<TimetableScreenProps> = ({ navigation }) => {
     )) : null;
   };
 
-  if (!timetableData) {
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonStudentInfo} />
+      {weekDays.map((_, index) => (
+        <View key={index} style={styles.skeletonDay}>
+          <View style={styles.skeletonDayTitle} />
+          {[...Array(4)].map((_, subIndex) => (
+            <View key={subIndex} style={styles.skeletonPeriod}>
+              <View style={styles.skeletonTime} />
+              <View style={styles.skeletonSubject} />
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <AntIcon name="schedule" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Timetable Available</Text>
+      <Text style={styles.emptyStateDescription}>Your timetable hasn't been set up yet. Check back later or contact your administrator.</Text>
+    </View>
+  );
+
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>Loading...</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Timetable</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderSkeletonLoader()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!timetableData || Object.keys(timetableData).length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Timetable</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderEmptyState()}
+        </View>
       </SafeAreaView>
     );
   }
@@ -228,6 +291,63 @@ const styles = StyleSheet.create({
     color: '#4a4a4a',
     fontSize: 14,
     marginTop: 2,
+  },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonStudentInfo: {
+    height: 80,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonDay: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  skeletonDayTitle: {
+    width: '40%',
+    height: 24,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  skeletonPeriod: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  skeletonTime: {
+    width: 80,
+    height: 30,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  skeletonSubject: {
+    flex: 1,
+    height: 30,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 

@@ -77,21 +77,25 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null);
 
   const [accountsReport, setAccountsReport] = useState<AccountsReportResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchAccountsReport();
   }, []);
 
   const fetchAccountsReport = async () => {
+    setIsLoading(true);
     try {
       const response = await getAccountsReport();
-      console.log('API Response:', JSON.stringify(response, null, 2)); // Log the response
+      console.log('API Response:', JSON.stringify(response, null, 2));
       setAccountsReport(response);
       const processedPayments = processAccountsData(response.accounts);
       setFilteredPayments(processedPayments);
     } catch (error) {
       console.error('Error fetching accounts report:', error);
       Alert.alert('Error', 'Failed to fetch accounts report. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -392,6 +396,62 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ navigation }) => {
     setIsFilterVisible(false);
   };
 
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonSummary}>
+        <View style={styles.skeletonSummaryItem} />
+        <View style={styles.skeletonSummaryItem} />
+      </View>
+      <View style={styles.skeletonChart} />
+      {[...Array(5)].map((_, index) => (
+        <View key={index} style={styles.skeletonPaymentItem}>
+          <View style={styles.skeletonPaymentInfo} />
+          <View style={styles.skeletonPaymentAmount} />
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <AntIcon name="wallet" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Payments Available</Text>
+      <Text style={styles.emptyStateDescription}>There are no payments to display at this time. Check back later for updates.</Text>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payments</Text>
+        </View>
+        <View style={styles.contentContainer}>
+          {renderSkeletonLoader()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!accountsReport || (accountsReport.accounts.length === 0 && accountsReport.paymentDues.length === 0)) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <AntIcon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payments</Text>
+        </View>
+        <View style={styles.contentContainer}>
+          {renderEmptyState()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -629,6 +689,66 @@ const styles = StyleSheet.create({
   },
   feeDetail: {
     marginTop: 5,
+  },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  skeletonSummaryItem: {
+    width: '40%',
+    height: 80,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+  },
+  skeletonChart: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonPaymentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+  },
+  skeletonPaymentInfo: {
+    width: '60%',
+    height: 40,
+    backgroundColor: '#D0D0D0',
+    borderRadius: 5,
+  },
+  skeletonPaymentAmount: {
+    width: '20%',
+    height: 30,
+    backgroundColor: '#D0D0D0',
+    borderRadius: 5,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 

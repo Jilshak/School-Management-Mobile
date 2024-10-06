@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal } from 'react-native';
 import { Text, Icon, Card } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -22,15 +22,23 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'All' | 'In Progress' | 'Completed'>('All');
+  const [isLoading, setIsLoading] = useState(true);
+  const [subjects, setSubjects] = useState<SubjectInfo[]>([]);
 
-  const subjects: SubjectInfo[] = [
-    { subject: 'Mathematics', icon: 'calculator', color: '#FFFFFF', unitsCount: 5, progress: 75 },
-    { subject: 'Science', icon: 'experiment', color: '#FFFFFF', unitsCount: 4, progress: 60 },
-    { subject: 'English', icon: 'read', color: '#FFFFFF', unitsCount: 6, progress: 80 },
-    { subject: 'Social Studies', icon: 'global', color: '#FFFFFF', unitsCount: 3, progress: 45 },
-    { subject: 'Physical Education', icon: 'trophy', color: '#FFFFFF', unitsCount: 2, progress: 90 },
-    { subject: 'Computer Science', icon: 'laptop', color: '#FFFFFF', unitsCount: 4, progress: 30 },
-  ];
+  useEffect(() => {
+    // Simulating API call
+    setTimeout(() => {
+      setSubjects([
+        { subject: 'Mathematics', icon: 'calculator', color: '#FFFFFF', unitsCount: 5, progress: 75 },
+        { subject: 'Science', icon: 'experiment', color: '#FFFFFF', unitsCount: 4, progress: 60 },
+        { subject: 'English', icon: 'read', color: '#FFFFFF', unitsCount: 6, progress: 80 },
+        { subject: 'Social Studies', icon: 'global', color: '#FFFFFF', unitsCount: 3, progress: 45 },
+        { subject: 'Physical Education', icon: 'trophy', color: '#FFFFFF', unitsCount: 2, progress: 90 },
+        { subject: 'Computer Science', icon: 'laptop', color: '#FFFFFF', unitsCount: 4, progress: 30 },
+      ]);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
 
   const filteredSubjects = subjects.filter(subject =>
     subject.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -96,6 +104,69 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
     </Modal>
   );
 
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonSearchBar} />
+      {[...Array(5)].map((_, index) => (
+        <View key={index} style={styles.skeletonCard}>
+          <View style={styles.skeletonCardContent}>
+            <View style={styles.skeletonIcon} />
+            <View style={styles.skeletonInfo}>
+              <View style={styles.skeletonSubjectName} />
+              <View style={styles.skeletonUnitCount} />
+              <View style={styles.skeletonProgressBarContainer}>
+                <View style={styles.skeletonProgressBar} />
+              </View>
+              <View style={styles.skeletonProgressText} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <Icon name="book" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Subjects Available</Text>
+      <Text style={styles.emptyStateDescription}>There are no subjects to display at this time. Check back later for updates.</Text>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Syllabus</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderSkeletonLoader()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Syllabus</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderEmptyState()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -128,12 +199,11 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
           ListEmptyComponent={
             <Text style={styles.emptyListText}>No subjects found</Text>
           }
-          showsVerticalScrollIndicator={false} // Add this line to remove the scrollbar
+          showsVerticalScrollIndicator={false}
         />
       </View>
 
       {renderFilterModal()}
-      <BottomNavBar />
     </SafeAreaView>
   );
 };
@@ -289,6 +359,91 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonSearchBar: {
+    height: 50,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+  },
+  skeletonCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+  },
+  skeletonIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#E1E9EE',
+    marginRight: 15,
+  },
+  skeletonInfo: {
+    flex: 1,
+  },
+  skeletonSubjectName: {
+    height: 18,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    marginBottom: 8,
+    width: '80%',
+  },
+  skeletonUnitCount: {
+    height: 14,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    marginBottom: 8,
+    width: '40%',
+  },
+  skeletonProgressBarContainer: {
+    height: 4,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 2,
+    marginBottom: 6,
+    width: '100%',
+  },
+  skeletonProgressBar: {
+    height: '100%',
+    backgroundColor: '#D0D0D0',
+    borderRadius: 2,
+    width: '60%',
+  },
+  skeletonProgressText: {
+    height: 12,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    width: '30%',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 

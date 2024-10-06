@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal } from 'react-native';
 import { Text, Icon, Card } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { Picker } from '@react-native-picker/picker';
 
 type SubjectDetailScreenProps = {
   navigation: StackNavigationProp<any, 'SubjectDetail'>;
@@ -43,27 +42,34 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
+  const [syllabus, setSyllabus] = useState<SyllabusItem[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
 
-  // Mock data
-  const syllabus: SyllabusItem[] = [
-    { id: '1', title: 'Unit 1: Introduction', description: 'Overview of the subject', completed: true, estimatedHours: 10 },
-    { id: '2', title: 'Unit 2: Core Concepts', description: 'Fundamental principles and theories', completed: true, estimatedHours: 15 },
-    { id: '3', title: 'Unit 3: Advanced Topics', description: 'In-depth exploration of complex ideas', completed: false, estimatedHours: 20 },
-    { id: '4', title: 'Unit 4: Practical Applications', description: 'Real-world use cases and examples', completed: false, estimatedHours: 25 },
-    { id: '5', title: 'Unit 5: Review and Assessment', description: 'Recap and evaluation of learning', completed: false, estimatedHours: 12 },
-  ];
-
-  const resources: Resource[] = [
-    { id: '1', title: 'Textbook PDF', type: 'pdf', url: 'https://example.com/textbook.pdf', fileSize: '15.2 MB', uploadDate: '2023-05-01' },
-    { id: '2', title: 'Lecture Slides', type: 'ppt', url: 'https://example.com/slides.ppt', fileSize: '5.7 MB', uploadDate: '2023-05-15' },
-    { id: '3', title: 'Video Tutorial', type: 'video', url: 'https://example.com/tutorial.mp4', fileSize: '102.8 MB', uploadDate: '2023-05-20' },
-  ];
-
-  const assignments: Assignment[] = [
-    { id: '1', title: 'Assignment 1', dueDate: '2023-06-15', status: 'Submitted', grade: 'A', totalPoints: 100, submissionMethod: 'Online' },
-    { id: '2', title: 'Assignment 2', dueDate: '2023-06-30', status: 'Pending', totalPoints: 50, submissionMethod: 'In-class' },
-    { id: '3', title: 'Assignment 3', dueDate: '2023-07-15', status: 'Graded', grade: 'B+', totalPoints: 75, submissionMethod: 'Online' },
-  ];
+  useEffect(() => {
+    // Simulating API call
+    setTimeout(() => {
+      setSyllabus([
+        { id: '1', title: 'Unit 1: Introduction', description: 'Overview of the subject', completed: true, estimatedHours: 10 },
+        { id: '2', title: 'Unit 2: Core Concepts', description: 'Fundamental principles and theories', completed: true, estimatedHours: 15 },
+        { id: '3', title: 'Unit 3: Advanced Topics', description: 'In-depth exploration of complex ideas', completed: false, estimatedHours: 20 },
+        { id: '4', title: 'Unit 4: Practical Applications', description: 'Real-world use cases and examples', completed: false, estimatedHours: 25 },
+        { id: '5', title: 'Unit 5: Review and Assessment', description: 'Recap and evaluation of learning', completed: false, estimatedHours: 12 },
+      ]);
+      setResources([
+        { id: '1', title: 'Textbook PDF', type: 'pdf', url: 'https://example.com/textbook.pdf', fileSize: '15.2 MB', uploadDate: '2023-05-01' },
+        { id: '2', title: 'Lecture Slides', type: 'ppt', url: 'https://example.com/slides.ppt', fileSize: '5.7 MB', uploadDate: '2023-05-15' },
+        { id: '3', title: 'Video Tutorial', type: 'video', url: 'https://example.com/tutorial.mp4', fileSize: '102.8 MB', uploadDate: '2023-05-20' },
+      ]);
+      setAssignments([
+        { id: '1', title: 'Assignment 1', dueDate: '2023-06-15', status: 'Submitted', grade: 'A', totalPoints: 100, submissionMethod: 'Online' },
+        { id: '2', title: 'Assignment 2', dueDate: '2023-06-30', status: 'Pending', totalPoints: 50, submissionMethod: 'In-class' },
+        { id: '3', title: 'Assignment 3', dueDate: '2023-07-15', status: 'Graded', grade: 'B+', totalPoints: 75, submissionMethod: 'Online' },
+      ]);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
 
   const renderSyllabusItem = ({ item }: { item: SyllabusItem }) => (
     <Card style={styles.syllabusCard}>
@@ -168,6 +174,71 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
         return ['All'];
     }
   };
+
+  const renderSkeletonLoader = () => (
+    <View style={styles.skeletonContainer}>
+      <View style={styles.skeletonSearchBar} />
+      <View style={styles.skeletonTabContainer}>
+        {[...Array(3)].map((_, index) => (
+          <View key={index} style={styles.skeletonTab} />
+        ))}
+      </View>
+      {[...Array(5)].map((_, index) => (
+        <View key={index} style={styles.skeletonCard}>
+          <View style={styles.skeletonCardHeader}>
+            <View style={styles.skeletonTitle} />
+            <View style={styles.skeletonIcon} />
+          </View>
+          <View style={styles.skeletonDescription} />
+          <View style={styles.skeletonDetails} />
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <Icon name="file-unknown" size={80} color="#001529" />
+      <Text style={styles.emptyStateTitle}>No Content Available</Text>
+      <Text style={styles.emptyStateDescription}>There is no content to display for this subject at this time. Check back later for updates.</Text>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{subject}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderSkeletonLoader()}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const currentContent = activeTab === 'syllabus' ? syllabus : activeTab === 'resources' ? resources : assignments;
+
+  if (currentContent.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{subject}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.contentContainer}>
+          {renderEmptyState()}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -431,6 +502,85 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  skeletonContainer: {
+    padding: 20,
+  },
+  skeletonSearchBar: {
+    height: 40,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  skeletonTabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  skeletonTab: {
+    width: '30%',
+    height: 40,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+  },
+  skeletonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+  },
+  skeletonCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  skeletonTitle: {
+    width: '70%',
+    height: 20,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+  },
+  skeletonIcon: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 10,
+  },
+  skeletonDescription: {
+    height: 15,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  skeletonDetails: {
+    height: 15,
+    backgroundColor: '#E1E9EE',
+    width: '50%',
+    borderRadius: 4,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 
