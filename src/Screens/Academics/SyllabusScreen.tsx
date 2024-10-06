@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Text, Icon, Card } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BottomNavBar from '../../Components/BottomNavBar';
@@ -40,6 +40,10 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
     }, 1000);
   }, []);
 
+  const closeFilterModal = () => {
+    setShowFilterModal(false);
+  };
+
   const filteredSubjects = subjects.filter(subject =>
     subject.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (selectedFilter === 'All' || 
@@ -72,35 +76,39 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
       visible={showFilterModal}
       transparent
       animationType="slide"
-      onRequestClose={() => setShowFilterModal(false)}
+      onRequestClose={closeFilterModal}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Filter Subjects</Text>
-          <View style={styles.filterOptions}>
-            {['All', 'In Progress', 'Completed'].map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[
-                  styles.filterOption,
-                  selectedFilter === filter && styles.filterOptionActive
-                ]}
-                onPress={() => {
-                  setSelectedFilter(filter as 'All' | 'In Progress' | 'Completed');
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextActive]}>
-                  {filter}
-                </Text>
+      <TouchableWithoutFeedback onPress={closeFilterModal}>
+        <View style={styles.modalContainer}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Filter Subjects</Text>
+              <View style={styles.filterOptions}>
+                {['All', 'In Progress', 'Completed'].map((filter) => (
+                  <TouchableOpacity
+                    key={filter}
+                    style={[
+                      styles.filterOption,
+                      selectedFilter === filter && styles.filterOptionActive
+                    ]}
+                    onPress={() => {
+                      setSelectedFilter(filter as 'All' | 'In Progress' | 'Completed');
+                      closeFilterModal();
+                    }}
+                  >
+                    <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextActive]}>
+                      {filter}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={closeFilterModal}>
+                <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setShowFilterModal(false)}>
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 

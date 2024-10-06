@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Text, Icon, Card } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -71,6 +71,10 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
     }, 1000);
   }, []);
 
+  const closeFilterModal = () => {
+    setShowFilterModal(false);
+  };
+
   const renderSyllabusItem = ({ item }: { item: SyllabusItem }) => (
     <Card style={styles.syllabusCard}>
       <View style={styles.syllabusItemHeader}>
@@ -130,35 +134,39 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
       visible={showFilterModal}
       transparent
       animationType="slide"
-      onRequestClose={() => setShowFilterModal(false)}
+      onRequestClose={closeFilterModal}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Filter {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</Text>
-          <View style={styles.filterOptions}>
-            {getFilterOptions().map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[
-                  styles.filterOption,
-                  selectedFilter === filter && styles.filterOptionActive
-                ]}
-                onPress={() => {
-                  setSelectedFilter(filter);
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextActive]}>
-                  {filter}
-                </Text>
+      <TouchableWithoutFeedback onPress={closeFilterModal}>
+        <View style={styles.modalContainer}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Filter {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</Text>
+              <View style={styles.filterOptions}>
+                {getFilterOptions().map((filter) => (
+                  <TouchableOpacity
+                    key={filter}
+                    style={[
+                      styles.filterOption,
+                      selectedFilter === filter && styles.filterOptionActive
+                    ]}
+                    onPress={() => {
+                      setSelectedFilter(filter);
+                      closeFilterModal();
+                    }}
+                  >
+                    <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextActive]}>
+                      {filter}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={closeFilterModal}>
+                <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setShowFilterModal(false)}>
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 

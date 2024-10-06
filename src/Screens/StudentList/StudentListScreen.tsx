@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Text, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -62,8 +63,12 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
     return nameMatch && genderMatch && performanceMatch;
   });
 
-  const applyFilters = () => {
+  const closeFilterModal = () => {
     setFilterModalVisible(false);
+  };
+
+  const applyFilters = () => {
+    closeFilterModal();
     // The filteredStudents will automatically update based on the new filterOptions
   };
 
@@ -72,7 +77,7 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
       gender: '',
       performanceRange: '',
     });
-    setFilterModalVisible(false);
+    closeFilterModal();
   };
 
   const renderStudentItem = ({ item }: { item: ClassroomStudent }) => {
@@ -143,68 +148,72 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
         visible={filterModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setFilterModalVisible(false)}
+        onRequestClose={closeFilterModal}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Students</Text>
+        <TouchableWithoutFeedback onPress={closeFilterModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filter Students</Text>
 
-            <Text style={styles.filterLabel}>Gender</Text>
-            <View style={styles.filterOptions}>
-              {['Male', 'Female', 'Other'].map((gender) => (
-                <TouchableOpacity
-                  key={gender}
-                  style={[
-                    styles.filterOption,
-                    filterOptions.gender === gender && styles.filterOptionActive,
-                  ]}
-                  onPress={() => setFilterOptions({ ...filterOptions, gender })}
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      filterOptions.gender === gender && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {gender}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                <Text style={styles.filterLabel}>Gender</Text>
+                <View style={styles.filterOptions}>
+                  {['Male', 'Female', 'Other'].map((gender) => (
+                    <TouchableOpacity
+                      key={gender}
+                      style={[
+                        styles.filterOption,
+                        filterOptions.gender === gender && styles.filterOptionActive,
+                      ]}
+                      onPress={() => setFilterOptions({ ...filterOptions, gender })}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          filterOptions.gender === gender && styles.filterOptionTextActive,
+                        ]}
+                      >
+                        {gender}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-            <Text style={styles.filterLabel}>Performance</Text>
-            <View style={styles.filterOptions}>
-              {['High', 'Medium', 'Low'].map((range) => (
-                <TouchableOpacity
-                  key={range}
-                  style={[
-                    styles.filterOption,
-                    filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionActive,
-                  ]}
-                  onPress={() => setFilterOptions({ ...filterOptions, performanceRange: range.toLowerCase() })}
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {range}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                <Text style={styles.filterLabel}>Performance</Text>
+                <View style={styles.filterOptions}>
+                  {['High', 'Medium', 'Low'].map((range) => (
+                    <TouchableOpacity
+                      key={range}
+                      style={[
+                        styles.filterOption,
+                        filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionActive,
+                      ]}
+                      onPress={() => setFilterOptions({ ...filterOptions, performanceRange: range.toLowerCase() })}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionTextActive,
+                        ]}
+                      >
+                        {range}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-            <View style={styles.modalButtons}>
-              <Button onPress={resetFilters} style={styles.modalButton}>
-                Reset
-              </Button>
-              <Button onPress={applyFilters} style={[styles.modalButton, styles.applyButton]} type="primary">
-                Apply
-              </Button>
-            </View>
+                <View style={styles.modalButtons}>
+                  <Button onPress={resetFilters} style={styles.modalButton}>
+                    Reset
+                  </Button>
+                  <Button onPress={applyFilters} style={[styles.modalButton, styles.applyButton]} type="primary">
+                    Apply
+                  </Button>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

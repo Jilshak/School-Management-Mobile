@@ -333,6 +333,10 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
     setFilterStatus(null);
   };
 
+  const closeFilterModal = () => {
+    setFilterModalVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -470,100 +474,104 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
         animationType="slide"
         transparent={true}
         visible={filterModalVisible}
-        onRequestClose={() => setFilterModalVisible(false)}
+        onRequestClose={closeFilterModal}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Leave Requests</Text>
+        <TouchableWithoutFeedback onPress={closeFilterModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filter Leave Requests</Text>
 
-            <Text style={styles.filterLabel}>Status:</Text>
-            <View style={styles.filterOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.filterOption,
-                  filterStatus === null && styles.filterOptionActive,
-                ]}
-                onPress={() => setFilterStatus(null)}
-              >
-                <Text
-                  style={[
-                    styles.filterOptionText,
-                    filterStatus === null && styles.filterOptionTextActive,
-                  ]}
-                >
-                  All
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.filterOption,
-                  filterStatus === "PENDING" && styles.filterOptionActive,
-                ]}
-                onPress={() => setFilterStatus("PENDING")}
-              >
-                <Text
-                  style={[
-                    styles.filterOptionText,
-                    filterStatus === "PENDING" && styles.filterOptionTextActive,
-                  ]}
-                >
-                  Pending
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.filterOption,
-                  filterStatus === "APPROVED" && styles.filterOptionActive,
-                ]}
-                onPress={() => setFilterStatus("APPROVED")}
-              >
-                <Text
-                  style={[
-                    styles.filterOptionText,
-                    filterStatus === "APPROVED" &&
-                      styles.filterOptionTextActive,
-                  ]}
-                >
-                  Approved
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.filterOption,
-                  filterStatus === "REJECTED" && styles.filterOptionActive,
-                ]}
-                onPress={() => setFilterStatus("REJECTED")}
-              >
-                <Text
-                  style={[
-                    styles.filterOptionText,
-                    filterStatus === "REJECTED" &&
-                      styles.filterOptionTextActive,
-                  ]}
-                >
-                  Rejected
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <Text style={styles.filterLabel}>Status:</Text>
+                <View style={styles.filterOptions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterOption,
+                      filterStatus === null && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setFilterStatus(null)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        filterStatus === null && styles.filterOptionTextActive,
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterOption,
+                      filterStatus === "PENDING" && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setFilterStatus("PENDING")}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        filterStatus === "PENDING" && styles.filterOptionTextActive,
+                      ]}
+                    >
+                      Pending
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterOption,
+                      filterStatus === "APPROVED" && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setFilterStatus("APPROVED")}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        filterStatus === "APPROVED" &&
+                          styles.filterOptionTextActive,
+                      ]}
+                    >
+                      Approved
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterOption,
+                      filterStatus === "REJECTED" && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setFilterStatus("REJECTED")}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        filterStatus === "REJECTED" &&
+                          styles.filterOptionTextActive,
+                      ]}
+                    >
+                      Rejected
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={resetFilters}
-              >
-                <Text style={styles.modalButtonText}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.applyButton]}
-                onPress={() => setFilterModalVisible(false)}
-              >
-                <Text style={[styles.modalButtonText, styles.applyButtonText]}>
-                  Apply
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={resetFilters}
+                  >
+                    <Text style={styles.modalButtonText}>Reset</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.applyButton]}
+                    onPress={closeFilterModal}
+                  >
+                    <Text style={[styles.modalButtonText, styles.applyButtonText]}>
+                      Apply
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <Modal

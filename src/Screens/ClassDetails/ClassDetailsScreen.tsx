@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Text } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -108,6 +109,10 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
     setFilterPerformance(null);
   };
 
+  const closeFilterModal = () => {
+    setFilterModalVisible(false);
+  };
+
   const renderClassCard = ({ item }: { item: ClassInfo }) => (
     <TouchableOpacity
       style={styles.classCard}
@@ -194,60 +199,64 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
         animationType="slide"
         transparent={true}
         visible={filterModalVisible}
-        onRequestClose={() => setFilterModalVisible(false)}
+        onRequestClose={closeFilterModal}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Classes</Text>
-            
-            <Text style={styles.filterLabel}>Teacher:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-              <TouchableOpacity
-                style={[styles.filterOption, filterTeacher === null && styles.filterOptionActive]}
-                onPress={() => setFilterTeacher(null)}
-              >
-                <Text style={[styles.filterOptionText, filterTeacher === null && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {teachers.map(teacher => (
-                <TouchableOpacity
-                  key={teacher}
-                  style={[styles.filterOption, filterTeacher === teacher && styles.filterOptionActive]}
-                  onPress={() => setFilterTeacher(teacher)}
-                >
-                  <Text style={[styles.filterOptionText, filterTeacher === teacher && styles.filterOptionTextActive]}>{teacher}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+        <TouchableWithoutFeedback onPress={closeFilterModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filter Classes</Text>
+                
+                <Text style={styles.filterLabel}>Teacher:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterTeacher === null && styles.filterOptionActive]}
+                    onPress={() => setFilterTeacher(null)}
+                  >
+                    <Text style={[styles.filterOptionText, filterTeacher === null && styles.filterOptionTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  {teachers.map(teacher => (
+                    <TouchableOpacity
+                      key={teacher}
+                      style={[styles.filterOption, filterTeacher === teacher && styles.filterOptionActive]}
+                      onPress={() => setFilterTeacher(teacher)}
+                    >
+                      <Text style={[styles.filterOptionText, filterTeacher === teacher && styles.filterOptionTextActive]}>{teacher}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
-            <Text style={styles.filterLabel}>Performance Range:</Text>
-            <View style={styles.filterOptions}>
-              <TouchableOpacity
-                style={[styles.filterOption, filterPerformance === null && styles.filterOptionActive]}
-                onPress={() => setFilterPerformance(null)}
-              >
-                <Text style={[styles.filterOptionText, filterPerformance === null && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {performanceRanges.map(range => (
-                <TouchableOpacity
-                  key={range}
-                  style={[styles.filterOption, filterPerformance === range && styles.filterOptionActive]}
-                  onPress={() => setFilterPerformance(range)}
-                >
-                  <Text style={[styles.filterOptionText, filterPerformance === range && styles.filterOptionTextActive]}>{range}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                <Text style={styles.filterLabel}>Performance Range:</Text>
+                <View style={styles.filterOptions}>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterPerformance === null && styles.filterOptionActive]}
+                    onPress={() => setFilterPerformance(null)}
+                  >
+                    <Text style={[styles.filterOptionText, filterPerformance === null && styles.filterOptionTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  {performanceRanges.map(range => (
+                    <TouchableOpacity
+                      key={range}
+                      style={[styles.filterOption, filterPerformance === range && styles.filterOptionActive]}
+                      onPress={() => setFilterPerformance(range)}
+                    >
+                      <Text style={[styles.filterOptionText, filterPerformance === range && styles.filterOptionTextActive]}>{range}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={resetFilters}>
-                <Text style={styles.modalButtonText}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={() => setFilterModalVisible(false)}>
-                <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.modalButton} onPress={resetFilters}>
+                    <Text style={styles.modalButtonText}>Reset</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={closeFilterModal}>
+                    <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

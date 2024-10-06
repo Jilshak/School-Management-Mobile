@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView, Alert, TouchableWithoutFeedback } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -149,6 +149,10 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
     </View>
   );
 
+  const closeFilterModal = () => {
+    setFilterModalVisible(false);
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -231,63 +235,67 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
         animationType="slide"
         transparent={true}
         visible={filterModalVisible}
-        onRequestClose={() => setFilterModalVisible(false)}
+        onRequestClose={closeFilterModal}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Subjects</Text>
-            
-            <Text style={styles.filterLabel}>Availability:</Text>
-            <View style={styles.filterOptions}>
-              <TouchableOpacity
-                style={[styles.filterOption, filterAvailable === null && styles.filterOptionActive]}
-                onPress={() => setFilterAvailable(null)}
-              >
-                <Text style={[styles.filterOptionText, filterAvailable === null && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterOption, filterAvailable === true && styles.filterOptionActive]}
-                onPress={() => setFilterAvailable(true)}
-              >
-                <Text style={[styles.filterOptionText, filterAvailable === true && styles.filterOptionTextActive]}>Available</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterOption, filterAvailable === false && styles.filterOptionActive]}
-                onPress={() => setFilterAvailable(false)}
-              >
-                <Text style={[styles.filterOptionText, filterAvailable === false && styles.filterOptionTextActive]}>Not Available</Text>
-              </TouchableOpacity>
-            </View>
+        <TouchableWithoutFeedback onPress={closeFilterModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filter Subjects</Text>
+                
+                <Text style={styles.filterLabel}>Availability:</Text>
+                <View style={styles.filterOptions}>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterAvailable === null && styles.filterOptionActive]}
+                    onPress={() => setFilterAvailable(null)}
+                  >
+                    <Text style={[styles.filterOptionText, filterAvailable === null && styles.filterOptionTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterAvailable === true && styles.filterOptionActive]}
+                    onPress={() => setFilterAvailable(true)}
+                  >
+                    <Text style={[styles.filterOptionText, filterAvailable === true && styles.filterOptionTextActive]}>Available</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterAvailable === false && styles.filterOptionActive]}
+                    onPress={() => setFilterAvailable(false)}
+                  >
+                    <Text style={[styles.filterOptionText, filterAvailable === false && styles.filterOptionTextActive]}>Not Available</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <Text style={styles.filterLabel}>Genre:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.genreScroll}>
-              <TouchableOpacity
-                style={[styles.filterOption, filterGenre === null && styles.filterOptionActive]}
-                onPress={() => setFilterGenre(null)}
-              >
-                <Text style={[styles.filterOptionText, filterGenre === null && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {genres.map(genre => (
-                <TouchableOpacity
-                  key={genre}
-                  style={[styles.filterOption, filterGenre === genre && styles.filterOptionActive]}
-                  onPress={() => setFilterGenre(genre)}
-                >
-                  <Text style={[styles.filterOptionText, filterGenre === genre && styles.filterOptionTextActive]}>{genre}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                <Text style={styles.filterLabel}>Genre:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.genreScroll}>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterGenre === null && styles.filterOptionActive]}
+                    onPress={() => setFilterGenre(null)}
+                  >
+                    <Text style={[styles.filterOptionText, filterGenre === null && styles.filterOptionTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  {genres.map(genre => (
+                    <TouchableOpacity
+                      key={genre}
+                      style={[styles.filterOption, filterGenre === genre && styles.filterOptionActive]}
+                      onPress={() => setFilterGenre(genre)}
+                    >
+                      <Text style={[styles.filterOptionText, filterGenre === genre && styles.filterOptionTextActive]}>{genre}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={resetFilters}>
-                <Text style={styles.modalButtonText}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={() => setFilterModalVisible(false)}>
-                <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.modalButton} onPress={resetFilters}>
+                    <Text style={styles.modalButtonText}>Reset</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalButton, styles.applyButton]} onPress={closeFilterModal}>
+                    <Text style={[styles.modalButtonText, styles.applyButtonText]}>Apply</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );
