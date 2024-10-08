@@ -101,7 +101,8 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
     <Card style={styles.assignmentCard}>
       <Text style={styles.assignmentTitle}>{item.title}</Text>
       <Text style={styles.assignmentDueDate}>Due: {item.dueDate}</Text>
-      <Text style={styles.assignmentDetails}>{`Total Points: ${item.totalPoints} • Submit via: ${item.submissionMethod}`}</Text>
+      <Text style=
+      {styles.assignmentDetails}>{`Total Points: ${item.totalPoints} • Submit via: ${item.submissionMethod}`}</Text>
       <View style={styles.assignmentFooter}>
         <Text style={[styles.assignmentStatus, { color: item.status === 'Submitted' ? '#52c41a' : item.status === 'Graded' ? '#1890ff' : '#faad14' }]}>{item.status}</Text>
         {item.grade && <Text style={styles.assignmentGrade}>Grade: {item.grade}</Text>}
