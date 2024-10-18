@@ -165,109 +165,6 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
     return Math.round(totalScore / validScores.length);
   };
 
-  // const renderPerformanceComparison = () => (
-  //   <View style={styles.chartContainer}>
-  //     <Text style={styles.sectionTitle}>Performance Comparison</Text>
-  //     <BarChart
-  //       data={{
-  //         labels: subjects.map((subject) => subject.name.substring(0, 3)),
-  //         datasets: [
-  //           {
-  //             data: subjects.map((subject) => subject.percentage),
-  //             color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-  //           },
-  //           {
-  //             data: subjects.map((subject) => classAverages[subject.name]),
-  //             color: (opacity = 1) => `rgba(134, 65, 244, ${opacity})`,
-  //           },
-  //         ],
-  //       }}
-  //       width={Dimensions.get("window").width - 40}
-  //       height={220}
-  //       yAxisLabel="%"
-  //       yAxisSuffix=""
-  //       chartConfig={{
-  //         backgroundColor: "#ffffff",
-  //         backgroundGradientFrom: "#ffffff",
-  //         backgroundGradientTo: "#ffffff",
-  //         decimalPlaces: 0,
-  //         color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-  //         style: {
-  //           borderRadius: 16,
-  //         },
-  //       }}
-  //       style={{
-  //         marginVertical: 8,
-  //         borderRadius: 16,
-  //       }}
-  //     />
-  //     <View style={styles.legendContainer}>
-  //       <View style={styles.legendItem}>
-  //         <View
-  //           style={[
-  //             styles.legendColor,
-  //             { backgroundColor: "rgba(0, 21, 41, 1)" },
-  //           ]}
-  //         />
-  //         <Text style={styles.legendText}>Your Score</Text>
-  //       </View>
-  //       <View style={styles.legendItem}>
-  //         <View
-  //           style={[
-  //             styles.legendColor,
-  //             { backgroundColor: "rgba(134, 65, 244, 1)" },
-  //           ]}
-  //         />
-  //         <Text style={styles.legendText}>Class Average</Text>
-  //       </View>
-  //     </View>
-  //   </View>
-  // );
-
-  // const renderExamReport = () => (
-  //   <>
-  //     <View style={styles.studentInfo}>
-  //       <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
-  //       <Text style={styles.studentClass}>Class: UKG</Text>
-  //       <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
-  //     </View>
-
-  //     <View style={styles.overallGrade}>
-  //       <Text style={styles.overallGradeTitle}>Overall Grade</Text>
-  //       <Text style={styles.overallGradeValue}>A</Text>
-  //       <Text style={styles.overallPercentage}>93.6%</Text>
-  //     </View>
-
-  //     {renderPerformanceComparison()}
-
-  //     <View style={styles.subjectsContainer}>
-  //       <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
-  //       {examResults.map((subject:any, index:any) => (
-  //         <View key={index} style={styles.subjectItem}>
-  //           <View style={styles.subjectInfo}>
-  //             <Text style={styles.subjectName}>{subject.name}</Text>
-  //             <Text style={styles.subjectGrade}>{subject.grade}</Text>
-  //           </View>
-  //           <View style={styles.percentageBar}>
-  //             <View
-  //               style={[
-  //                 styles.percentageFill,
-  //                 { width: `${subject.percentage}%` },
-  //               ]}
-  //             />
-  //           </View>
-  //           <Text style={styles.percentageText}>{subject.percentage}%</Text>
-  //         </View>
-  //       ))}
-  //     </View>
-
-  //     <TouchableOpacity style={styles.downloadButton}>
-  //       <AntIcon name="download" size={24} color="#ffffff" />
-  //       <Text style={styles.downloadButtonText}>Download PDF</Text>
-  //     </TouchableOpacity>
-  //   </>
-  // );
-
   const renderExamList = () => {
     if (!marksheetData) return null;
 
@@ -334,7 +231,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
     const semExams = marksheetData.exams.filter(exam => exam.examType === 'Sem Exam') as SemExam[];
     const sortedSemExams = semExams.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    const labels = sortedSemExams.map(exam => new Date(exam.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    const labels = sortedSemExams.map(exam => new Date(exam.date).toLocaleDateString('en-US', { month: 'short' }));
     const scores = sortedSemExams.map(exam => exam.score);
 
     return (
@@ -347,19 +244,34 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
           }}
           width={Dimensions.get("window").width - 40}
           height={220}
+          yAxisLabel=""
+          yAxisSuffix="%"
+          yAxisInterval={20}
           chartConfig={{
             backgroundColor: "#ffffff",
             backgroundGradientFrom: "#ffffff",
             backgroundGradientTo: "#ffffff",
             decimalPlaces: 0,
             color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
             style: { borderRadius: 16 },
+            propsForDots: {
+              r: "6",
+              strokeWidth: "2",
+              stroke: "#001529"
+            },
+            propsForBackgroundLines: {
+              strokeDasharray: '',
+            },
           }}
           bezier
           style={{
             marginVertical: 8,
             borderRadius: 16,
           }}
+          fromZero={true}
+          segments={5}
+          formatYLabel={(value) => value}
         />
       </View>
     );
@@ -392,7 +304,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
         </View>
         <View style={styles.examStatus}>
           {isAttended ? (
-            <Text style={styles.examScore}>{semExam.score.toFixed(2)}%</Text>
+            <Text style={styles.examScore}>{semExam.score}%</Text>
           ) : (
             <Text style={styles.examNotAttended}>Not Attended</Text>
           )}
@@ -441,10 +353,10 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
           {examResults.map(result => (
             <View key={result._id} style={styles.subjectItem}>
               <Text style={styles.subjectName}>{result.subjectDetails.name}</Text>
-              <Text style={styles.examDetailsScore}>Score: {result.score}%</Text>
+              <Text style={styles.examDetailsScore}>Score: {result.score}</Text>
             </View>
           ))}
-          <Text style={styles.examDetailsScore}>Overall Score: {semExam.score.toFixed(2)}%</Text>
+          <Text style={styles.examDetailsScore}>Overall Score: {semExam.score}%</Text>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => {
@@ -849,6 +761,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
+    alignItems: 'center', // Center the chart horizontally
   },
   legendContainer: {
     flexDirection: "row",
