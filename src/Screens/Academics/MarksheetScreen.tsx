@@ -4,7 +4,7 @@ import { Text, Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { Dimensions, TouchableWithoutFeedback } from 'react-native';
-import { getMarksheet } from '../../Services/Marksheet/markSheetServices';
+import { getExamMarksheet, getMarksheet } from '../../Services/Marksheet/markSheetServices';
 import { logJSON } from '../../utils/logger';
 import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 
@@ -41,6 +41,26 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
 
     fetchMarksheet();
   }, []);
+
+  const [selectedExamDetails, setSelectedExamDetails] = useState<any>(null);
+
+  // ... existing useEffect hooks ...
+
+  useEffect(() => {
+    if (selectedExam) {
+      fetchExamDetails(selectedExam);
+    }
+  }, [selectedExam]);
+
+  const fetchExamDetails = async (examId: string) => {
+    try {
+      const data = await getExamMarksheet(examId);
+      setSelectedExamDetails(data);
+      logJSON("SELECTED EXAM DETAILS", data);
+    } catch (error) {
+      console.error('Error fetching exam details:', error);
+    }
+  };
 
   useEffect(() => {
     setFilteredExams(
@@ -116,82 +136,107 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
     </View>
   );
 
-  const renderExamReport = () => (
-    <>
-      <View style={styles.studentInfo}>
-        <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
-        <Text style={styles.studentClass}>Class: UKG</Text>
-        <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
-      </View>
+  const renderExamReport = () => {
+    if (!selectedExamDetails) return null;
 
-      <View style={styles.overallGrade}>
-        <Text style={styles.overallGradeTitle}>Overall Grade</Text>
-        <Text style={styles.overallGradeValue}>A</Text>
-        <Text style={styles.overallPercentage}>93.6%</Text>
-      </View>
+    const subjects = selectedExamDetails.map(detail => ({
+      name: detail.subjectDetails.name,
+      grade: calculateGrade(detail.score, detail.examDetails.exams.find(exam => exam.subjectId === detail.subjectId).totalMark),
+      percentage: calculatePercentage(detail.score, detail.examDetails.exams.find(exam => exam.subjectId === detail.subjectId).totalMark),
+      score: detail.score,
+      totalMark: detail.examDetails.exams.find(exam => exam.subjectId === detail.subjectId).totalMark
+    }));
 
-      {renderPerformanceComparison()}
+    const overallPercentage = calculateOverallPercentage(subjects);
+    const overallGrade = calculateGrade(overallPercentage, 100);
 
-      <View style={styles.subjectsContainer}>
-        <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
-        {subjects.map((subject, index) => (
-          <View key={index} style={styles.subjectItem}>
-            <View style={styles.subjectInfo}>
-              <Text style={styles.subjectName}>{subject.name}</Text>
-              <Text style={styles.subjectGrade}>{subject.grade}</Text>
+    return (
+      <>
+        <View style={styles.overallGrade}>
+          <Text style={styles.overallGradeTitle}>Overall Grade</Text>
+          <Text style={styles.overallGradeValue}>{overallGrade}</Text>
+          <Text style={styles.overallPercentage}>{Math.round(overallPercentage)}%</Text>
+        </View>
+
+        {renderPerformanceComparison(subjects)}
+
+        <View style={styles.subjectsContainer}>
+          <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
+          {subjects.map((subject, index) => (
+            <View key={index} style={styles.subjectItem}>
+              <View style={styles.subjectInfo}>
+                <Text style={styles.subjectName}>{subject.name}</Text>
+                <Text style={styles.subjectGrade}>{subject.grade}</Text>
+              </View>
+              <View style={styles.percentageBar}>
+                <View style={[styles.percentageFill, { width: `${subject.percentage}%` }]} />
+              </View>
+              <Text style={styles.percentageText}>{Math.round(subject.percentage) }%</Text>
+              <Text style={styles.scoreText}>({subject.score}/{subject.totalMark})</Text>
             </View>
-            <View style={styles.percentageBar}>
-              <View style={[styles.percentageFill, { width: `${subject.percentage}%` }]} />
-            </View>
-            <Text style={styles.percentageText}>{subject.percentage}%</Text>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
 
-      <TouchableOpacity style={styles.downloadButton}>
-        <AntIcon name="download" size={24} color="#ffffff" />
-        <Text style={styles.downloadButtonText}>Download PDF</Text>
-      </TouchableOpacity>
-    </>
-  );
+        {/* <TouchableOpacity style={styles.downloadButton}>
+          <AntIcon name="download" size={24} color="#ffffff" />
+          <Text style={styles.downloadButtonText}>Download PDF</Text>
+        </TouchableOpacity> */}
+      </>
+    );
+  };
+
+  // Helper functions
+  const calculateGrade = (score: number, totalMark: number): string => {
+    const percentage = (score / totalMark) * 100;
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C';
+    return 'F';
+  };
+
+  const calculatePercentage = (score: number, totalMark: number): number => {
+    return (score / totalMark) * 100;
+  };
+
+  const calculateOverallPercentage = (subjects: any[]): number => {
+    const totalScore = subjects.reduce((sum, subject) => sum + subject.score, 0);
+    const totalMarks = subjects.reduce((sum, subject) => sum + subject.totalMark, 0);
+    return (totalScore / totalMarks) * 100;
+  };
 
   const renderExamItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.examItem}
-      onPress={() => setSelectedExam(item.id)}
+      onPress={() => setSelectedExam(item._id)}
     >
       <View style={styles.examMainInfo}>
-        <Text style={styles.examName}>{item.name}</Text>
-        <Text style={styles.examDate}>{item.date}</Text>
+        <Text style={styles.examName}>{item.examType}</Text>
+        <Text style={styles.examDate}>{formatDate(item.date)}</Text>
       </View>
       <View style={styles.examStatus}>
-        <Text style={[styles.examStatusText, { color: item.status === 'Completed' ? '#52c41a' : '#faad14' }]}>
-          {item.status}
+        <Text style={[styles.examStatusText, { color: '#52c41a' }]}>
+          Completed
         </Text>
-        {item.score && <Text style={styles.examScore}>{item.score}%</Text>}
+        <Text style={styles.examScore}>{Math.round(item.percentage)}%</Text>
       </View>
     </TouchableOpacity>
   );
 
   const renderExamList = () => {
+    const calculateAverageScore = () => {
+      if (!marksheetData || !marksheetData.exams || marksheetData.exams.length === 0) {
+        return 'N/A';
+      }
+      
+      const totalPercentage = marksheetData.exams.reduce((sum, exam) => sum + exam.percentage, 0);
+      const averagePercentage = totalPercentage / marksheetData.exams.length;
+      
+      return `${Math.round(averagePercentage)}%`;
+    };
+
     const sections = [
-      {
-        title: 'Student Info',
-        data: ['info'],
-        renderItem: () => (
-          <View style={styles.studentInfoCard}>
-            <Image
-              source={{ uri: 'https://example.com/student-avatar.jpg' }}
-              style={styles.studentAvatar}
-            />
-            <View style={styles.studentDetails}>
-              <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
-              <Text style={styles.studentClass}>Class: UKG</Text>
-              <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
-            </View>
-          </View>
-        )
-      },
       {
         title: 'Summary',
         data: ['summary'],
@@ -199,11 +244,13 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryTitle}>Average Score</Text>
-              <Text style={styles.summaryValue}>90%</Text>
+              <Text style={styles.summaryValue}>{calculateAverageScore()}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryTitle}>Exams Taken</Text>
-              <Text style={styles.summaryValue}>2/3</Text>
+              <Text style={styles.summaryValue}>
+                {marksheetData ? `${marksheetData.exams.length}/${marksheetData.total}` : 'N/A'}
+              </Text>
             </View>
           </View>
         )
@@ -215,7 +262,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
       },
       {
         title: 'Exam Reports',
-        data: ['search', ...filteredExams],
+        data: ['search', ...(marksheetData?.exams || [])],
         renderItem: ({ item, index }: { item: any; index: number }) => {
           if (index === 0) {
             return (
@@ -257,67 +304,72 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
     if (!marksheetData) return null;
 
     const examData = marksheetData.exams.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const screenWidth = Dimensions.get('window').width;
+    const chartWidth = screenWidth - 40; // Adjust padding as needed
+    const chartHeight = 220;
 
     return (
       <TouchableWithoutFeedback onPress={() => setTooltipData(null)}>
         <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Performance Trend</Text>
-          <LineChart
-            data={{
-              labels: examData.map(exam => exam.examType === 'Class Test' ? 'Test' : exam.examType),
-              datasets: [{
-                data: examData.map(exam => Math.round(exam.percentage))
-              }]
-            }}
-            width={Dimensions.get('window').width - 40}
-            height={220}
-            yAxisLabel=""
-            yAxisSuffix="%"
-            yAxisInterval={1}
-            fromZero={true}
-            chartConfig={{
-              backgroundColor: '#ffffff',
-              backgroundGradientFrom: '#ffffff',
-              backgroundGradientTo: '#ffffff',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              style: {
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <LineChart
+              data={{
+                labels: examData.map(exam => exam.examType === 'Class Test' ? 'Test' : exam.examType),
+                datasets: [{
+                  data: examData.map(exam => Math.round(exam.percentage))
+                }]
+              }}
+              width={Math.max(chartWidth, examData.length * 60)} // Ensure minimum width based on data points
+              height={chartHeight}
+              yAxisLabel=""
+              yAxisSuffix="%"
+              yAxisInterval={1}
+              fromZero={true}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16
+                },
+                propsForDots: {
+                  r: '6',
+                  strokeWidth: '2',
+                  stroke: '#ffa726'
+                }
+              }}
+              bezier
+              style={{
+                marginVertical: 8,
                 borderRadius: 16
-              },
-              propsForDots: {
-                r: '6',
-                strokeWidth: '2',
-                stroke: '#ffa726'
-              }
-            }}
-            bezier
-            style={{
-              marginVertical: 8,
-              borderRadius: 16
-            }}
-            onDataPointClick={({ x, y, index }) => {
-              const exam = examData[index];
-              setTooltipData({ x, y, visible: true, exam });
-            }}
-            decorator={() => {
-              return tooltipData?.visible ? (
-                <View
-                  style={[
-                    styles.tooltip,
-                    {
-                      left: tooltipData.x - 60,
-                      top: tooltipData.y - 50,
-                    },
-                  ]}
-                >
-                  <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
-                  <Text style={styles.tooltipText}>Score: {Math.round(tooltipData.exam.percentage)}%</Text>
-                  <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
-                </View>
-              ) : null;
-            }}
-          />
+              }}
+              onDataPointClick={({ x, y, index }) => {
+                const exam = examData[index];
+                setTooltipData({ x, y, visible: true, exam });
+              }}
+              decorator={() => {
+                return tooltipData?.visible ? (
+                  <View
+                    style={[
+                      styles.tooltip,
+                      {
+                        left: tooltipData.x - 60,
+                        top: tooltipData.y - 50,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
+                    <Text style={styles.tooltipText}>Score: {Math.round(tooltipData.exam.percentage)}%</Text>
+                    <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
+                  </View>
+                ) : null;
+              }}
+            />
+          </ScrollView>
         </View>
       </TouchableWithoutFeedback>
     );
@@ -637,6 +689,12 @@ const styles = StyleSheet.create({
   tooltipText: {
     color: 'white',
     fontSize: 12,
+  },
+  scoreText: {
+    fontSize: 14,
+    color: '#4a4a4a',
+    marginTop: 5,
+    textAlign: 'right',
   },
 });
 
