@@ -16,25 +16,28 @@ import { LineChart } from "react-native-chart-kit";
 import { getUserDetails } from "../../Services/User/UserService";
 import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 import { IUser } from "../../Services/User/IUserService";
+import { getExamResultByClassAndStudent } from "../../Services/Marksheet/markSheetServices";
+import { logJSON } from "../../utils/logger";
 
 type StudentDetailsScreenProps = {
   navigation: StackNavigationProp<any, "StudentDetails">;
-  route: RouteProp<{ StudentDetails: { studentId: string } }, "StudentDetails">;
+  route: RouteProp<{ StudentDetails: { studentId: string, classId: string } }, "StudentDetails">;
 };
 
 const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { studentId } = route.params;
+  const { studentId, classId } = route.params;
   const scrollY = useRef(new Animated.Value(0)).current;
   const [userDetails, setUserDetails] = useState<IUser | null>(null);
+  const [examResults, setExamResults] = useState<any[]>([]);
+  const [tooltipData, setTooltipData] = useState<{ x: number; y: number; visible: boolean; exam: any } | null>(null);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
         const response = await getUserDetails(studentId);
-        console.log(response);
         setUserDetails(response);
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -43,42 +46,102 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     fetchUserDetails();
   }, []);
 
-  const renderPerformanceChart = () => (
-    <View style={styles.chartContainer}>
-      <Text style={styles.sectionTitle}>Performance Trend</Text>
-      <LineChart
-        data={{
-          labels: ["Term 1", "Term 2", "Term 3"],
-          datasets: [
-            {
-              data: [
-                userDetails?.performance ?? 5 - 5,
-                userDetails?.performance ?? 0,
-                userDetails?.performance ?? 0 + 2,
-              ],
+  useEffect(() => {
+    const fetchExamResult = async () => {
+      try {
+        const response = await getExamResultByClassAndStudent(classId, studentId);
+        setExamResults(response.exams);
+      } catch (error) {
+        console.error("Error fetching exam results:", error);
+      }
+    };
+    fetchExamResult();
+  }, [classId, studentId]);
+
+  const calculateAveragePerformance = () => {
+    if (examResults.length === 0) return 0;
+    const totalScore = examResults.reduce((sum, exam) => sum + exam.score, 0);
+    return Math.round(totalScore / examResults.length);
+  };
+
+  const renderPerformanceChart = () => {
+    if (examResults.length === 0) {
+      return (
+        <View style={styles.chartContainer}>
+          <Text style={styles.sectionTitle}>Performance Trend</Text>
+          <Text>No exam data available</Text>
+        </View>
+      );
+    }
+
+    const chartData = examResults.map(exam => ({
+      label: exam.examType,
+      score: exam.score
+    }));
+
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.sectionTitle}>Performance Trend</Text>
+        <LineChart
+          data={{
+            labels: chartData.map(item => item.label),
+            datasets: [
+              {
+                data: chartData.map(item => item.score),
+              },
+            ],
+          }}
+          width={Dimensions.get("window").width - 40}
+          height={220}
+          yAxisSuffix="%"
+          yAxisInterval={1}
+          fromZero={true}
+          chartConfig={{
+            backgroundColor: "#ffffff",
+            backgroundGradientFrom: "#ffffff",
+            backgroundGradientTo: "#ffffff",
+            decimalPlaces: 1,
+            color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            style: {
+              borderRadius: 16,
             },
-          ],
-        }}
-        width={Dimensions.get("window").width - 40}
-        height={220}
-        chartConfig={{
-          backgroundColor: "#ffffff",
-          backgroundGradientFrom: "#ffffff",
-          backgroundGradientTo: "#ffffff",
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-          style: {
+            propsForDots: {
+              r: "6",
+              strokeWidth: "2",
+              stroke: "#ffa726"
+            }
+          }}
+          bezier
+          style={{
+            marginVertical: 8,
             borderRadius: 16,
-          },
-        }}
-        bezier
-        style={{
-          marginVertical: 8,
-          borderRadius: 16,
-        }}
-      />
-    </View>
-  );
+          }}
+          onDataPointClick={({ x, y, index }) => {
+            const exam = examResults[index];
+            setTooltipData({ x, y, visible: true, exam });
+          }}
+          decorator={() => {
+            return tooltipData?.visible ? (
+              <View
+                style={[
+                  styles.tooltip,
+                  {
+                    left: tooltipData.x - 60,
+                    top: tooltipData.y - 50,
+                  },
+                ]}
+              >
+                <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
+                <Text style={styles.tooltipText}>Score: {tooltipData.exam.score}%</Text>
+                <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
+              </View>
+            ) : null;
+          }}
+        />
+      </View>
+    );
+  };
 
   const renderSubjectPerformance = () => (
     <View style={styles.subjectsContainer}>
@@ -107,14 +170,14 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   );
 
   const renderDetailItem = (label: string, value: string | number) => (
-    <View style={styles.detailItem}>
+    <View key={label} style={styles.detailItem}>
       <Text style={styles.detailLabel}>{label}: </Text>
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 
   const renderExtraCurricularActivities = () => (
-    <View style={styles.sectionContainer}>
+    <View key="extraCurricular" style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Extra-Curricular Activities</Text>
       <View style={styles.activitiesContainer}>
         {userDetails?.extraCurricular?.map(
@@ -140,10 +203,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
 
       <ScrollView
         style={styles.contentContainer}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={() => setTooltipData(null)}
         scrollEventThrottle={16}
       >
         <View style={styles.studentInfoCard}>
@@ -173,7 +233,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
             <Icon name="linechart" size={20} color="#001529" />
             <Text style={styles.summaryTitle}>Performance</Text>
             <Text style={styles.summaryValue}>
-              {userDetails?.performance ?? 0}%
+              {calculateAveragePerformance()}%
             </Text>
           </View>
           <View style={[styles.summaryItem, { alignItems: "center" }]}>
@@ -445,6 +505,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4a4a4a",
     lineHeight: 20,
+  },
+  tooltip: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 5,
+    padding: 10,
+    position: 'absolute',
+    width: 120,
+  },
+  tooltipTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  tooltipText: {
+    color: 'white',
+    fontSize: 12,
   },
 });
 

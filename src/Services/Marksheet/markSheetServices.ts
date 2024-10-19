@@ -9,3 +9,9 @@ import api from "../axios";
     const response = await api.get(`/exams/result/student?examId=${examId}`);
     return response.data;
   };
+
+  export const getExamResultByClassAndStudent = async (classId: string, studentId?: string) => {
+    const url = `/exams/offline-exam/${classId}${studentId ? `?studentId=${studentId}` : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  };
