@@ -1,223 +1,251 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  TextInput,
-  SectionList,
-  Dimensions,
-} from "react-native";
-import { Text, Icon as AntIcon } from "@ant-design/react-native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { LineChart, BarChart } from "react-native-chart-kit";
-import { AntDesign } from "@expo/vector-icons";
-import { getExamMarksheet, getMarksheet } from "../../Services/Marksheet/markSheetServices";
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, FlatList, Image, TextInput, SectionList } from 'react-native';
+import { Text, Icon as AntIcon } from '@ant-design/react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { LineChart, BarChart } from 'react-native-chart-kit';
+import { Dimensions, TouchableWithoutFeedback } from 'react-native';
+import { getMarksheet } from '../../Services/Marksheet/markSheetServices';
+import { logJSON } from '../../utils/logger';
+import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 
 type MarksheetScreenProps = {
-  navigation: StackNavigationProp<any, "Marksheet">;
+  navigation: StackNavigationProp<any, 'Marksheet'>;
 };
 
-type Exam = {
-  _id: string;
-  date: string;
-  subjectId?: {
-    _id: string;
-    name: string;
-  };
-  classId: {
-    _id: string;
-    name: string;
-  };
-  score?: number;
-  examType: string;
-  description?: string;
-};
-
-type SemExam = {
-  _id: string;
-  classId: {
-    _id: string;
-    name: string;
-  };
-  exams: {
-    subjectId: {
-      _id: string;
-      name: string;
-      code: string;
-    };
-    date: string;
-    startTime: string;
-    endTime: string;
-    description?: string;
-  }[];
-  examType: 'Sem Exam';
-  date: string;
-  score: number;
-};
-
-type MarksheetData = {
-  exams: (Exam | SemExam)[];
-  total: number;
-  attended: number;
-};
-
-type ExamResult = {
-  _id: string;
-  studentId: string;
-  examId: string;
-  subjectId: string;
-  score: number;
-  schoolId: string;
-  createdAt: string;
-  updatedAt: string;
-  subjectDetails: {
-    _id: string;
-    name: string;
-    code: string;
-    schoolId: string;
-  };
-};
+type SubjectName = 'Mathematics' | 'Science' | 'English' | 'Social Studies' | 'Physical Education';
 
 const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredExams, setFilteredExams] = useState<Exam[]>([]);
-  const [marksheetData, setMarksheetData] = useState<MarksheetData | null>(null);
-  const [examResults, setExamResults] = useState<ExamResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredExams, setFilteredExams] = useState<any[]>([]);
+  const [marksheetData, setMarksheetData] = useState<any>(null);
+  const [tooltipData, setTooltipData] = useState<{ x: number; y: number; visible: boolean; exam: any } | null>(null);
+
+  const exams = [
+    { id: '1', name: 'First Term Exam', date: '2023-09-15', status: 'Completed', score: 92 },
+    { id: '2', name: 'Mid-Term Exam', date: '2023-12-10', status: 'Completed', score: 88 },
+    { id: '3', name: 'Final Term Exam', date: '2024-03-20', status: 'Upcoming', score: null },
+    // Add more exams as needed
+  ];
 
   useEffect(() => {
-    const fetchMarksheetData = async () => {
+    const fetchMarksheet = async () => {
       try {
-        // Simulate a delay to show the skeleton loader
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const res = await getMarksheet();
-        const { attended, total } = calculateAttendedExams(res);
-        setMarksheetData({ ...res, attended, total });
-        setFilteredExams(res.exams);
+        const data = await getMarksheet();
+        setMarksheetData(data);
+        logJSON("MARKSHEET", data);
       } catch (error) {
-        console.error("Error fetching marksheet data:", error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching marksheet:', error);
       }
     };
 
-    fetchMarksheetData();
+    fetchMarksheet();
   }, []);
 
-  const fetchExamResult = async (examId: string) => {
-    try {
-      const res = await getExamMarksheet(examId);
-      setExamResults(res);
-    } catch (error) {
-      console.error("Error fetching exam result:", error);
-      // You might want to show an error message to the user here
-    }
-  }
-
   useEffect(() => {
-    if (marksheetData) {
-      setFilteredExams(
-        marksheetData.exams.filter((exam) => {
-          if (exam.examType === 'Sem Exam') {
-            const semExam = exam as SemExam;
-            return semExam.exams.some(subExam => 
-              subExam.subjectId.name.toLowerCase().includes(searchQuery.toLowerCase())
-            ) || semExam.date.includes(searchQuery);
-          } else {
-            const classTest = exam as Exam;
-            return (classTest.subjectId?.name.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-              classTest.date.includes(searchQuery);
-          }
-        })
-      );
-    }
-  }, [searchQuery, marksheetData]);
+    setFilteredExams(
+      exams.filter(exam => 
+        exam.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        exam.date.includes(searchQuery)
+      )
+    );
+  }, [searchQuery]);
 
-  const calculateSemExamAverage = () => {
-    if (!marksheetData) return 0;
-    const semExams = marksheetData.exams.filter(exam => exam.examType === "Sem Exam") as SemExam[];
-    if (semExams.length === 0) return 0;
-    const attendedExams = semExams.filter(exam => exam.score > 0);
-    if (attendedExams.length === 0) return 0;
-    const totalScore = attendedExams.reduce((sum, exam) => sum + exam.score, 0);
-    return Math.round(totalScore / attendedExams.length);
+  const subjects: { name: SubjectName; grade: string; percentage: number }[] = [
+    { name: 'Mathematics', grade: 'A', percentage: 92 },
+    { name: 'Science', grade: 'A+', percentage: 98 },
+    { name: 'English', grade: 'B+', percentage: 88 },
+    { name: 'Social Studies', grade: 'A', percentage: 94 },
+    { name: 'Physical Education', grade: 'A+', percentage: 96 },
+  ];
+
+  const classAverages: Record<SubjectName, number> = {
+    Mathematics: 85,
+    Science: 88,
+    English: 82,
+    'Social Studies': 86,
+    'Physical Education': 90,
   };
 
-  const groupExams = (exams: (Exam | SemExam)[]): (SemExam | Exam)[] => {
-    return exams.map(exam => {
-      if (exam.examType === 'Sem Exam') {
-        return exam as SemExam;
-      } else {
-        return exam as Exam;
-      }
-    });
-  };
+  const renderPerformanceComparison = () => (
+    <View style={styles.chartContainer}>
+      <Text style={styles.sectionTitle}>Performance Comparison</Text>
+      <BarChart
+        data={{
+          labels: subjects.map(subject => subject.name.substring(0, 3)),
+          datasets: [
+            {
+              data: subjects.map(subject => subject.percentage),
+              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+            },
+            {
+              data: subjects.map(subject => classAverages[subject.name]),
+              color: (opacity = 1) => `rgba(134, 65, 244, ${opacity})`,
+            },
+          ],
+        }}
+        width={Dimensions.get('window').width - 40}
+        height={220}
+        yAxisLabel="%"
+        yAxisSuffix=""
+        chartConfig={{
+          backgroundColor: '#ffffff',
+          backgroundGradientFrom: '#ffffff',
+          backgroundGradientTo: '#ffffff',
+          decimalPlaces: 0,
+          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          style: {
+            borderRadius: 16,
+          },
+        }}
+        style={{
+          marginVertical: 8,
+          borderRadius: 16,
+        }}
+      />
+      <View style={styles.legendContainer}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendColor, { backgroundColor: 'rgba(0, 21, 41, 1)' }]} />
+          <Text style={styles.legendText}>Your Score</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendColor, { backgroundColor: 'rgba(134, 65, 244, 1)' }]} />
+          <Text style={styles.legendText}>Class Average</Text>
+        </View>
+      </View>
+    </View>
+  );
 
-  const calculateAverageScore = (subjects: Exam[]) => {
-    const validScores = subjects.filter(subject => subject.score !== undefined);
-    if (validScores.length === 0) return 0;
-    const totalScore = validScores.reduce((sum, subject) => sum + (subject.score || 0), 0);
-    return Math.round(totalScore / validScores.length);
-  };
+  const renderExamReport = () => (
+    <>
+      <View style={styles.studentInfo}>
+        <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
+        <Text style={styles.studentClass}>Class: UKG</Text>
+        <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
+      </View>
+
+      <View style={styles.overallGrade}>
+        <Text style={styles.overallGradeTitle}>Overall Grade</Text>
+        <Text style={styles.overallGradeValue}>A</Text>
+        <Text style={styles.overallPercentage}>93.6%</Text>
+      </View>
+
+      {renderPerformanceComparison()}
+
+      <View style={styles.subjectsContainer}>
+        <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
+        {subjects.map((subject, index) => (
+          <View key={index} style={styles.subjectItem}>
+            <View style={styles.subjectInfo}>
+              <Text style={styles.subjectName}>{subject.name}</Text>
+              <Text style={styles.subjectGrade}>{subject.grade}</Text>
+            </View>
+            <View style={styles.percentageBar}>
+              <View style={[styles.percentageFill, { width: `${subject.percentage}%` }]} />
+            </View>
+            <Text style={styles.percentageText}>{subject.percentage}%</Text>
+          </View>
+        ))}
+      </View>
+
+      <TouchableOpacity style={styles.downloadButton}>
+        <AntIcon name="download" size={24} color="#ffffff" />
+        <Text style={styles.downloadButtonText}>Download PDF</Text>
+      </TouchableOpacity>
+    </>
+  );
+
+  const renderExamItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.examItem}
+      onPress={() => setSelectedExam(item.id)}
+    >
+      <View style={styles.examMainInfo}>
+        <Text style={styles.examName}>{item.name}</Text>
+        <Text style={styles.examDate}>{item.date}</Text>
+      </View>
+      <View style={styles.examStatus}>
+        <Text style={[styles.examStatusText, { color: item.status === 'Completed' ? '#52c41a' : '#faad14' }]}>
+          {item.status}
+        </Text>
+        {item.score && <Text style={styles.examScore}>{item.score}%</Text>}
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderExamList = () => {
-    if (!marksheetData) return null;
-
-    const groupedExams = groupExams(marksheetData.exams);
-
-    const sections:any = [
+    const sections = [
       {
-        title: "Summary",
-        data: ["summary"],
+        title: 'Student Info',
+        data: ['info'],
+        renderItem: () => (
+          <View style={styles.studentInfoCard}>
+            <Image
+              source={{ uri: 'https://example.com/student-avatar.jpg' }}
+              style={styles.studentAvatar}
+            />
+            <View style={styles.studentDetails}>
+              <Text style={styles.studentName}>MUHAMMED AYAAN P P</Text>
+              <Text style={styles.studentClass}>Class: UKG</Text>
+              <Text style={styles.academicYear}>Academic Year: 2023-2024</Text>
+            </View>
+          </View>
+        )
+      },
+      {
+        title: 'Summary',
+        data: ['summary'],
         renderItem: () => (
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
-              <AntDesign name="linechart" size={24} color="#001529" />
-              <Text style={styles.summaryTitle}>Average Score (Sem Exams)</Text>
-              <Text style={styles.summaryValue}>{calculateSemExamAverage()}%</Text>
+              <Text style={styles.summaryTitle}>Average Score</Text>
+              <Text style={styles.summaryValue}>90%</Text>
             </View>
             <View style={styles.summaryItem}>
-              <AntDesign name="calendar" size={24} color="#001529" />
-              <Text style={styles.summaryTitle}>Exams Attended</Text>
-              <Text style={styles.summaryValue}>{marksheetData.attended}/{marksheetData.total}</Text>
+              <Text style={styles.summaryTitle}>Exams Taken</Text>
+              <Text style={styles.summaryValue}>2/3</Text>
             </View>
           </View>
-        ),
+        )
       },
       {
-        title: "Performance Chart",
-        data: ["chart"],
-        renderItem: () => renderPerformanceChart(),
+        title: 'Performance Chart',
+        data: ['chart'],
+        renderItem: () => renderPerformanceChart()
       },
       {
-        title: "Sem Exams",
-        data: groupedExams.filter(exam => exam.examType === 'Sem Exam') as SemExam[],
-        renderItem: ({ item }: { item: SemExam }) => renderSemExamItem(item),
-      },
-      {
-        title: "Class Tests",
-        data: groupedExams.filter(exam => exam.examType === 'Class Test') as Exam[],
-        renderItem: ({ item }: { item: Exam }) => renderClassTestItem(item),
-      },
+        title: 'Exam Reports',
+        data: ['search', ...filteredExams],
+        renderItem: ({ item, index }: { item: any; index: number }) => {
+          if (index === 0) {
+            return (
+              <View style={styles.searchContainer}>
+                <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search exams..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+            );
+          }
+          return renderExamItem({ item });
+        }
+      }
     ];
 
     return (
       <View style={styles.examListContainer}>
         <SectionList
           sections={sections}
-          keyExtractor={(item) => {
-            if (typeof item === 'string') return item;
-            return item._id;
-          }}
-          renderItem={({ item, section }:any) => section.renderItem({ item }) }
-          renderSectionHeader={({ section: { title } }) => (
-            <Text style={styles.sectionTitle}>{title}</Text>
-          )}
+          keyExtractor={(item, index) => item.id || index.toString()}
+          renderItem={({ item, section, index }) => section.renderItem({ item, index })}
+          renderSectionHeader={({ section: { title } }) => 
+            title === 'Exam Reports' ? (
+              <Text style={styles.sectionTitle}>{title}</Text>
+            ) : null
+          }
           contentContainerStyle={styles.scrollContent}
           stickySectionHeadersEnabled={false}
         />
@@ -228,288 +256,77 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   const renderPerformanceChart = () => {
     if (!marksheetData) return null;
 
-    const semExams = marksheetData.exams.filter(exam => exam.examType === 'Sem Exam') as SemExam[];
-    const sortedSemExams = semExams.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    const labels = sortedSemExams.map(exam => new Date(exam.date).toLocaleDateString('en-US', { month: 'short' }));
-    const scores = sortedSemExams.map(exam => exam.score);
+    const examData = marksheetData.exams.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.sectionTitle}>Semester Exam Performance Trend</Text>
-        <LineChart
-          data={{
-            labels,
-            datasets: [{ data: scores }],
-          }}
-          width={Dimensions.get("window").width - 40}
-          height={220}
-          yAxisLabel=""
-          yAxisSuffix="%"
-          yAxisInterval={20}
-          chartConfig={{
-            backgroundColor: "#ffffff",
-            backgroundGradientFrom: "#ffffff",
-            backgroundGradientTo: "#ffffff",
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-            style: { borderRadius: 16 },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: "#001529"
-            },
-            propsForBackgroundLines: {
-              strokeDasharray: '',
-            },
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16,
-          }}
-          fromZero={true}
-          segments={5}
-          formatYLabel={(value) => value}
-        />
-      </View>
-    );
-  };
-
-  const formatDate = (dateString: string, includeYear = true) => {
-    const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    if (includeYear) {
-      options.year = 'numeric';
-    }
-    return date.toLocaleDateString('en-US', options);
-  };
-
-  const renderSemExamItem = (semExam: SemExam) => {
-    const isAttended = semExam.score > 0;
-    return (
-      <TouchableOpacity
-        style={styles.examItem}
-        onPress={() => {
-          setSelectedExam(semExam._id);
-          fetchExamResult(semExam._id);
-        }}
-      >
-        <View style={styles.examMainInfo}>
-          <Text style={styles.examName}>Semester Exam</Text>
-          <Text style={styles.examDate}>
-            {formatDate(semExam.date)}
-          </Text>
-        </View>
-        <View style={styles.examStatus}>
-          {isAttended ? (
-            <Text style={styles.examScore}>{semExam.score}%</Text>
-          ) : (
-            <Text style={styles.examNotAttended}>Not Attended</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderClassTestItem = (classTest: Exam) => {
-    const isAttended = classTest.score !== undefined && classTest.score > 0;
-    return (
-      <TouchableOpacity
-        style={styles.examItem}
-        onPress={() => {
-          setSelectedExam(classTest._id);
-          fetchExamResult(classTest._id);
-        }}
-      >
-        <View style={styles.examMainInfo}>
-          <Text style={styles.examName}>{classTest.subjectId?.name || 'Unknown Subject'}</Text>
-          <Text style={styles.examDate}>{formatDate(classTest.date)}</Text>
-        </View>
-        <View style={styles.examStatus}>
-          {isAttended ? (
-            <Text style={styles.examScore}>{classTest.score}%</Text>
-          ) : (
-            <Text style={styles.examNotAttended}>Not Attended</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderExamDetails = (examId: string) => {
-    const exam = marksheetData?.exams.find(e => e._id === examId);
-    if (!exam) return null;
-
-    if (exam.examType === 'Sem Exam') {
-      const semExam = exam as SemExam;
-      return (
-        <ScrollView contentContainerStyle={styles.examDetailsContainer}>
-          <Text style={styles.examDetailsTitle}>Semester Exam</Text>
-          <Text style={styles.examDetailsDate}>
-            Date: {formatDate(semExam.date)}
-          </Text>
-          {examResults.map(result => (
-            <View key={result._id} style={styles.subjectItem}>
-              <Text style={styles.subjectName}>{result.subjectDetails.name}</Text>
-              <Text style={styles.examDetailsScore}>Score: {result.score}</Text>
-            </View>
-          ))}
-          <Text style={styles.examDetailsScore}>Overall Score: {semExam.score}%</Text>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              setSelectedExam(null);
-              setExamResults([]);
+      <TouchableWithoutFeedback onPress={() => setTooltipData(null)}>
+        <View style={styles.chartContainer}>
+          <Text style={styles.sectionTitle}>Performance Trend</Text>
+          <LineChart
+            data={{
+              labels: examData.map(exam => exam.examType === 'Class Test' ? 'Test' : exam.examType),
+              datasets: [{
+                data: examData.map(exam => Math.round(exam.percentage))
+              }]
             }}
-          >
-            <Text style={styles.backButtonText}>Back to Exam List</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      );
-    } else {
-      const classTest = exam as Exam;
-      return (
-        <ScrollView contentContainerStyle={styles.examDetailsContainer}>
-          <Text style={styles.examDetailsTitle}>{classTest.subjectId?.name || 'Unknown Subject'} - Class Test</Text>
-          <Text style={styles.examDetailsDate}>
-            Date: {formatDate(classTest.date)}
-          </Text>
-          {examResults.length > 0 ? (
-            <Text style={styles.examDetailsScore}>Score: {examResults[0].score}%</Text>
-          ) : (
-            <Text style={styles.examDetailsNotAttended}>Not Attended</Text>
-          )}
-          {classTest.description && (
-            <Text style={styles.examDetailsDescription}>
-              Description: {classTest.description}
-            </Text>
-          )}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              setSelectedExam(null);
-              setExamResults([]);
+            width={Dimensions.get('window').width - 40}
+            height={220}
+            yAxisLabel=""
+            yAxisSuffix="%"
+            yAxisInterval={1}
+            fromZero={true}
+            chartConfig={{
+              backgroundColor: '#ffffff',
+              backgroundGradientFrom: '#ffffff',
+              backgroundGradientTo: '#ffffff',
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16
+              },
+              propsForDots: {
+                r: '6',
+                strokeWidth: '2',
+                stroke: '#ffa726'
+              }
             }}
-          >
-            <Text style={styles.backButtonText}>Back to Exam List</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      );
-    }
-  };
-
-  const formatTime = (timeString: string) => {
-    const date = new Date(timeString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const calculateAttendedExams = (data: MarksheetData) => {
-    if (!data) return { attended: 0, total: 0 };
-    const attendedExams = data.exams.filter(exam => {
-      if (exam.examType === 'Sem Exam') {
-        return (exam as SemExam).score > 0;
-      } else {
-        return (exam as Exam).score !== undefined && (exam as Exam).score! > 0;
-      }
-    });
-    return { attended: attendedExams.length, total: data.exams.length };
-  };
-
-  const renderSkeletonLoader = () => (
-    <View style={styles.skeletonContainer}>
-      <View style={styles.skeletonSearchBar} />
-      <View style={styles.skeletonSummary}>
-        <View style={styles.skeletonSummaryItem}>
-          <View style={styles.skeletonSummaryIcon} />
-          <View style={styles.skeletonSummaryText} />
-          <View style={styles.skeletonSummaryValue} />
+            bezier
+            style={{
+              marginVertical: 8,
+              borderRadius: 16
+            }}
+            onDataPointClick={({ x, y, index }) => {
+              const exam = examData[index];
+              setTooltipData({ x, y, visible: true, exam });
+            }}
+            decorator={() => {
+              return tooltipData?.visible ? (
+                <View
+                  style={[
+                    styles.tooltip,
+                    {
+                      left: tooltipData.x - 60,
+                      top: tooltipData.y - 50,
+                    },
+                  ]}
+                >
+                  <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
+                  <Text style={styles.tooltipText}>Score: {Math.round(tooltipData.exam.percentage)}%</Text>
+                  <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
+                </View>
+              ) : null;
+            }}
+          />
         </View>
-        <View style={styles.skeletonSummaryItem}>
-          <View style={styles.skeletonSummaryIcon} />
-          <View style={styles.skeletonSummaryText} />
-          <View style={styles.skeletonSummaryValue} />
-        </View>
-      </View>
-      <View style={styles.skeletonChart} />
-      <View style={styles.skeletonSectionTitle} />
-      <View style={styles.skeletonExamList}>
-        {[...Array(3)].map((_, index) => (
-          <View key={index} style={styles.skeletonExamItem}>
-            <View style={styles.skeletonExamHeader}>
-              <View style={styles.skeletonExamName} />
-              <View style={styles.skeletonExamDate} />
-            </View>
-            <View style={styles.skeletonExamStatus} />
-          </View>
-        ))}
-      </View>
-      <View style={styles.skeletonSectionTitle} />
-      <View style={styles.skeletonExamList}>
-        {[...Array(2)].map((_, index) => (
-          <View key={index} style={styles.skeletonExamItem}>
-            <View style={styles.skeletonExamHeader}>
-              <View style={styles.skeletonExamName} />
-              <View style={styles.skeletonExamDate} />
-            </View>
-            <View style={styles.skeletonExamStatus} />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <AntDesign name="filetext1" size={80} color="#001529" />
-      <Text style={styles.emptyStateTitle}>No Marksheet Available</Text>
-      <Text style={styles.emptyStateDescription}>Your marksheet hasn't been generated yet. Check back later or contact your administrator.</Text>
-    </View>
-  );
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntIcon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Marksheet</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.contentContainer}>
-          {renderSkeletonLoader()}
-        </View>
-      </SafeAreaView>
+      </TouchableWithoutFeedback>
     );
-  }
-
-  if (!marksheetData || marksheetData.exams.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntIcon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Marksheet</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.contentContainer}>
-          {renderEmptyState()}
-        </View>
-      </SafeAreaView>
-    );
-  }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() =>
-            selectedExam ? setSelectedExam(null) : navigation.goBack()
-          }
-        >
+        <TouchableOpacity onPress={() => selectedExam ? setSelectedExam(null) : navigation.goBack()}>
           <AntIcon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Marksheet</Text>
@@ -518,7 +335,13 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
 
       <View style={styles.contentContainer}>
         {selectedExam ? (
-          renderExamDetails(selectedExam)
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            onScroll={() => setTooltipData(null)}
+            scrollEventThrottle={16}
+          >
+            {renderExamReport()}
+          </ScrollView>
         ) : (
           renderExamList()
         )}
@@ -530,23 +353,23 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f2f5",
+    backgroundColor: '#f0f2f5',
   },
   contentContainer: {
     flex: 1,
-    marginTop: 80, // Height of the header plus top margin
+    marginTop: 80, 
   },
   scrollContent: {
     padding: 20,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#001529",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#001529',
     padding: 15,
     borderRadius: 10,
-    position: "absolute",
+    position: 'absolute',
     top: 20,
     left: 20,
     right: 20,
@@ -554,63 +377,63 @@ const styles = StyleSheet.create({
     height: 60, // Specify a fixed height for the header
   },
   headerTitle: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   studentInfo: {
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
   },
   studentName: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
   },
   studentClass: {
     fontSize: 16,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     marginTop: 5,
   },
   academicYear: {
     fontSize: 16,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     marginTop: 5,
   },
   overallGrade: {
-    backgroundColor: "#001529",
+    backgroundColor: '#001529',
     borderRadius: 10,
     padding: 20,
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 20,
   },
   overallGradeTitle: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 16,
     marginBottom: 10,
   },
   overallGradeValue: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 48,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   overallPercentage: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 18,
     marginTop: 5,
   },
   subjectsContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
     marginBottom: 10,
     marginTop: 20,
   },
@@ -618,59 +441,59 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   subjectInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 5,
   },
   subjectName: {
     fontSize: 16,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
   },
   subjectGrade: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
   },
   percentageBar: {
     height: 10,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: '#e0e0e0',
     borderRadius: 5,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   percentageFill: {
-    height: "100%",
-    backgroundColor: "#001529",
+    height: '100%',
+    backgroundColor: '#001529',
   },
   percentageText: {
     fontSize: 14,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     marginTop: 5,
-    textAlign: "right",
+    textAlign: 'right',
   },
   downloadButton: {
-    backgroundColor: "#001529",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#001529',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 15,
     borderRadius: 10,
   },
   downloadButtonText: {
-    color: "#ffffff",
+    color: '#ffffff',
     marginLeft: 10,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 16,
   },
   examListContainer: {
     flex: 1,
   },
   studentInfoCard: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
   studentAvatar: {
     width: 60,
@@ -685,10 +508,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   examItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
@@ -698,53 +521,52 @@ const styles = StyleSheet.create({
   },
   examName: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
   },
   examDate: {
     fontSize: 14,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     marginTop: 2,
   },
   examStatus: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
   },
   examStatusText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   examScore: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
     marginTop: 2,
   },
   summaryContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#ffffff",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#ffffff',
     borderRadius: 10,
-    padding: 20,
+    padding: 15,
     marginBottom: 20,
   },
   summaryItem: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   summaryTitle: {
     fontSize: 14,
-    color: "#4a4a4a",
-    marginTop: 10,
+    color: '#4a4a4a',
   },
   summaryValue: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
     marginTop: 5,
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
@@ -757,20 +579,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   chartContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
-    alignItems: 'center', // Center the chart horizontally
   },
   legendContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: 10,
   },
   legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 10,
   },
   legendColor: {
@@ -781,170 +602,41 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
   },
   examReportHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 15,
   },
-  examType: {
-    fontSize: 14,
-    color: "#4a4a4a",
-    marginTop: 2,
-  },
-  examDetailsContainer: {
-    padding: 20,
-  },
-  examDetailsTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#001529",
-    marginBottom: 10,
-  },
-  examDetailsDate: {
-    fontSize: 16,
-    color: "#4a4a4a",
-    marginBottom: 5,
-  },
-  examDetailsStatus: {
-    fontSize: 16,
-    color: "#4a4a4a",
-    marginBottom: 5,
-  },
-  examDetailsScore: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#52c41a",
-    marginBottom: 5,
-  },
-  examDetailsDescription: {
-    fontSize: 16,
-    color: "#4a4a4a",
+  chartLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     marginTop: 10,
   },
-  backButton: {
-    backgroundColor: "#001529",
-    padding: 10,
+  legendItem: {
+    marginRight: 10,
+    marginBottom: 5,
+    fontSize: 12,
+    color: '#4a4a4a',
+  },
+  tooltip: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 5,
-    alignItems: "center",
-    marginTop: 20,
+    padding: 10,
+    position: 'absolute',
+    width: 120,
   },
-  backButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  examNotAttended: {
-    color: '#ff4d4f',
+  tooltipTitle: {
+    color: 'white',
     fontWeight: 'bold',
-  },
-  examDetailsNotAttended: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ff4d4f',
-    marginBottom: 10,
-  },
-  skeletonContainer: {
-    padding: 20,
-  },
-  skeletonSearchBar: {
-    height: 40,
-    backgroundColor: '#E1E9EE',
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  skeletonSummary: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  skeletonSummaryItem: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-  },
-  skeletonSummaryIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E1E9EE',
-    marginBottom: 10,
-  },
-  skeletonSummaryText: {
-    width: '80%',
-    height: 14,
-    backgroundColor: '#E1E9EE',
     marginBottom: 5,
   },
-  skeletonSummaryValue: {
-    width: '60%',
-    height: 20,
-    backgroundColor: '#E1E9EE',
-  },
-  skeletonChart: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  skeletonSectionTitle: {
-    width: '60%',
-    height: 24,
-    backgroundColor: '#E1E9EE',
-    marginBottom: 15,
-  },
-  skeletonExamList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-  skeletonExamItem: {
-    marginBottom: 15,
-  },
-  skeletonExamHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  skeletonExamName: {
-    width: '60%',
-    height: 18,
-    backgroundColor: '#E1E9EE',
-  },
-  skeletonExamDate: {
-    width: '30%',
-    height: 18,
-    backgroundColor: '#E1E9EE',
-  },
-  skeletonExamStatus: {
-    width: '40%',
-    height: 14,
-    backgroundColor: '#E1E9EE',
-    alignSelf: 'flex-end',
-  },
-  emptyStateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#001529',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  emptyStateDescription: {
-    fontSize: 16,
-    color: '#8c8c8c',
-    textAlign: 'center',
+  tooltipText: {
+    color: 'white',
+    fontSize: 12,
   },
 });
 
