@@ -63,13 +63,15 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   };
 
   useEffect(() => {
-    setFilteredExams(
-      exams.filter(exam => 
-        exam.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        exam.date.includes(searchQuery)
-      )
-    );
-  }, [searchQuery]);
+    if (marksheetData && marksheetData.exams) {
+      setFilteredExams(
+        marksheetData.exams.filter((exam: any) => 
+          exam.examType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          formatDate(exam.date).includes(searchQuery)
+        )
+      );
+    }
+  }, [searchQuery, marksheetData]);
 
   const subjects: { name: SubjectName; grade: string; percentage: number }[] = [
     { name: 'Mathematics', grade: 'A', percentage: 92 },
@@ -262,7 +264,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
       },
       {
         title: 'Exam Reports',
-        data: ['search', ...(marksheetData?.exams || [])],
+        data: ['search', ...(filteredExams || [])],
         renderItem: ({ item, index }: { item: any; index: number }) => {
           if (index === 0) {
             return (

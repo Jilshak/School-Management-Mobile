@@ -15,3 +15,18 @@ import api from "../axios";
     const response = await api.get(url);
     return response.data;
   };
+
+export const getExistingResultOfStudent = async (examId: string, studentId: string) => {
+  try {
+    const response = await api.get('/exams/result/teacher', {
+      params: {
+        examId,
+        studentId
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching existing result of student:', error);
+    throw error;
+  }
+};

@@ -8,7 +8,7 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
-import { Text, Progress, Tag } from "@ant-design/react-native";
+import { Text, Tag } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/AntDesign";
@@ -16,7 +16,7 @@ import { LineChart } from "react-native-chart-kit";
 import { getUserDetails } from "../../Services/User/UserService";
 import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 import { IUser } from "../../Services/User/IUserService";
-import { getExamResultByClassAndStudent } from "../../Services/Marksheet/markSheetServices";
+import { getExamResultByClassAndStudent, getExistingResultOfStudent } from "../../Services/Marksheet/markSheetServices";
 import { logJSON } from "../../utils/logger";
 
 type StudentDetailsScreenProps = {
@@ -33,6 +33,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   const [userDetails, setUserDetails] = useState<IUser | null>(null);
   const [examResults, setExamResults] = useState<any[]>([]);
   const [tooltipData, setTooltipData] = useState<{ x: number; y: number; visible: boolean; exam: any } | null>(null);
+  const [selectedExamResult, setSelectedExamResult] = useState<any>(null);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -192,6 +193,35 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     </View>
   );
 
+  const handleExamClick = async (examId: string) => {
+    try {
+      const result = await getExistingResultOfStudent(examId, studentId);
+      setSelectedExamResult(result);
+      // You can add logic here to display the result, e.g., in a modal or a new section
+    } catch (error) {
+      console.error("Error fetching exam result:", error);
+      // Handle error (e.g., show an error message to the user)
+    }
+  };
+
+  const renderExams = () => (
+    <View style={styles.sectionContainer}>
+      <Text style={styles.sectionTitle}>Exams</Text>
+      <View style={styles.examsContainer}>
+        {examResults.map((exam, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.examTag}
+            onPress={() => handleExamClick(exam.id)}
+          >
+            <Text style={styles.examType}>{exam.examType}</Text>
+            <Text style={styles.examDate}>{formatDate(exam.date)}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -254,6 +284,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
         </View>
 
         {renderPerformanceChart()}
+        {renderExams()}
         {renderSubjectPerformance()}
         {renderExtraCurricularActivities()}
 
@@ -522,6 +553,32 @@ const styles = StyleSheet.create({
   tooltipText: {
     color: 'white',
     fontSize: 12,
+  },
+  examsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginHorizontal: -4, // Compensate for examTag margin
+  },
+  examTag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 10,
+    margin: 4,
+    width: '31%', // Approximately 3 items per row with margins
+    alignItems: 'center',
+  },
+  examType: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#001529',
+    textAlign: 'center',
+  },
+  examDate: {
+    fontSize: 12,
+    color: '#4a4a4a',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 
