@@ -141,10 +141,10 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
 
     const subjects = selectedExamDetails.map(detail => ({
       name: detail.subjectDetails.name,
-      grade: calculateGrade(detail.score, detail.examDetails.exams.find(exam => exam.subjectId === detail.subjectId).totalMark),
-      percentage: calculatePercentage(detail.score, detail.examDetails.exams.find(exam => exam.subjectId === detail.subjectId).totalMark),
+      grade: calculateGrade(detail.score, detail.examDetails.exams.find((exam:any) => exam.subjectId === detail.subjectId).totalMark),
+      percentage: calculatePercentage(detail.score, detail.examDetails.exams.find((exam:any) => exam.subjectId === detail.subjectId).totalMark),
       score: detail.score,
-      totalMark: detail.examDetails.exams.find(exam => exam.subjectId === detail.subjectId).totalMark
+      totalMark: detail.examDetails.exams.find((exam:any) => exam.subjectId === detail.subjectId).totalMark
     }));
 
     const overallPercentage = calculateOverallPercentage(subjects);

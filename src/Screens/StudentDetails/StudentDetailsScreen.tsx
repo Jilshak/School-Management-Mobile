@@ -51,6 +51,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
       try {
         const response = await getExamResultByClassAndStudent(classId, studentId);
         setExamResults(response.exams);
+        logJSON("EXAM RESULTS", response.exams);
       } catch (error) {
         console.error("Error fetching exam results:", error);
       }
