@@ -56,7 +56,7 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
       const formattedClasses: ClassInfo[] = classrooms.classrooms.map(classroom => ({
         id: classroom._id,
         name: classroom.name,
-        teacher: classroom.classTeacherDetails.name,
+        teacher: classroom.classTeacherDetails?.name,
         studentCount: classroom.studentCount - 1,
         averagePerformance: 0,
       }));

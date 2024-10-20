@@ -89,7 +89,7 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
     return (
       <TouchableOpacity
         style={styles.studentItem}
-        onPress={() => navigation.navigate('StudentDetails', { studentId: item._id })}
+        onPress={() => navigation.navigate('StudentDetails', { studentId: item._id, classId: classId })}
       >
         <View>
           <Text style={styles.studentName}>{`${item.studentDetails.firstName} ${item.studentDetails.lastName}`}</Text>
