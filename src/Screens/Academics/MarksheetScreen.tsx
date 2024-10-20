@@ -6,7 +6,7 @@ import { LineChart, BarChart } from 'react-native-chart-kit';
 import { Dimensions, TouchableWithoutFeedback } from 'react-native';
 import { getExamMarksheet, getMarksheet } from '../../Services/Marksheet/markSheetServices';
 import { logJSON } from '../../utils/logger';
-import { formatDate, formatDateToYear } from "../../utils/DateUtil";
+import { formatDate } from "../../utils/DateUtil";
 
 type MarksheetScreenProps = {
   navigation: StackNavigationProp<any, 'Marksheet'>;
@@ -211,7 +211,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   const renderExamItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.examItem}
-      onPress={() => setSelectedExam(item._id)}
+      onPress={() => navigation.navigate('ExamDetails', { examId: item._id, studentId: '', isTeacher: false })}
     >
       <View style={styles.examMainInfo}>
         <Text style={styles.examName}>{item.examType}</Text>

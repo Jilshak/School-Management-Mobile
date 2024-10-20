@@ -193,15 +193,8 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     </View>
   );
 
-  const handleExamClick = async (examId: string) => {
-    try {
-      const result = await getExistingResultOfStudent(examId, studentId);
-      setSelectedExamResult(result);
-      // You can add logic here to display the result, e.g., in a modal or a new section
-    } catch (error) {
-      console.error("Error fetching exam result:", error);
-      // Handle error (e.g., show an error message to the user)
-    }
+  const handleExamClick = (examId: string) => {
+    navigation.navigate('ExamDetails', { examId, studentId, isTeacher: true });
   };
 
   const renderExams = () => (
@@ -212,7 +205,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
           <TouchableOpacity
             key={index}
             style={styles.examTag}
-            onPress={() => handleExamClick(exam.id)}
+            onPress={() => handleExamClick(exam._id)}
           >
             <Text style={styles.examType}>{exam.examType}</Text>
             <Text style={styles.examDate}>{formatDate(exam.date)}</Text>
