@@ -21,12 +21,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
   const [marksheetData, setMarksheetData] = useState<any>(null);
   const [tooltipData, setTooltipData] = useState<{ x: number; y: number; visible: boolean; exam: any } | null>(null);
 
-  const exams = [
-    { id: '1', name: 'First Term Exam', date: '2023-09-15', status: 'Completed', score: 92 },
-    { id: '2', name: 'Mid-Term Exam', date: '2023-12-10', status: 'Completed', score: 88 },
-    { id: '3', name: 'Final Term Exam', date: '2024-03-20', status: 'Upcoming', score: null },
-    // Add more exams as needed
-  ];
+
 
   useEffect(() => {
     const fetchMarksheet = async () => {
@@ -219,7 +214,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
       </View>
       <View style={styles.examStatus}>
         <Text style={[styles.examStatusText, { color: '#52c41a' }]}>
-          Completed
+          Score
         </Text>
         <Text style={styles.examScore}>{Math.round(item.percentage)}%</Text>
       </View>
@@ -317,7 +312,7 @@ const MarksheetScreen: React.FC<MarksheetScreenProps> = ({ navigation }) => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <LineChart
               data={{
-                labels: examData.map(exam => exam.examType === 'Class Test' ? 'Test' : exam.examType),
+                // labels: examData.map(exam => exam.examType === 'Class Test' ? 'Test' : exam.examType),
                 datasets: [{
                   data: examData.map(exam => Math.round(exam.percentage))
                 }]

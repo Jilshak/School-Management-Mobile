@@ -30,3 +30,14 @@ export const getExistingResultOfStudent = async (examId: string, studentId: stri
     throw error;
   }
 };
+
+export const fetchStudentSubjectPerformance = async (studentId: string, examType?: 'Class Test' | 'Sem Exam') => {
+  try {
+    const url = `/exams/student-performance?studentId=${studentId}${examType ? `&examType=${examType}` : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching student performance:', error);
+    throw error;
+  }
+};

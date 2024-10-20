@@ -16,7 +16,7 @@ import { LineChart } from "react-native-chart-kit";
 import { getUserDetails } from "../../Services/User/UserService";
 import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 import { IUser } from "../../Services/User/IUserService";
-import { getExamResultByClassAndStudent, getExistingResultOfStudent } from "../../Services/Marksheet/markSheetServices";
+import { getExamResultByClassAndStudent,fetchStudentSubjectPerformance } from "../../Services/Marksheet/markSheetServices";
 import { logJSON } from "../../utils/logger";
 
 type StudentDetailsScreenProps = {
@@ -34,6 +34,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   const [examResults, setExamResults] = useState<any[]>([]);
   const [tooltipData, setTooltipData] = useState<{ x: number; y: number; visible: boolean; exam: any } | null>(null);
   const [selectedExamResult, setSelectedExamResult] = useState<any>(null);
+  const [subjectPerformance, setSubjectPerformance] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -59,6 +60,36 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     };
     fetchExamResult();
   }, [classId, studentId]);
+
+  useEffect(() => {
+    const fetchStudentSubjectWisePerformance = async () => {
+      try {
+        const response = await fetchStudentSubjectPerformance(studentId);
+        const allSubjects = response.performance.flatMap(exam => exam.subjects);
+        const aggregatedSubjects = allSubjects.reduce((acc, subject) => {
+          if (!acc[subject.subjectName]) {
+            acc[subject.subjectName] = {
+              totalPercentage: 0,
+              examCount: 0,
+            };
+          }
+          acc[subject.subjectName].totalPercentage += subject.averagePercentage;
+          acc[subject.subjectName].examCount += subject.examCount;
+          return acc;
+        }, {});
+
+        const subjectPerformanceData = Object.entries(aggregatedSubjects).map(([subjectName, data]: [string, any]) => ({
+          subjectName,
+          averagePercentage: data.totalPercentage / data.examCount,
+        }));
+
+        setSubjectPerformance(subjectPerformanceData);
+      } catch (error) {
+        console.error("Error fetching student subject performance:", error);
+      }
+    };
+    fetchStudentSubjectWisePerformance();
+  }, [studentId]);
 
   const calculateAveragePerformance = () => {
     if (examResults.length === 0) return 0;
@@ -86,7 +117,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
         <Text style={styles.sectionTitle}>Performance Trend</Text>
         <LineChart
           data={{
-            labels: chartData.map(item => item.label),
+            // labels: chartData.map(item => item.label),
             datasets: [
               {
                 data: chartData.map(item => item.score),
@@ -148,24 +179,23 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   const renderSubjectPerformance = () => (
     <View style={styles.subjectsContainer}>
       <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
-      {[
-        "Mathematics",
-        "Science",
-        "English",
-        "Social Studies",
-        "Physical Education",
-      ].map((subject, index) => (
+      {subjectPerformance.map((subject, index) => (
         <View key={index} style={styles.subjectItem}>
           <View style={styles.subjectInfo}>
-            <Text style={styles.subjectName}>{subject}</Text>
-            <Text style={styles.subjectGrade}>A</Text>
+            <Text style={styles.subjectName}>{subject.subjectName}</Text>
+            <Text style={styles.subjectGrade}>
+              {subject.averagePercentage >= 90 ? 'A' :
+               subject.averagePercentage >= 80 ? 'B' :
+               subject.averagePercentage >= 70 ? 'C' :
+               subject.averagePercentage >= 60 ? 'D' : 'F'}
+            </Text>
           </View>
           <View style={styles.percentageBar}>
             <View
-              style={[styles.percentageFill, { width: `${85 + index * 2}%` }]}
+              style={[styles.percentageFill, { width: `${subject.averagePercentage}%` }]}
             />
           </View>
-          <Text style={styles.percentageText}>{85 + index * 2}%</Text>
+          <Text style={styles.percentageText}>{subject.averagePercentage.toFixed(2)}%</Text>
         </View>
       ))}
     </View>
