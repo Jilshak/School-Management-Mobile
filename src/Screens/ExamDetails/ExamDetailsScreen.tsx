@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { Text } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import { getExistingResultOfStudent, getExamMarksheet } from '../../Services/Marksheet/markSheetServices';
 import { formatDate } from '../../utils/DateUtil';
-import { calculateGrade, calculatePercentage } from '../../utils/GradeUtils';
+import { calculateGrade, calculatePercentage, gradeSystem } from '../../utils/GradeUtils';
 
 type ExamDetailsScreenProps = {
   navigation: StackNavigationProp<any, 'ExamDetails'>;
@@ -17,6 +17,7 @@ const ExamDetailsScreen: React.FC<ExamDetailsScreenProps> = ({ navigation, route
   const { examId, studentId, isTeacher } = route.params;
   const [examDetails, setExamDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isGradeSystemVisible, setIsGradeSystemVisible] = useState(false);
 
   useEffect(() => {
     const fetchExamDetails = async () => {
@@ -44,6 +45,33 @@ const ExamDetailsScreen: React.FC<ExamDetailsScreenProps> = ({ navigation, route
     const overallPercentage = (totalScore / totalMarks) * 100;
     return calculateGrade(overallPercentage, 100);
   };
+
+  const renderGradeSystemModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isGradeSystemVisible}
+      onRequestClose={() => setIsGradeSystemVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Grade System</Text>
+          {Object.entries(gradeSystem).map(([grade, range], index) => (
+            <View key={index} style={styles.gradeRow}>
+              <Text style={styles.gradeText}>{grade}</Text>
+              <Text style={styles.gradeRangeText}>{range}</Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setIsGradeSystemVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   if (loading) {
     return (
@@ -90,8 +118,14 @@ const ExamDetailsScreen: React.FC<ExamDetailsScreenProps> = ({ navigation, route
       </View>
 
       <ScrollView style={styles.contentContainer}>
+
         <View style={styles.overallGradeContainer}>
-          <Text style={styles.overallGradeTitle}>Overall Grade</Text>
+          <View style={styles.overallGradeHeader}>
+            <Text style={styles.overallGradeTitle}>Overall Grade</Text>
+            <TouchableOpacity onPress={() => setIsGradeSystemVisible(true)}>
+              <Icon name="infocirlceo" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.overallGradeValue}>{overallGrade}</Text>
         </View>
 
@@ -112,6 +146,8 @@ const ExamDetailsScreen: React.FC<ExamDetailsScreenProps> = ({ navigation, route
           ))}
         </View>
       </ScrollView>
+
+      {renderGradeSystemModal()}
     </SafeAreaView>
   );
 };
@@ -165,18 +201,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#001529',
     borderRadius: 10,
     padding: 20,
-    alignItems: 'center',
     marginBottom: 20,
+  },
+  overallGradeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   overallGradeTitle: {
     color: '#ffffff',
-    fontSize: 16,
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   overallGradeValue: {
     color: '#ffffff',
     fontSize: 48,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   subjectsContainer: {
     backgroundColor: '#ffffff',
@@ -242,6 +284,52 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#ff4d4f',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  gradeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  gradeText: {
+    fontSize: 16,
+    color: '#001529',
+    fontWeight: 'bold',
+  },
+  gradeRangeText: {
+    fontSize: 16,
+    color: '#4a4a4a',
+  },
+  closeButton: {
+    backgroundColor: '#001529',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  closeButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
