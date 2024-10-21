@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, Alert, Modal, Dimensions } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, Alert, Modal, Dimensions, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { Question, questions } from './questions';
-import { AntDesign } from '@expo/vector-icons'; // Add this import
+import { AntDesign } from '@expo/vector-icons';
 
 type MCQScreenProps = {
   navigation: StackNavigationProp<any, 'MCQ'>;
@@ -55,6 +55,8 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
   const [showStartModal, setShowStartModal] = useState(true);
   const [examStarted, setExamStarted] = useState(false);
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [showQuestionOverview, setShowQuestionOverview] = useState(false);
 
   const initialQuestions = useMemo(() => {
     const getQuestionsFromChapters = () => {
@@ -139,7 +141,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     setTimerActive(false);
     const finalScore = calculateScore();
     setScore(finalScore);
-    setQuizDuration((Date.now() - startTime) / 1000); // Set quiz duration in seconds
+    setQuizDuration((Date.now() - startTime) / 1000)
     setShowResultModal(true);
   };
 
@@ -154,7 +156,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     setTimerActive(false);
     setModalVisible(false);
     const finalScore = calculateScore();
-    setScore(finalScore); // Set the actual score
+    setScore(finalScore);
     setQuizDuration((Date.now() - startTime) / 1000);
     setShowResultModal(true);
   };
@@ -214,38 +216,142 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     return subjectQuestions.slice(startIndex, endIndex);
   };
 
-  const renderQuestion = ({ item, index }: { item: Question; index: number }) => (
-    <View style={styles.questionCard} key={`question-${index}`}>
-      <Text style={styles.questionText}>{`${index + 1}. ${item.question}`}</Text>
-      {item.options.map((option, optionIndex) => (
-        <TouchableOpacity
-          key={`question-${index}-option-${optionIndex}`}
-          style={[
-            styles.optionButton,
-            selectedAnswers[item.id] === option && styles.selectedOptionButton,
-            submitted && option === item.correctAnswer && styles.correctOptionButton,
-            submitted && selectedAnswers[item.id] === option && selectedAnswers[item.id] !== item.correctAnswer && styles.incorrectOptionButton,
-          ]}
-          onPress={() => handleOptionSelect(item.id, option)}
-          disabled={submitted}
-        >
-          <Text
-            style={[
-              styles.optionText,
-              selectedAnswers[item.id] === option && styles.selectedOptionText,
-              submitted && option === item.correctAnswer && styles.correctOptionText,
-              submitted && selectedAnswers[item.id] === option && selectedAnswers[item.id] !== item.correctAnswer && styles.incorrectOptionText,
-            ]}
-          >
-            {`${String.fromCharCode(65 + optionIndex)}. ${option}`}
-          </Text>
-          {submitted && selectedAnswers[item.id] === option && option === item.correctAnswer && (
-            <AntIcon name="check" size={24} color="#ffffff" style={styles.tickIcon} />
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < subjectQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const toggleQuestionOverview = () => {
+    setShowQuestionOverview(!showQuestionOverview);
+  };
+
+  const renderQuestion = () => {
+    const question = subjectQuestions[currentQuestionIndex];
+    return (
+      <View style={styles.questionContainer}>
+        <View style={styles.questionCard}>
+          <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${question.question}`}</Text>
+          {question.options.map((option, optionIndex) => (
+            <TouchableOpacity
+              key={`question-${currentQuestionIndex}-option-${optionIndex}`}
+              style={[
+                styles.optionButton,
+                selectedAnswers[question.id] === option && styles.selectedOptionButton,
+                submitted && option === question.correctAnswer && styles.correctOptionButton,
+                submitted && selectedAnswers[question.id] === option && selectedAnswers[question.id] !== question.correctAnswer && styles.incorrectOptionButton,
+              ]}
+              onPress={() => handleOptionSelect(question.id, option)}
+              disabled={submitted}
+            >
+              <Text
+                style={[
+                  styles.optionText,
+                  selectedAnswers[question.id] === option && styles.selectedOptionText,
+                  submitted && option === question.correctAnswer && styles.correctOptionText,
+                  submitted && selectedAnswers[question.id] === option && selectedAnswers[question.id] !== question.correctAnswer && styles.incorrectOptionText,
+                ]}
+              >
+                {`${String.fromCharCode(65 + optionIndex)}. ${option}`}
+              </Text>
+              {submitted && selectedAnswers[question.id] === option && option === question.correctAnswer && (
+                <AntIcon name="check" size={24} color="#ffffff" style={styles.tickIcon} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderQuestionOverview = () => {
+    const subjectSections = subjects.reduce((acc, subject) => {
+      acc[subject] = subjectQuestions.filter(q => q.subject === subject);
+      return acc;
+    }, {} as Record<string, Question[]>);
+
+    let questionNumber = 1;
+    const answeredCount = Object.keys(selectedAnswers).length;
+    const totalCount = subjectQuestions.length;
+    const unansweredCount = totalCount - answeredCount;
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showQuestionOverview}
+        onRequestClose={toggleQuestionOverview}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.questionOverviewContainerNew}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitleNew}>Question Overview</Text>
+              <TouchableOpacity onPress={toggleQuestionOverview}>
+                <AntIcon name="close" size={24} color="#001529" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.overviewSummary}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{totalCount}</Text>
+                <Text style={styles.summaryLabel}>Total</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryNumber, { color: '#52c41a' }]}>{answeredCount}</Text>
+                <Text style={styles.summaryLabel}>Answered</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryNumber, { color: '#faad14' }]}>{unansweredCount}</Text>
+                <Text style={styles.summaryLabel}>Unanswered</Text>
+              </View>
+            </View>
+            <ScrollView style={styles.questionOverviewContentNew}>
+              {subjects.map(subject => {
+                const subjectQuestionCount = subjectSections[subject].length;
+                if (subjectQuestionCount === 0) return null;
+                return (
+                  <View key={subject} style={styles.subjectSection}>
+                    <Text style={styles.subjectTitleNew}>{subject} ({subjectQuestionCount})</Text>
+                    <View style={styles.questionNumberContainer}>
+                      {subjectSections[subject].map((question, index) => {
+                        const currentQuestionNumber = questionNumber++;
+                        return (
+                          <TouchableOpacity
+                            key={question.id}
+                            style={[
+                              styles.questionNumberButton,
+                              subjectQuestions.indexOf(question) === currentQuestionIndex && styles.currentQuestionButton,
+                            ].filter(Boolean)}
+                            onPress={() => {
+                              setCurrentQuestionIndex(subjectQuestions.indexOf(question));
+                              toggleQuestionOverview();
+                            }}
+                          >
+                            <Text style={[
+                              styles.questionNumberText,
+                              (subjectQuestions.indexOf(question) === currentQuestionIndex || selectedAnswers[question.id]) ? styles.activeQuestionNumberText : undefined
+                            ]}>
+                              {currentQuestionNumber}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   const renderResultModal = () => {
     const { correctCount, incorrectCount, unselectedCount, averageTimePerQuestion } = calculateResults();
@@ -259,7 +365,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
       >
         <View style={styles.resultModalContainer}>
           <View style={styles.resultModalContent}>
-            <Text style={styles.resultModalTitle}>Quiz Completed!</Text>
+            <Text style={styles.resultModalTitleNew}>Quiz Completed!</Text>
             <View style={styles.resultScoreContainer}>
               <Text style={styles.resultScoreText}>{score}</Text>
               <Text style={styles.resultScoreMaxText}>/ {subjectQuestions.length * 4}</Text>
@@ -306,8 +412,33 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     if (selectedQuestionCount) {
       setShowStartModal(false);
       setExamStarted(true);
-      const shuffledQuestions = shuffleArray(initialQuestions).slice(0, selectedQuestionCount);
-      setSubjectQuestions(shuffledQuestions);
+
+      // Group questions by subject
+      const questionsBySubject = subjects.reduce((acc, subject) => {
+        acc[subject] = initialQuestions.filter(q => q.subject === subject && selectedChapters.includes(q.chapterId));
+        return acc;
+      }, {} as Record<string, Question[]>);
+
+      let selectedQuestions: Question[] = [];
+
+      // Select questions from each subject
+      subjects.forEach(subject => {
+        const subjectQuestions = shuffleArray(questionsBySubject[subject]);
+        const questionsToSelect = Math.floor(selectedQuestionCount / subjects.length);
+        selectedQuestions = [...selectedQuestions, ...subjectQuestions.slice(0, questionsToSelect)];
+      });
+
+      // If we don't have enough questions, fill with random questions from any subject
+      while (selectedQuestions.length < selectedQuestionCount) {
+        const remainingQuestions = initialQuestions.filter(q => !selectedQuestions.includes(q) && selectedChapters.includes(q.chapterId));
+        if (remainingQuestions.length === 0) break;
+        selectedQuestions.push(shuffleArray(remainingQuestions)[0]);
+      }
+
+      // Sort questions by subject order
+      selectedQuestions.sort((a, b) => subjects.indexOf(a.subject) - subjects.indexOf(b.subject));
+
+      setSubjectQuestions(selectedQuestions);
       setRemainingTime(selectedQuestionCount * 60);
     } else {
       Alert.alert("Please select the number of questions");
@@ -323,7 +454,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
     >
       <View style={styles.startModalContainer}>
         <View style={styles.startModalContent}>
-          <Text style={styles.startModalTitle}>Exam Setup</Text>
+          <Text style={styles.startModalTitleNew}>Exam Setup</Text>
           <Text style={styles.startModalText}>Select the number of questions:</Text>
           <View style={styles.questionCountContainer}>
             {[30, 50, 90, 120, 150, 180].map((count) => (
@@ -411,40 +542,42 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
             />
           </View>
 
-          <FlatList
-            data={getCurrentPageQuestions()}
-            renderItem={renderQuestion}
-            keyExtractor={(item, index) => `question-${index + (currentPage - 1) * QUESTIONS_PER_PAGE}`}
-            contentContainerStyle={styles.questionList}
-          />
+          {renderQuestion()}
 
           <View style={styles.bottomContainer}>
-            <View style={styles.paginationContainer}>
+            <View style={styles.navigationContainer}>
               <TouchableOpacity
-                style={[styles.paginationButton, currentPage === 1 && styles.disabledButton]}
-                onPress={handlePreviousPage}
-                disabled={currentPage === 1}
+                style={[styles.navigationButton, currentQuestionIndex === 0 && styles.disabledButton]}
+                onPress={handlePreviousQuestion}
+                disabled={currentQuestionIndex === 0}
               >
-                <Text style={styles.paginationButtonText}>Previous</Text>
+                <Text style={styles.navigationButtonText}>Previous</Text>
               </TouchableOpacity>
-              <Text style={styles.pageIndicator}>{`${currentPage} / ${totalPages}`}</Text>
               <TouchableOpacity
-                style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
-                onPress={handleNextPage}
-                disabled={currentPage === totalPages}
+                style={[styles.navigationButton, currentQuestionIndex === subjectQuestions.length - 1 && styles.disabledButton]}
+                onPress={handleNextQuestion}
+                disabled={currentQuestionIndex === subjectQuestions.length - 1}
               >
-                <Text style={styles.paginationButtonText}>Next</Text>
+                <Text style={styles.navigationButtonText}>Next</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.submitButton, submitted && styles.viewResultsButton]} 
-              onPress={submitted ? handleViewResults : handleSubmit}
-            >
-              <Text style={styles.submitButtonText}>
-                {submitted ? 'View Results' : 'Submit'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.submitContainer}>
+              <TouchableOpacity 
+                style={[styles.submitButton, submitted && styles.viewResultsButton]} 
+                onPress={submitted ? handleViewResults : handleSubmit}
+              >
+                <Text style={styles.submitButtonText}>
+                  {submitted ? 'View Results' : 'Submit'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.overviewButton}
+                onPress={toggleQuestionOverview}
+              >
+                <AntDesign name="appstore1" size={24} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Modal
@@ -455,7 +588,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
           >
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Confirm Submission</Text>
+                <Text style={styles.modalTitleNew}>Confirm Submission</Text>
                 <Text style={styles.modalText}>Time remaining: {formatTime(remainingTime)}</Text>
                 <Text style={styles.modalText}>Answered: {answeredCount}</Text>
                 <Text style={styles.modalText}>Unanswered: {unansweredCount}</Text>
@@ -472,6 +605,7 @@ const MCQScreen: React.FC<MCQScreenProps> = ({ navigation, route }) => {
             </View>
           </Modal>
 
+          {renderQuestionOverview()}
           {renderResultModal()}
         </>
       )}
@@ -502,11 +636,18 @@ const styles = StyleSheet.create({
   questionList: {
     padding: 20,
   },
+  questionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
   questionCard: {
     backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 20,
-    marginBottom: 20,
+    width: '100%',
+    maxWidth: 500, // Add a max width to prevent the card from becoming too wide on larger screens
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -517,7 +658,8 @@ const styles = StyleSheet.create({
     color: '#001529',
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
+    textAlign: 'center',
   },
   optionButton: {
     flexDirection: 'row',
@@ -525,7 +667,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f0f2f5',
     borderRadius: 5,
-    padding: 10,
+    padding: 15,
     marginBottom: 10,
   },
   tickIcon: {
@@ -585,13 +727,6 @@ const styles = StyleSheet.create({
     color: '#001529',
     fontWeight: 'bold',
   },
-  submitButton: {
-    backgroundColor: '#001529',
-    padding: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginTop: 10,
-  },
   viewResultsButton: {
     backgroundColor: '#001529',
   },
@@ -611,7 +746,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 20,
   },
-  modalTitle: {
+  modalTitleNew: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 15,
@@ -698,7 +833,7 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width * 0.9,
     maxWidth: 400,
   },
-  resultModalTitle: {
+  resultModalTitleNew: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#001529',
@@ -764,7 +899,7 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 400,
   },
-  startModalTitle: {
+  startModalTitleNew: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#001529',
@@ -852,6 +987,162 @@ const styles = StyleSheet.create({
   },
   selectedQuestionCountButtonText: {
     color: '#ffffff',
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  navigationButton: {
+    backgroundColor: '#001529',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 25,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  navigationButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  overviewButton: {
+    backgroundColor: '#001529',
+    padding: 12,
+    borderRadius: 25,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  questionOverviewContainerNew: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
+  questionOverviewContentNew: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  questionNumberContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  questionNumberButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f2f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 5,
+  },
+  currentQuestionButton: {
+    backgroundColor: '#1890ff',
+  },
+  answeredQuestionButton: {
+    backgroundColor: '#52c41a',
+  },
+  questionNumberText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
+  activeQuestionNumberText: {
+    color: '#ffffff',
+  },
+  subjectSection: {
+    marginBottom: 20,
+  },
+  subjectTitleNew: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginBottom: 10,
+    backgroundColor: '#f0f2f5',
+    padding: 10,
+    borderRadius: 5,
+  },
+  totalQuestionsText: {
+    fontSize: 14,
+    color: '#8c8c8c',
+    marginTop: 5,
+  },
+  overviewSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 15,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 15,
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#8c8c8c',
+    marginTop: 5,
+  },
+
+  questionOverviewContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    maxHeight: '90%',
+  },
+  questionOverviewContent: {
+    paddingHorizontal: 20,
+  },
+  subjectTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#001529',
+    marginBottom: 10,
+    backgroundColor: '#f0f2f5',
+    padding: 10,
+    borderRadius: 5,
+  },
+  submitContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  submitButton: {
+    backgroundColor: '#001529',
+    padding: 12,
+    borderRadius: 25,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
   },
 });
 

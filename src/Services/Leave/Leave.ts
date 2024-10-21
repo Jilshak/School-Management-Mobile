@@ -1,3 +1,4 @@
+import { RegularizationRequest } from "../Attendance/IClassAttendance";
 import api from "../axios";
 import { LeaveRequest, LeaveRequestByTeacher } from "./ILeave";
 
@@ -104,6 +105,50 @@ export const getLeaveRequests = async () => {
     const response = await api.get("/attendance/leave-requests");
     return response.data;
   } catch (error) {
+    throw error;
+  }
+};
+
+// Add this function to fetch regularization requests
+export const fetchRegularizationRequests = async (): Promise<
+  RegularizationRequest[]
+> => {
+  try {
+    const response = await api.get("/attendance/regularization/student");
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateRegularizationRequest = async (
+  id: string,
+  regularizationRequestData: Partial<RegularizationRequest>
+): Promise<RegularizationRequest> => {
+  try {
+    const response = await api.patch(
+      `/attendance/regularization/${id}`,
+      regularizationRequestData
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Add this function to delete regularization requests
+export const deleteRegularizationRequest = async (
+  regularizationRequestId: string
+): Promise<void> => {
+  try {
+    const response = await api.delete(
+      `/attendance/regularization/${regularizationRequestId}`
+    );
+    if (response.status !== 200) {
+      throw new Error("Failed to delete regularization request");
+    }
+  } catch (error) {
+    console.error("Error deleting regularization request:", error);
     throw error;
   }
 };
