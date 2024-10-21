@@ -20,12 +20,18 @@ import {
   fetchLeaveRequests,
   updateLeaveRequest,
   deleteLeaveRequest,
+  fetchRegularizationRequests,
+  updateRegularizationRequest,
+  deleteRegularizationRequest,
 } from "../../Services/Leave/Leave";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useToast } from "../../contexts/ToastContext";
 import { Calendar, DateData } from "react-native-calendars";
 import { formatDateTime } from "../../utils/DateUtil";
+import { getAttendance } from "../../Services/Attendance/ClassAttendance";
+import { Picker } from "@react-native-picker/picker";
 
+type RequestItem = LeaveRequest | RegularizationRequest;
 type LeaveRequestListScreenProps = {
   navigation: StackNavigationProp<any, "LeaveRequestList">;
 };
@@ -35,6 +41,18 @@ type LeaveRequest = {
   startDate: string;
   endDate: string;
   reason: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  classId: string;
+  studentId: string;
+};
+
+type RegularizationRequest = {
+  _id: string;
+  date: string;
+  reason: string;
+  type: "fullDay" | "halfDay";
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -65,7 +83,23 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
   const [editMarkedDates, setEditMarkedDates] = useState<{
     [key: string]: any;
   }>({});
-  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(
+    null
+  );
+  const [activeTab, setActiveTab] = useState<"leave" | "regularization">(
+    "leave"
+  );
+  const [regularizationRequests, setRegularizationRequests] = useState<
+    RegularizationRequest[]
+  >([]);
+  const [regularizationLoaded, setRegularizationLoaded] = useState(false);
+  const [editingRegularizationRequest, setEditingRegularizationRequest] =
+    useState<RegularizationRequest | null>(null);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]); // Initialize as an empty array
+  const [regularizationPage, setRegularizationPage] = useState(1);
+  const [regularizationLoading, setRegularizationLoading] = useState(false);
+  const [hasMoreRegularizations, setHasMoreRegularizations] = useState(true);
+  const [regularizationType, setRegularizationType] = useState<"fullDay" | "halfDay">("fullDay");
 
   useEffect(() => {
     fetchLeaveRequest();
@@ -84,9 +118,44 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
     }
   };
 
+  const fetchRegularizationRequest = async (page = 1) => {
+    if (!hasMoreRegularizations && page !== 1) return;
+    
+    try {
+      setRegularizationLoading(true);
+      const requests = await fetchRegularizationRequests();
+      
+      if (page === 1) {
+        setRegularizationRequests(requests as RegularizationRequest[]);
+      } else {
+        setRegularizationRequests(prev => [...prev, ...(requests as RegularizationRequest[])]);
+      }
+      
+      setRegularizationPage(page);
+      setHasMoreRegularizations(requests.length === 20);
+      setRegularizationLoaded(true);
+    } catch (error) {
+      console.error("Error fetching regularization requests:", error);
+      showToast("Failed to fetch regularization requests", "error");
+    } finally {
+      setRegularizationLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleLoadMoreRegularizations = () => {
+    if (!regularizationLoading && hasMoreRegularizations) {
+      fetchRegularizationRequest(regularizationPage + 1);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
-    fetchLeaveRequest();
+    if (activeTab === "leave") {
+      fetchLeaveRequest();
+    } else {
+      fetchRegularizationRequest(1);
+    }
   };
 
   const handleCancelRequest = (id: string) => {
@@ -97,26 +166,34 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
   const confirmCancelRequest = async () => {
     if (selectedRequestId) {
       try {
-        await deleteLeaveRequest(selectedRequestId);
-        setLeaveRequests((prevRequests) =>
-          prevRequests.filter((request) => request._id !== selectedRequestId)
-        );
-        showToast("Leave request cancelled successfully", "success");
+        if (activeTab === "leave") {
+          await deleteLeaveRequest(selectedRequestId);
+          setLeaveRequests((prevRequests) =>
+            prevRequests.filter((request) => request._id !== selectedRequestId)
+          );
+          showToast("Leave request cancelled successfully", "success");
+        } else {
+          await deleteRegularizationRequest(selectedRequestId);
+          setRegularizationRequests((prevRequests) =>
+            prevRequests.filter((request) => request._id !== selectedRequestId)
+          );
+          showToast("Regularization request cancelled successfully", "success");
+        }
       } catch (error) {
-        console.error("Error cancelling leave request:", error);
-        showToast("Failed to cancel leave request", "error");
+        console.error(`Error cancelling ${activeTab} request:`, error);
+        showToast(`Failed to cancel ${activeTab} request`, "error");
       }
     }
     setModalVisible(false);
   };
 
   const handleEditRequest = async (leaveRequest: LeaveRequest) => {
-    console.log(leaveRequest, "this is the leave request")
+    console.log(leaveRequest, "this is the leave request");
     if (leaveRequest.status.toLowerCase() !== "pending") {
       showToast("Only pending requests can be edited", "error");
       return;
     }
-    
+
     setEditingLeaveRequest(leaveRequest);
     setEditStartDate(leaveRequest.startDate);
     setEditEndDate(leaveRequest.endDate);
@@ -135,11 +212,23 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
     while (current <= endDate) {
       const dateString = current.toISOString().split("T")[0];
       if (start === end) {
-        range[dateString] = { selected: true, color: "#50cebb", textColor: "white" };
+        range[dateString] = {
+          selected: true,
+          color: "#50cebb",
+          textColor: "white",
+        };
       } else if (dateString === start) {
-        range[dateString] = { startingDay: true, color: "#50cebb", textColor: "white" };
+        range[dateString] = {
+          startingDay: true,
+          color: "#50cebb",
+          textColor: "white",
+        };
       } else if (dateString === end) {
-        range[dateString] = { endingDay: true, color: "#50cebb", textColor: "white" };
+        range[dateString] = {
+          endingDay: true,
+          color: "#50cebb",
+          textColor: "white",
+        };
       } else {
         range[dateString] = { color: "#70d7c7", textColor: "white" };
       }
@@ -151,68 +240,171 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
   const handleEditDayPress = (day: DateData) => {
     const selectedDate = day.dateString;
 
-    if (!editStartDate || (editStartDate && editEndDate)) {
+    if (activeTab === 'regularization') {
+      // For regularization, only allow single date selection
       setEditStartDate(selectedDate);
-      setEditEndDate('');
-      setEditMarkedDates(getMarkedDates(selectedDate, selectedDate));
-    } else if (editStartDate && !editEndDate) {
-      let newStartDate = editStartDate;
-      let newEndDate = selectedDate;
+      setEditEndDate(selectedDate);
+      setEditMarkedDates({
+        [selectedDate]: { selected: true, selectedColor: '#001529' }
+      });
+    } else {
+      // For leave requests, keep the existing range selection logic
+      if (!editStartDate || (editStartDate && editEndDate)) {
+        setEditStartDate(selectedDate);
+        setEditEndDate("");
+        setEditMarkedDates({
+          [selectedDate]: { selected: true, selectedColor: '#001529' }
+        });
+      } else if (editStartDate && !editEndDate) {
+        let newStartDate = editStartDate;
+        let newEndDate = selectedDate;
 
-      if (new Date(newStartDate) > new Date(newEndDate)) {
-        [newStartDate, newEndDate] = [newEndDate, newStartDate];
+        if (new Date(newStartDate) > new Date(newEndDate)) {
+          [newStartDate, newEndDate] = [newEndDate, newStartDate];
+        }
+
+        setEditStartDate(newStartDate);
+        setEditEndDate(newEndDate);
+        setEditMarkedDates(getMarkedDates(newStartDate, newEndDate));
       }
-
-      setEditStartDate(newStartDate);
-      setEditEndDate(newEndDate);
-      setEditMarkedDates(getMarkedDates(newStartDate, newEndDate));
     }
   };
 
-  const handleUpdateLeaveRequest = async () => {
-    if (!editingLeaveRequest) return;
+  const handleUpdateRequest = async () => {
+    if (activeTab === "leave" && editingLeaveRequest) {
+      try {
+        const formatDate = (dateString: string) => {
+          const date = new Date(dateString);
+          return date.toISOString();
+        };
 
+        const updatedLeaveRequestData = {
+          startDate: formatDate(editStartDate),
+          endDate: formatDate(editEndDate),
+          reason: editReason,
+        };
+
+        const updatedLeaveRequest = await updateLeaveRequest(
+          editingLeaveRequest._id,
+          updatedLeaveRequestData
+        );
+
+        setLeaveRequests((prevRequests) =>
+          prevRequests.map((request) =>
+            request._id === editingLeaveRequest._id
+              ? {
+                  ...request,
+                  ...updatedLeaveRequestData,
+                }
+              : request
+          )
+        );
+
+        showToast("Leave request updated successfully", "success");
+        setEditModalVisible(false);
+      } catch (error) {
+        console.error("Error updating leave request:", error);
+        showToast("Failed to update leave request", "error");
+      }
+    } else if (activeTab === "regularization" && editingRegularizationRequest) {
+      try {
+        const formatDate = (dateString: string) => {
+          const date = new Date(dateString);
+          return date.toISOString();
+        };
+
+        const updatedRegularizationRequestData = {
+          date: formatDate(editStartDate),
+          reason: editReason,
+          type: regularizationType, // Include the regularization type
+        };
+
+        const updatedRequest = await updateRegularizationRequest(
+          editingRegularizationRequest._id,
+          updatedRegularizationRequestData
+        );
+
+        setRegularizationRequests((prevRequests) =>
+          prevRequests.map((request) =>
+            request._id === editingRegularizationRequest._id
+              ? {
+                  ...request,
+                  ...updatedRegularizationRequestData,
+                }
+              : request
+          )
+        );
+
+        showToast("Regularization request updated successfully", "success");
+        setEditModalVisible(false);
+      } catch (error) {
+        console.error("Error updating regularization request:", error);
+        showToast("Failed to update regularization request", "error");
+      }
+    }
+  };
+
+  const handleEditRegularizationRequest = async (
+    request: RegularizationRequest
+  ) => {
+    if (request.status.toLowerCase() !== "pending") {
+      showToast("Only pending requests can be edited", "error");
+      return;
+    }
+
+    setEditingRegularizationRequest(request);
+    setEditStartDate(request.date);
+    setEditEndDate(request.date);
+    setEditReason(request.reason);
+    setEditMarkedDates(getMarkedDates(request.date, request.date));
+    setRegularizationType(request.type || "fullDay"); // Set the regularization type
+    await fetchAttendanceData();
+    setEditModalVisible(true);
+  };
+
+  const fetchAttendanceData = async () => {
     try {
-      const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toISOString();
-      };
-
-      const updatedLeaveRequestData = {
-        startDate: formatDate(editStartDate),
-        endDate: formatDate(editEndDate),
-        reason: editReason,
-      };
-
-      const updatedLeaveRequest = await updateLeaveRequest(editingLeaveRequest._id, updatedLeaveRequestData);
-
-      setLeaveRequests((prevRequests) =>
-        prevRequests.map((request) =>
-          request._id === editingLeaveRequest._id
-            ? {
-                ...request,
-                ...updatedLeaveRequestData,
-              }
-            : request
-        )
-      );
-
-      showToast("Leave request updated successfully", "success");
-      setEditModalVisible(false);
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const data = await getAttendance(year, month);
+      setAttendanceData(Array.isArray(data.attendanceReport) ? data.attendanceReport : []);
     } catch (error) {
-      console.error("Error updating leave request:", error);
-      showToast("Failed to update leave request", "error");
+      showToast("Failed to fetch attendance data", "error");
+      setAttendanceData([]);
     }
   };
 
-  const filteredLeaveRequests = leaveRequests.filter(
-    (request) =>
-      (request.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        request.startDate.includes(searchQuery) ||
-        request.endDate.includes(searchQuery)) &&
-      (filterStatus === null ||
-        request.status.toLowerCase() === filterStatus.toLowerCase())
-  );
+  const isDateDisabled = (date: string) => {
+    if (!Array.isArray(attendanceData) || attendanceData.length === 0) return true;
+
+    const attendanceRecord = attendanceData.find(
+      (record: any) => new Date(record.date).toISOString().split('T')[0] === date
+    );
+
+    if (!attendanceRecord) return true;
+    if (attendanceRecord.status === 'absent' || attendanceRecord.status === 'halfday') return false;
+
+    return true;
+  };
+
+  const filteredRequests =
+    activeTab === "leave"
+      ? leaveRequests.filter(
+          (request) =>
+            (request.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              request.startDate.includes(searchQuery) ||
+              request.endDate.includes(searchQuery)) &&
+            (filterStatus === null ||
+              request.status.toLowerCase() === filterStatus.toLowerCase())
+        )
+      : regularizationRequests.filter(
+          (request) =>
+            (request.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              request.date.includes(searchQuery)) &&
+            (filterStatus === null ||
+              request.status.toLowerCase() === filterStatus.toLowerCase())
+        );
 
   const toggleExpandDescription = (id: string) => {
     setExpandedRequestId(expandedRequestId === id ? null : id);
@@ -249,15 +441,17 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
           <Text
             style={[
               styles.reasonText,
-              expandedRequestId === item._id && styles.expandedReasonText
+              expandedRequestId === item._id && styles.expandedReasonText,
             ]}
             numberOfLines={expandedRequestId === item._id ? undefined : 2}
           >
             {item.reason}
           </Text>
-          {(item.status.toLowerCase() === "approved" || item.status.toLowerCase() === "rejected") && (
+          {(item.status.toLowerCase() === "approved" ||
+            item.status.toLowerCase() === "rejected") && (
             <Text style={styles.updatedAtText}>
-              {item.status.charAt(0).toUpperCase() + item.status.slice(1)} on {formatDateTime(item.updatedAt)}
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)} on{" "}
+              {formatDateTime(item.updatedAt)}
             </Text>
           )}
         </View>
@@ -266,6 +460,81 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
             <TouchableOpacity
               style={[styles.actionButton, styles.editButton]}
               onPress={() => handleEditRequest(item)}
+            >
+              <AntIcon name="edit" size={16} color="#001529" />
+              <Text style={[styles.actionButtonText, styles.editButtonText]}>
+                Edit
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={() => handleCancelRequest(item._id)}
+            >
+              <AntIcon name="close" size={16} color="#001529" />
+              <Text style={[styles.actionButtonText, styles.cancelButtonText]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
+  );
+
+  const renderRegularizationRequestItem = ({
+    item,
+  }: {
+    item: RegularizationRequest;
+  }) => (
+    <TouchableWithoutFeedback onPress={() => toggleExpandDescription(item._id)}>
+      <View style={styles.leaveRequestItem}>
+        <View style={styles.leaveRequestContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.dateContainer}>
+              <AntIcon
+                name="calendar"
+                size={20}
+                color="#001529"
+                style={styles.calendarIcon}
+              />
+              <Text style={styles.dateText}>{formatDate(item.date)}</Text>
+            </View>
+            <View style={styles.statusTypeContainer}>
+              <View style={styles.typeContainer}>
+                <Text style={styles.typeText}>{item.type === 'fullDay' ? 'FULL DAY' : 'HALF DAY'}</Text>
+              </View>
+              <View
+                style={[
+                  styles.statusContainer,
+                  { backgroundColor: getStatusColor(item.status) },
+                ]}
+              >
+                <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+              </View>
+            </View>
+          </View>
+          <Text
+            style={[
+              styles.reasonText,
+              expandedRequestId === item._id && styles.expandedReasonText,
+            ]}
+            numberOfLines={expandedRequestId === item._id ? undefined : 2}
+          >
+            {item.reason}
+          </Text>
+          {(item.status.toLowerCase() === "approved" ||
+            item.status.toLowerCase() === "rejected") && (
+            <Text style={styles.updatedAtText}>
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)} on{" "}
+              {formatDateTime(item.updatedAt)}
+            </Text>
+          )}
+        </View>
+        {item.status.toLowerCase() === "pending" && (
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEditRegularizationRequest(item)}
             >
               <AntIcon name="edit" size={16} color="#001529" />
               <Text style={[styles.actionButtonText, styles.editButtonText]}>
@@ -337,15 +606,82 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
     setFilterModalVisible(false);
   };
 
+  const getStats = () => {
+    const requests =
+      activeTab === "leave" ? leaveRequests : regularizationRequests;
+    return {
+      approved: requests.filter((r) => r.status.toLowerCase() === "approved")
+        .length,
+      pending: requests.filter((r) => r.status.toLowerCase() === "pending")
+        .length,
+      rejected: requests.filter((r) => r.status.toLowerCase() === "rejected")
+        .length,
+    };
+  };
+
+  const renderTabBar = () => (
+    <View style={styles.tabBar}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "leave" && styles.activeTab]}
+        onPress={() => {
+          setActiveTab("leave");
+          setSearchQuery("");
+          setFilterStatus(null);
+        }}
+      >
+        <Icon
+          name="calendar-outline"
+          size={24}
+          color={activeTab === "leave" ? "#ffffff" : "#001529"}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === "leave" && styles.activeTabText,
+          ]}
+        >
+          Leave
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "regularization" && styles.activeTab]}
+        onPress={() => {
+          setActiveTab("regularization");
+          setSearchQuery("");
+          setFilterStatus(null);
+          if (!regularizationLoaded) {
+            fetchRegularizationRequest(1);
+          }
+        }}
+      >
+        <Icon
+          name="time-outline"
+          size={24}
+          color={activeTab === "regularization" ? "#ffffff" : "#001529"}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === "regularization" && styles.activeTabText,
+          ]}
+        >
+          Regularization
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <AntIcon name="arrow-left" size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Leave Requests</Text>
+        <Text style={styles.headerTitle}>My Requests</Text>
         <View style={{ width: 24 }} />
       </View>
+
+      {renderTabBar()}
 
       {loading ? (
         <ActivityIndicator size="large" color="#001529" style={styles.loader} />
@@ -353,15 +689,15 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
         <>
           <View style={styles.contentContainer}>
             <View style={styles.searchContainer}>
-              <Icon
+        <Icon
                 name="search"
-                size={20}
+          size={20}
                 color="#001529"
                 style={styles.searchIcon}
               />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search leave requests..."
+                placeholder={`Search ${activeTab} requests...`}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholderTextColor="#4a4a4a"
@@ -376,56 +712,53 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
 
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {
-                    leaveRequests.filter(
-                      (r) => r.status.toLowerCase() === "approved"
-                    ).length
-                  }
-                </Text>
+                <Text style={styles.statValue}>{getStats().approved}</Text>
                 <Text style={styles.statLabel}>Approved</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {
-                    leaveRequests.filter(
-                      (r) => r.status.toLowerCase() === "pending"
-                    ).length
-                  }
-                </Text>
+                <Text style={styles.statValue}>{getStats().pending}</Text>
                 <Text style={styles.statLabel}>Pending</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {
-                    leaveRequests.filter(
-                      (r) => r.status.toLowerCase() === "rejected"
-                    ).length
-                  }
-                </Text>
+                <Text style={styles.statValue}>{getStats().rejected}</Text>
                 <Text style={styles.statLabel}>Rejected</Text>
               </View>
             </View>
           </View>
 
           <FlatList
-            data={filteredLeaveRequests}
-            renderItem={renderLeaveRequestItem}
+            data={filteredRequests as RequestItem[]}
+            renderItem={({ item }) =>
+              activeTab === "leave"
+                ? renderLeaveRequestItem({ item: item as LeaveRequest })
+                : renderRegularizationRequestItem({
+                    item: item as RegularizationRequest,
+                  })
+            }
             keyExtractor={(item) => item._id}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={EmptyListComponent}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
+            onEndReached={activeTab === "regularization" ? handleLoadMoreRegularizations : undefined}
+            onEndReachedThreshold={0.1}
+            ListFooterComponent={
+              activeTab === "regularization" && regularizationLoading ? (
+                <ActivityIndicator size="small" color="#001529" style={styles.footerLoader} />
+              ) : null
+            }
           />
         </>
       )}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate("LeaveRequest")}
-      >
-        <AntIcon name="plus" size={24} color="#ffffff" />
-      </TouchableOpacity>
+      {activeTab === "leave" && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate("LeaveRequest")}
+        >
+          <AntIcon name="plus" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      )}
 
       <Modal
         animationType="fade"
@@ -441,9 +774,12 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
               color="#faad14"
               style={styles.modalIcon}
             />
-            <Text style={styles.cancelModalTitle}>Cancel Leave Request</Text>
+            <Text style={styles.cancelModalTitle}>
+              Cancel {activeTab === "leave" ? "Leave" : "Regularization"}{" "}
+              Request
+            </Text>
             <Text style={styles.cancelModalText}>
-              Are you sure you want to cancel this leave request?
+              Are you sure you want to cancel this {activeTab} request?
             </Text>
             <View style={styles.cancelModalButtons}>
               <TouchableOpacity
@@ -491,8 +827,8 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
                     ]}
                     onPress={() => setFilterStatus(null)}
                   >
-                    <Text
-                      style={[
+        <Text
+          style={[
                         styles.filterOptionText,
                         filterStatus === null && styles.filterOptionTextActive,
                       ]}
@@ -510,7 +846,8 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
                     <Text
                       style={[
                         styles.filterOptionText,
-                        filterStatus === "PENDING" && styles.filterOptionTextActive,
+                        filterStatus === "PENDING" &&
+                          styles.filterOptionTextActive,
                       ]}
                     >
                       Pending
@@ -563,7 +900,9 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
                     style={[styles.modalButton, styles.applyButton]}
                     onPress={closeFilterModal}
                   >
-                    <Text style={[styles.modalButtonText, styles.applyButtonText]}>
+                    <Text
+                      style={[styles.modalButtonText, styles.applyButtonText]}
+                    >
                       Apply
                     </Text>
                   </TouchableOpacity>
@@ -580,19 +919,23 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.editModalContainer}
         >
           <View style={styles.editModalContent}>
             <ScrollView contentContainerStyle={styles.editModalScrollContent}>
-              <Text style={styles.editModalTitle}>Edit Leave Request</Text>
+              <Text style={styles.editModalTitle}>
+                Edit {activeTab === "leave" ? "Leave" : "Regularization"}{" "}
+                Request
+              </Text>
 
               <Calendar
                 style={styles.calendar}
                 onDayPress={handleEditDayPress}
                 markedDates={editMarkedDates}
-                markingType={editStartDate === editEndDate ? "dot" : "period"}
+                markingType={activeTab === 'regularization' ? "dot" : "period"}
+                minDate={new Date().toISOString().split('T')[0]}
                 theme={{
                   backgroundColor: "#ffffff",
                   calendarBackground: "#ffffff",
@@ -607,24 +950,109 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
                   arrowColor: "#001529",
                   monthTextColor: "#001529",
                   indicatorColor: "#001529",
+                  disabledDotColor: '#e0e0e0',
+                  disabledTextColor: '#d9d9d9',
+                  'stylesheet.day.basic': {
+                    base: {
+                      width: 32,
+                      height: 32,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    },
+                    selected: {
+                      backgroundColor: '#001529',
+                      borderRadius: 16,
+                    },
+                    disabled: {
+                      // Remove background color for disabled days
+                    },
+                  },
+                }}
+                dayComponent={({ date, state }: { date: any; state: any }) => {
+                  const isEnabled = !isDateDisabled(date.dateString);
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarDay,
+                        editMarkedDates[date.dateString] && styles.selectedDay,
+                      ]}
+                      onPress={() => isEnabled && handleEditDayPress(date)}
+                      disabled={!isEnabled}
+                    >
+                      <Text style={[
+                        styles.calendarDayText,
+                        !isEnabled && styles.disabledDayText,
+                        editMarkedDates[date.dateString] && styles.selectedDayText,
+                      ]}>
+                        {date.day}
+                      </Text>
+                    </TouchableOpacity>
+                  );
                 }}
               />
 
               <View style={styles.editDateDisplay}>
-                {editStartDate && editEndDate ? (
+                {editStartDate && (
                   <>
-                    <Text style={styles.editDateLabel}>Selected Dates:</Text>
+                    <Text style={styles.editDateLabel}>
+                      Selected Date{activeTab === "leave" && "s"}:
+                    </Text>
                     <Text style={styles.editDateText}>
-                      {formatDate(editStartDate)} - {formatDate(editEndDate)}
+                      {formatDate(editStartDate)}
+                      {activeTab === "leave" &&
+                        editEndDate !== editStartDate &&
+                        ` - ${formatDate(editEndDate)}`}
                     </Text>
-                    <Text style={styles.editDaysCount}>
-                      {getDaysDifference(editStartDate, editEndDate)} day(s)
-                    </Text>
+                    {activeTab === "leave" && (
+                      <Text style={styles.editDaysCount}>
+                        {getDaysDifference(editStartDate, editEndDate)} day(s)
+                      </Text>
+                    )}
                   </>
-                ) : (
-                  <Text style={styles.editDateLabel}>Select dates</Text>
                 )}
               </View>
+
+              {activeTab === "regularization" && (
+                <View style={styles.regularizationTypeContainer}>
+                  <Text style={styles.modalLabel}>Regularization Type:</Text>
+                  <View style={styles.regularizationTypeButtonContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.regularizationTypeButton,
+                        regularizationType === "fullDay" && styles.regularizationTypeButtonActive,
+                      ]}
+                      onPress={() => setRegularizationType("fullDay")}
+                    >
+                      <AntIcon 
+                        name="calendar" 
+                        size={24} 
+                        color={regularizationType === "fullDay" ? "#ffffff" : "#001529"} 
+                      />
+                      <Text style={[
+                        styles.regularizationTypeText,
+                        regularizationType === "fullDay" && styles.regularizationTypeTextActive,
+                      ]}>Full Day</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.regularizationTypeButton,
+                        regularizationType === "halfDay" && styles.regularizationTypeButtonActive,
+                      ]}
+                      onPress={() => setRegularizationType("halfDay")}
+                    >
+                      <AntIcon 
+                        name="schedule" 
+                        size={24} 
+                        color={regularizationType === "halfDay" ? "#ffffff" : "#001529"} 
+                      />
+                      <Text style={[
+                        styles.regularizationTypeText,
+                        regularizationType === "halfDay" && styles.regularizationTypeTextActive,
+                      ]}>Half Day</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
 
               <TextInput
                 style={styles.editReasonInput}
@@ -632,7 +1060,7 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
                 numberOfLines={3}
                 value={editReason}
                 onChangeText={setEditReason}
-                placeholder="Reason for leave"
+                placeholder={`Reason for ${activeTab}`}
                 placeholderTextColor="#999"
               />
 
@@ -645,7 +1073,7 @@ const LeaveRequestListScreen: React.FC<LeaveRequestListScreenProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.editModalButton, styles.editModalUpdateButton]}
-                  onPress={handleUpdateLeaveRequest}
+                  onPress={handleUpdateRequest}
                 >
                   <Text style={styles.editModalUpdateButtonText}>Update</Text>
                 </TouchableOpacity>
@@ -772,14 +1200,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   statusContainer: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   statusText: {
-    color: "#ffffff",
-    fontWeight: "bold",
+    color: '#ffffff',
     fontSize: 12,
+    fontWeight: 'bold',
   },
   loader: {
     flex: 1,
@@ -1000,15 +1428,15 @@ const styles = StyleSheet.create({
   },
   editModalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   editModalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
-    maxHeight: '90%', // Adjust this value as needed
+    maxHeight: "90%", // Adjust this value as needed
   },
   editModalScrollContent: {
     padding: 20,
@@ -1095,6 +1523,111 @@ const styles = StyleSheet.create({
     color: "#666",
     fontStyle: "italic",
     marginTop: 5,
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  activeTab: {
+    backgroundColor: "#001529",
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#001529",
+    marginLeft: 8,
+  },
+  activeTabText: {
+    color: "#ffffff",
+  },
+  regularizationContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  calendarDay: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedDay: {
+    backgroundColor: '#001529',
+    borderRadius: 16,
+  },
+  calendarDayText: {
+    color: '#001529',
+  },
+  disabledDayText: {
+    color: '#d9d9d9',
+  },
+  selectedDayText: {
+    color: '#ffffff',
+  },
+  footerLoader: {
+    marginVertical: 20,
+  },
+  regularizationTypeContainer: {
+    marginBottom: 20,
+  },
+  regularizationTypeButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  regularizationTypeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#d9d9d9',
+    borderRadius: 5,
+    marginHorizontal: 5,
+  },
+  regularizationTypeButtonActive: {
+    backgroundColor: '#001529',
+  },
+  regularizationTypeText: {
+    color: '#001529',
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  regularizationTypeTextActive: {
+    color: '#ffffff',
+  },
+  modalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#001529',
+  },
+  statusTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  typeContainer: {
+    backgroundColor: '#e6f7ff',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 6,
+  },
+  typeText: {
+    color: '#001529',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

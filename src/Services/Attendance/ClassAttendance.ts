@@ -1,15 +1,6 @@
 import api from "../axios";
+import { AttendanceRecord, RegularizeAttendanceParams, Student, RegularizationRequest, RegularizationStatus } from "./IClassAttendance";
 
-interface Student {
-  _id: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface AttendanceRecord {
-  studentId: string;
-  present: boolean;
-}
 
 export const fetchStudentsInClass = async (
   classId: string
@@ -66,6 +57,55 @@ export const getAttendance = async (year: number, month: number) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching attendance:", error);
+    throw error;
+  }
+};
+
+export const regularizeAttendance = async ({
+  attendanceId,
+  reason,
+  date,
+  type,
+}: {
+  attendanceId: string;
+  reason: string;
+  date: string;
+  type: "fullDay" | "halfDay";
+}) => {
+  try {
+    const response = await api.post("/attendance/regularization", {
+      attendanceId,
+      reason,
+      date,
+      type,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error regularizing attendance:", error);
+    throw error;
+  }
+};
+
+export const fetchRegularizationRequests = async (): Promise<RegularizationRequest[]> => {
+  try {
+    const response = await api.get('/attendance/regularization/teacher');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching regularization requests:", error);
+    throw error;
+  }
+};
+
+export const updateRegularizationRequest = async (
+  id: string, 
+  status: RegularizationStatus,
+  type: string
+): Promise<RegularizationRequest> => {
+  try {
+    const response = await api.patch(`/attendance/regularization/approve-or-reject/${id}`, { status, type });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating regularization request:', error);
     throw error;
   }
 };

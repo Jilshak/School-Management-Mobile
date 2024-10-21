@@ -4,6 +4,7 @@ export interface LeaveRequest {
     endDate: string;
     reason: string;
     status: 'pending' | 'approved' | 'rejected';
+    regularization?: boolean;
     type: 'sick' | 'casual' | 'other';
     attachments?: string[];
   }

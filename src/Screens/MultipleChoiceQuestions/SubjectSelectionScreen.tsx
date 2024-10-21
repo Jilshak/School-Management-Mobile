@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView, Alert, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, FlatList, TextInput, Animated, Modal, ScrollView, Alert, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { Icon as AntIcon } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -30,32 +30,42 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterAvailable, setFilterAvailable] = useState<boolean | null>(null);
   const [filterGenre, setFilterGenre] = useState<string | null>(null);
-  const animatedValue = new Animated.Value(0);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [subjectsData, setSubjectsData] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-
-    // Simulate API call
-    const fetchSubjects = async () => {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-        // Here you would typically fetch the subjects from an API
-        // For now, we'll use the static data
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching subjects:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchSubjects();
+  const fetchSubjects = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log('Subjects fetched:', subjects);
+      setSubjectsData(subjects);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    console.log('Component mounted');
+    fetchSubjects();
+  }, [fetchSubjects]);
+
+  const filteredSubjects = useCallback(() => {
+    return subjectsData.filter(subject =>
+      (subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      subject.genre.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (filterAvailable === null || subject.available === filterAvailable) &&
+      (filterGenre === null || subject.genre === filterGenre)
+    );
+  }, [subjectsData, searchQuery, filterAvailable, filterGenre]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchSubjects().then(() => setRefreshing(false));
+  }, [fetchSubjects]);
 
   const handleSubjectSelect = (subject: string) => {
     setSelectedSubjects(prev => 
@@ -77,7 +87,7 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
   const renderSubject = ({ item }: { item: Subject }) => {
     const isSelected = selectedSubjects.includes(item.name);
     return (
-      <Animated.View style={[styles.subjectCard, { opacity: animatedValue }, isSelected && styles.selectedCard]}>
+      <View style={[styles.subjectCard, isSelected && styles.selectedCard]}>
         <TouchableOpacity onPress={() => handleSubjectSelect(item.name)}>
           <View style={styles.subjectHeader}>
             <AntIcon name="book" size={24} color="#ffffff" style={styles.subjectIcon} />
@@ -95,33 +105,8 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
             <View style={[styles.progressBar, { width: `${(item.completed / item.questionCount) * 100}%` }]} />
           </View>
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     );
-  };
-
-  const filteredSubjects = subjects.filter(subject =>
-    (subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    subject.genre.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (filterAvailable === null || subject.available === filterAvailable) &&
-    (filterGenre === null || subject.genre === filterGenre)
-  );
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-  };
-
-  const genres = Array.from(new Set(subjects.map(subject => subject.genre)));
-
-  const resetFilters = () => {
-    setFilterAvailable(null);
-    setFilterGenre(null);
   };
 
   const renderSkeletonLoader = () => (
@@ -141,51 +126,23 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
     </View>
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <AntIcon name="book" size={80} color="#001529" />
-      <Text style={styles.emptyStateTitle}>No Subjects Available</Text>
-      <Text style={styles.emptyStateDescription}>There are no subjects to display at this time. Check back later for updates.</Text>
-    </View>
-  );
+  console.log('Rendering component, subjectsData:', subjectsData);
+  console.log('Filtered subjects:', filteredSubjects());
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+  };
+
+  const genres = Array.from(new Set(subjectsData.map(subject => subject.genre)));
+
+  const resetFilters = () => {
+    setFilterAvailable(null);
+    setFilterGenre(null);
+  };
 
   const closeFilterModal = () => {
     setFilterModalVisible(false);
   };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntIcon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select Subject</Text>
-          <TouchableOpacity onPress={handleRefresh}>
-            <AntIcon name="reload" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-        {renderSkeletonLoader()}
-      </SafeAreaView>
-    );
-  }
-
-  if (subjects.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <AntIcon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select Subject</Text>
-          <TouchableOpacity onPress={handleRefresh}>
-            <AntIcon name="reload" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-        {renderEmptyState()}
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -199,37 +156,47 @@ const SubjectSelectionScreen: React.FC<SubjectSelectionScreenProps> = ({ navigat
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchBar}
-          placeholder="Search subjects..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor="#4a4a4a"
-        />
-        <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterButton}>
-          <AntIcon name="filter" size={24} color="#001529" />
-        </TouchableOpacity>
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
-            <AntIcon name="close" size={20} color="#001529" />
+      {isLoading ? (
+        renderSkeletonLoader()
+      ) : (
+        <>
+          <View style={styles.searchContainer}>
+            <AntIcon name="search" size={20} color="#001529" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchBar}
+              placeholder="Search subjects..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#4a4a4a"
+            />
+            <TouchableOpacity onPress={() => setFilterModalVisible(true)} style={styles.filterButton}>
+              <AntIcon name="filter" size={24} color="#001529" />
+            </TouchableOpacity>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
+                <AntIcon name="close" size={20} color="#001529" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {filteredSubjects().length > 0 ? (
+            <FlatList
+              data={filteredSubjects()}
+              renderItem={renderSubject}
+              keyExtractor={item => item.name}
+              contentContainerStyle={styles.subjectList}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          ) : (
+            <Text style={styles.noResultsText}>No subjects match your search criteria.</Text>
+          )}
+
+          <TouchableOpacity style={styles.nextButton} onPress={handleNextStep}>
+            <Text style={styles.nextButtonText}>Next</Text>
           </TouchableOpacity>
-        )}
-      </View>
-
-      <FlatList
-        data={filteredSubjects}
-        renderItem={renderSubject}
-        keyExtractor={item => item.name}
-        contentContainerStyle={styles.subjectList}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-      />
-
-      <TouchableOpacity style={styles.nextButton} onPress={handleNextStep}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+        </>
+      )}
 
       <Modal
         animationType="slide"
@@ -576,6 +543,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8c8c8c',
     textAlign: 'center',
+  },
+  noResultsText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#4a4a4a',
+    marginTop: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#001529',
   },
 });
 

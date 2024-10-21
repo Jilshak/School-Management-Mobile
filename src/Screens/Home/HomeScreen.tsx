@@ -167,7 +167,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       route: "FlashCardScreen",
       roles: [UserRole.STUDENT],
     },
-    { icon: "chat", text: "Chat", route: "Chat", roles: [] },
+    { icon: "chat", text: "Chat", route: "Chat", roles: [UserRole.STUDENT] },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
