@@ -8,7 +8,7 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
-import { Text, Progress, Tag } from "@ant-design/react-native";
+import { Text, Tag } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/AntDesign";
@@ -16,25 +16,30 @@ import { LineChart } from "react-native-chart-kit";
 import { getUserDetails } from "../../Services/User/UserService";
 import { formatDate, formatDateToYear } from "../../utils/DateUtil";
 import { IUser } from "../../Services/User/IUserService";
+import { getExamResultByClassAndStudent,fetchStudentSubjectPerformance } from "../../Services/Marksheet/markSheetServices";
+import { logJSON } from "../../utils/logger";
 
 type StudentDetailsScreenProps = {
   navigation: StackNavigationProp<any, "StudentDetails">;
-  route: RouteProp<{ StudentDetails: { studentId: string } }, "StudentDetails">;
+  route: RouteProp<{ StudentDetails: { studentId: string, classId: string } }, "StudentDetails">;
 };
 
 const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { studentId } = route.params;
+  const { studentId, classId } = route.params;
   const scrollY = useRef(new Animated.Value(0)).current;
   const [userDetails, setUserDetails] = useState<IUser | null>(null);
+  const [examResults, setExamResults] = useState<any[]>([]);
+  const [tooltipData, setTooltipData] = useState<{ x: number; y: number; visible: boolean; exam: any } | null>(null);
+  const [selectedExamResult, setSelectedExamResult] = useState<any>(null);
+  const [subjectPerformance, setSubjectPerformance] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
         const response = await getUserDetails(studentId);
-        console.log(response);
         setUserDetails(response);
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -43,78 +48,168 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     fetchUserDetails();
   }, []);
 
-  const renderPerformanceChart = () => (
-    <View style={styles.chartContainer}>
-      <Text style={styles.sectionTitle}>Performance Trend</Text>
-      <LineChart
-        data={{
-          labels: ["Term 1", "Term 2", "Term 3"],
-          datasets: [
-            {
-              data: [
-                userDetails?.performance ?? 5 - 5,
-                userDetails?.performance ?? 0,
-                userDetails?.performance ?? 0 + 2,
-              ],
+  useEffect(() => {
+    const fetchExamResult = async () => {
+      try {
+        const response = await getExamResultByClassAndStudent(classId, studentId);
+        setExamResults(response.exams);
+        logJSON("EXAM RESULTS", response.exams);
+      } catch (error) {
+        console.error("Error fetching exam results:", error);
+      }
+    };
+    fetchExamResult();
+  }, [classId, studentId]);
+
+  useEffect(() => {
+    const fetchStudentSubjectWisePerformance = async () => {
+      try {
+        const response = await fetchStudentSubjectPerformance(studentId);
+        const allSubjects = response.performance.flatMap(exam => exam.subjects);
+        const aggregatedSubjects = allSubjects.reduce((acc, subject) => {
+          if (!acc[subject.subjectName]) {
+            acc[subject.subjectName] = {
+              totalPercentage: 0,
+              examCount: 0,
+            };
+          }
+          acc[subject.subjectName].totalPercentage += subject.averagePercentage;
+          acc[subject.subjectName].examCount += subject.examCount;
+          return acc;
+        }, {});
+
+        const subjectPerformanceData = Object.entries(aggregatedSubjects).map(([subjectName, data]: [string, any]) => ({
+          subjectName,
+          averagePercentage: data.totalPercentage / data.examCount,
+        }));
+
+        setSubjectPerformance(subjectPerformanceData);
+      } catch (error) {
+        console.error("Error fetching student subject performance:", error);
+      }
+    };
+    fetchStudentSubjectWisePerformance();
+  }, [studentId]);
+
+  const calculateAveragePerformance = () => {
+    if (examResults.length === 0) return 0;
+    const totalScore = examResults.reduce((sum, exam) => sum + exam.score, 0);
+    return Math.round(totalScore / examResults.length);
+  };
+
+  const renderPerformanceChart = () => {
+    if (examResults.length === 0) {
+      return (
+        <View style={styles.chartContainer}>
+          <Text style={styles.sectionTitle}>Performance Trend</Text>
+          <Text>No exam data available</Text>
+        </View>
+      );
+    }
+
+    const chartData = examResults.map(exam => ({
+      label: exam.examType,
+      score: exam.score
+    }));
+
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.sectionTitle}>Performance Trend</Text>
+        <LineChart
+          data={{
+            // labels: chartData.map(item => item.label),
+            datasets: [
+              {
+                data: chartData.map(item => item.score),
+              },
+            ],
+          }}
+          width={Dimensions.get("window").width - 40}
+          height={220}
+          yAxisSuffix="%"
+          yAxisInterval={1}
+          fromZero={true}
+          chartConfig={{
+            backgroundColor: "#ffffff",
+            backgroundGradientFrom: "#ffffff",
+            backgroundGradientTo: "#ffffff",
+            decimalPlaces: 1,
+            color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            style: {
+              borderRadius: 16,
             },
-          ],
-        }}
-        width={Dimensions.get("window").width - 40}
-        height={220}
-        chartConfig={{
-          backgroundColor: "#ffffff",
-          backgroundGradientFrom: "#ffffff",
-          backgroundGradientTo: "#ffffff",
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-          style: {
+            propsForDots: {
+              r: "6",
+              strokeWidth: "2",
+              stroke: "#ffa726"
+            }
+          }}
+          bezier
+          style={{
+            marginVertical: 8,
             borderRadius: 16,
-          },
-        }}
-        bezier
-        style={{
-          marginVertical: 8,
-          borderRadius: 16,
-        }}
-      />
-    </View>
-  );
+          }}
+          onDataPointClick={({ x, y, index }) => {
+            const exam = examResults[index];
+            setTooltipData({ x, y, visible: true, exam });
+          }}
+          decorator={() => {
+            return tooltipData?.visible ? (
+              <View
+                style={[
+                  styles.tooltip,
+                  {
+                    left: tooltipData.x - 60,
+                    top: tooltipData.y - 50,
+                  },
+                ]}
+              >
+                <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
+                <Text style={styles.tooltipText}>Score: {tooltipData.exam.score}%</Text>
+                <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
+              </View>
+            ) : null;
+          }}
+        />
+      </View>
+    );
+  };
 
   const renderSubjectPerformance = () => (
     <View style={styles.subjectsContainer}>
       <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
-      {[
-        "Mathematics",
-        "Science",
-        "English",
-        "Social Studies",
-        "Physical Education",
-      ].map((subject, index) => (
+      {subjectPerformance.map((subject, index) => (
         <View key={index} style={styles.subjectItem}>
           <View style={styles.subjectInfo}>
-            <Text style={styles.subjectName}>{subject}</Text>
-            <Text style={styles.subjectGrade}>A</Text>
+            <Text style={styles.subjectName}>{subject.subjectName}</Text>
+            <Text style={styles.subjectGrade}>
+              {subject.averagePercentage >= 90 ? 'A' :
+               subject.averagePercentage >= 80 ? 'B' :
+               subject.averagePercentage >= 70 ? 'C' :
+               subject.averagePercentage >= 60 ? 'D' : 'F'}
+            </Text>
           </View>
           <View style={styles.percentageBar}>
             <View
-              style={[styles.percentageFill, { width: `${85 + index * 2}%` }]}
+              style={[styles.percentageFill, { width: `${subject.averagePercentage}%` }]}
             />
           </View>
-          <Text style={styles.percentageText}>{85 + index * 2}%</Text>
+          <Text style={styles.percentageText}>{subject.averagePercentage.toFixed(2)}%</Text>
         </View>
       ))}
     </View>
   );
 
   const renderDetailItem = (label: string, value: string | number) => (
-    <View style={styles.detailItem}>
+    <View key={label} style={styles.detailItem}>
       <Text style={styles.detailLabel}>{label}: </Text>
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 
   const renderExtraCurricularActivities = () => (
-    <View style={styles.sectionContainer}>
+    <View key="extraCurricular" style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Extra-Curricular Activities</Text>
       <View style={styles.activitiesContainer}>
         {userDetails?.extraCurricular?.map(
@@ -124,6 +219,28 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
             </Tag>
           )
         )}
+      </View>
+    </View>
+  );
+
+  const handleExamClick = (examId: string) => {
+    navigation.navigate('ExamDetails', { examId, studentId, isTeacher: true });
+  };
+
+  const renderExams = () => (
+    <View style={styles.sectionContainer}>
+      <Text style={styles.sectionTitle}>Exams</Text>
+      <View style={styles.examsContainer}>
+        {examResults.map((exam, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.examTag}
+            onPress={() => handleExamClick(exam._id)}
+          >
+            <Text style={styles.examType}>{exam.examType}</Text>
+            <Text style={styles.examDate}>{formatDate(exam.date)}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -140,10 +257,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
 
       <ScrollView
         style={styles.contentContainer}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={() => setTooltipData(null)}
         scrollEventThrottle={16}
       >
         <View style={styles.studentInfoCard}>
@@ -173,7 +287,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
             <Icon name="linechart" size={20} color="#001529" />
             <Text style={styles.summaryTitle}>Performance</Text>
             <Text style={styles.summaryValue}>
-              {userDetails?.performance ?? 0}%
+              {calculateAveragePerformance()}%
             </Text>
           </View>
           <View style={[styles.summaryItem, { alignItems: "center" }]}>
@@ -193,6 +307,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
         </View>
 
         {renderPerformanceChart()}
+        {renderExams()}
         {renderSubjectPerformance()}
         {renderExtraCurricularActivities()}
 
@@ -445,6 +560,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4a4a4a",
     lineHeight: 20,
+  },
+  tooltip: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 5,
+    padding: 10,
+    position: 'absolute',
+    width: 120,
+  },
+  tooltipTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  tooltipText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  examsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginHorizontal: -4, // Compensate for examTag margin
+  },
+  examTag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 10,
+    margin: 4,
+    width: '31%', // Approximately 3 items per row with margins
+    alignItems: 'center',
+  },
+  examType: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#001529',
+    textAlign: 'center',
+  },
+  examDate: {
+    fontSize: 12,
+    color: '#4a4a4a',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 

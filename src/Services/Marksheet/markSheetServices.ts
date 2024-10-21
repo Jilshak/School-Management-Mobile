@@ -9,3 +9,35 @@ import api from "../axios";
     const response = await api.get(`/exams/result/student?examId=${examId}`);
     return response.data;
   };
+
+  export const getExamResultByClassAndStudent = async (classId: string, studentId?: string) => {
+    const url = `/exams/offline-exam/${classId}${studentId ? `?studentId=${studentId}` : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  };
+
+export const getExistingResultOfStudent = async (examId: string, studentId: string) => {
+  try {
+    const response = await api.get('/exams/result/teacher', {
+      params: {
+        examId,
+        studentId
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching existing result of student:', error);
+    throw error;
+  }
+};
+
+export const fetchStudentSubjectPerformance = async (studentId: string, examType?: 'Class Test' | 'Sem Exam') => {
+  try {
+    const url = `/exams/student-performance?studentId=${studentId}${examType ? `&examType=${examType}` : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching student performance:', error);
+    throw error;
+  }
+};

@@ -36,7 +36,7 @@ import { ToastProvider } from "../contexts/ToastContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LeaveRequestListScreen from "../Screens/Attendance/LeaveRequestListScreen";
 import ChatScreen from "../Screens/Chat/ChatScreen";
-import RegularizationScreen from "../Screens/Attendance/RegularizationScreen";
+import ExamDetailsScreen from "../Screens/ExamDetails/ExamDetailsScreen";
 
 const Stack = createStackNavigator();
 
@@ -153,12 +153,8 @@ const AppNavigator: React.FC = () => {
               <Stack.Screen
                 name="FlashCardsLogic"
                 component={FlashCardsLogicScreen as React.ComponentType<any>}
-              />    
-              <Stack.Screen
-                name="RegularizationScreen"
-                component={RegularizationScreen as React.ComponentType<any>}
-              />        
-                  
+              />     
+            <Stack.Screen name="ExamDetails" component={ExamDetailsScreen as React.ComponentType<any>} />
             <Stack.Screen name="Login" component={LoginScreen} />
          
           <Stack.Screen name="Home" component={HomeScreen} />
