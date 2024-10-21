@@ -8,7 +8,7 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
-import { Text, Tag } from "@ant-design/react-native";
+import { Text, Tag, Icon as AntIcon } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/AntDesign";
@@ -65,8 +65,8 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
     const fetchStudentSubjectWisePerformance = async () => {
       try {
         const response = await fetchStudentSubjectPerformance(studentId);
-        const allSubjects = response.performance.flatMap(exam => exam.subjects);
-        const aggregatedSubjects = allSubjects.reduce((acc, subject) => {
+        const allSubjects = response.performance.flatMap((exam: { subjects: any[] }) => exam.subjects)
+        const aggregatedSubjects = allSubjects.reduce((acc: any, subject: any) => {
           if (!acc[subject.subjectName]) {
             acc[subject.subjectName] = {
               totalPercentage: 0,
@@ -98,106 +98,113 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   };
 
   const renderPerformanceChart = () => {
-    if (examResults.length === 0) {
-      return (
-        <View style={styles.chartContainer}>
-          <Text style={styles.sectionTitle}>Performance Trend</Text>
-          <Text>No exam data available</Text>
-        </View>
-      );
-    }
-
-    const chartData = examResults.map(exam => ({
-      label: exam.examType,
-      score: exam.score
-    }));
-
     return (
       <View style={styles.chartContainer}>
         <Text style={styles.sectionTitle}>Performance Trend</Text>
-        <LineChart
-          data={{
-            // labels: chartData.map(item => item.label),
-            datasets: [
-              {
-                data: chartData.map(item => item.score),
+        {examResults.length > 0 ? (
+          <LineChart
+            data={{
+              labels: examResults.map(exam => exam.examType),
+              datasets: [
+                {
+                  data: examResults.map(exam => exam.score),
+                },
+              ],
+            }}
+            width={Dimensions.get("window").width - 40}
+            height={220}
+            yAxisSuffix="%"
+            yAxisInterval={1}
+            fromZero={true}
+            chartConfig={{
+              backgroundColor: "#ffffff",
+              backgroundGradientFrom: "#ffffff",
+              backgroundGradientTo: "#ffffff",
+              decimalPlaces: 1,
+              color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16,
               },
-            ],
-          }}
-          width={Dimensions.get("window").width - 40}
-          height={220}
-          yAxisSuffix="%"
-          yAxisInterval={1}
-          fromZero={true}
-          chartConfig={{
-            backgroundColor: "#ffffff",
-            backgroundGradientFrom: "#ffffff",
-            backgroundGradientTo: "#ffffff",
-            decimalPlaces: 1,
-            color: (opacity = 1) => `rgba(0, 21, 41, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            style: {
+              propsForDots: {
+                r: "6",
+                strokeWidth: "2",
+                stroke: "#ffa726"
+              }
+            }}
+            bezier
+            style={{
+              marginVertical: 8,
               borderRadius: 16,
-            },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: "#ffa726"
-            }
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16,
-          }}
-          onDataPointClick={({ x, y, index }) => {
-            const exam = examResults[index];
-            setTooltipData({ x, y, visible: true, exam });
-          }}
-          decorator={() => {
-            return tooltipData?.visible ? (
-              <View
-                style={[
-                  styles.tooltip,
-                  {
-                    left: tooltipData.x - 60,
-                    top: tooltipData.y - 50,
-                  },
-                ]}
-              >
-                <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
-                <Text style={styles.tooltipText}>Score: {tooltipData.exam.score}%</Text>
-                <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
-              </View>
-            ) : null;
-          }}
-        />
+            }}
+            onDataPointClick={({ x, y, index }) => {
+              const exam = examResults[index];
+              setTooltipData({ x, y, visible: true, exam });
+            }}
+            decorator={() => {
+              return tooltipData?.visible ? (
+                <View
+                  style={[
+                    styles.tooltip,
+                    {
+                      left: tooltipData.x - 60,
+                      top: tooltipData.y - 50,
+                    },
+                  ]}
+                >
+                  <Text style={styles.tooltipTitle}>{tooltipData.exam.examType}</Text>
+                  <Text style={styles.tooltipText}>Score: {tooltipData.exam.score}%</Text>
+                  <Text style={styles.tooltipText}>Date: {formatDate(tooltipData.exam.date)}</Text>
+                </View>
+              ) : null;
+            }}
+          />
+        ) : (
+          <View style={styles.noChartDataContainer}>
+            <AntIcon name={"line-chart"} size={50} color="#bfbfbf" />
+            <Text style={styles.noChartDataText}>No exam data available yet</Text>
+            <Text style={styles.noChartDataSubText}>
+              Performance trend will be displayed here once exam results are available.
+            </Text>
+          </View>
+        )}
       </View>
     );
   };
 
+  const renderNoDataPlaceholder = (message: string, iconName: string = "file-exclamation") => (
+    <View style={styles.noDataContainer}>
+      <AntIcon name={iconName as any} size={40} color="#bfbfbf" />
+      <Text style={styles.noDataText}>{message}</Text>
+    </View>
+  );
+
   const renderSubjectPerformance = () => (
     <View style={styles.subjectsContainer}>
       <Text style={styles.sectionTitle}>Subject-wise Performance</Text>
-      {subjectPerformance.map((subject, index) => (
-        <View key={index} style={styles.subjectItem}>
-          <View style={styles.subjectInfo}>
-            <Text style={styles.subjectName}>{subject.subjectName}</Text>
-            <Text style={styles.subjectGrade}>
-              {subject.averagePercentage >= 90 ? 'A' :
-               subject.averagePercentage >= 80 ? 'B' :
-               subject.averagePercentage >= 70 ? 'C' :
-               subject.averagePercentage >= 60 ? 'D' : 'F'}
-            </Text>
+      {subjectPerformance.length > 0 ? (
+        subjectPerformance.map((subject, index) => (
+          <View key={index} style={styles.subjectItem}>
+            <View style={styles.subjectInfo}>
+              <Text style={styles.subjectName}>{subject.subjectName}</Text>
+              <Text style={styles.subjectGrade}>
+                {subject.averagePercentage >= 90 ? 'A' :
+                 subject.averagePercentage >= 80 ? 'B' :
+                 subject.averagePercentage >= 70 ? 'C' :
+                 subject.averagePercentage >= 60 ? 'D' : 'F'}
+              </Text>
+            </View>
+            <View style={styles.percentageBar}>
+              <View
+                style={[styles.percentageFill, { width: `${subject.averagePercentage}%` }]}
+              />
+            </View>
+            <Text style={styles.percentageText}>{subject.averagePercentage.toFixed(2)}%</Text>
           </View>
-          <View style={styles.percentageBar}>
-            <View
-              style={[styles.percentageFill, { width: `${subject.averagePercentage}%` }]}
-            />
-          </View>
-          <Text style={styles.percentageText}>{subject.averagePercentage.toFixed(2)}%</Text>
-        </View>
-      ))}
+        ))
+      ) : (
+        renderNoDataPlaceholder("No subject performance data available", "bar-chart")
+      )}
     </View>
   );
 
@@ -211,15 +218,17 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   const renderExtraCurricularActivities = () => (
     <View key="extraCurricular" style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Extra-Curricular Activities</Text>
-      <View style={styles.activitiesContainer}>
-        {userDetails?.extraCurricular?.map(
-          (activity: string, index: number) => (
+      {userDetails?.extraCurricular && userDetails.extraCurricular.length > 0 ? (
+        <View style={styles.activitiesContainer}>
+          {userDetails.extraCurricular.map((activity: string, index: number) => (
             <Tag key={index} style={styles.activityTag}>
               {activity}
             </Tag>
-          )
-        )}
-      </View>
+          ))}
+        </View>
+      ) : (
+        renderNoDataPlaceholder("No extra-curricular activities recorded", "trophy")
+      )}
     </View>
   );
 
@@ -230,18 +239,46 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
   const renderExams = () => (
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>Exams</Text>
-      <View style={styles.examsContainer}>
-        {examResults.map((exam, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.examTag}
-            onPress={() => handleExamClick(exam._id)}
-          >
-            <Text style={styles.examType}>{exam.examType}</Text>
-            <Text style={styles.examDate}>{formatDate(exam.date)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {examResults.length > 0 ? (
+        <View style={styles.examsContainer}>
+          {examResults.map((exam, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.examTag}
+              onPress={() => handleExamClick(exam._id)}
+            >
+              <Text style={styles.examType}>{exam.examType}</Text>
+              <Text style={styles.examDate}>{formatDate(exam.date)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        renderNoDataPlaceholder("No exam results available", "file-text")
+      )}
+    </View>
+  );
+
+  const renderAchievements = () => (
+    <View style={styles.sectionContainer}>
+      <Text style={styles.sectionTitle}>Achievements</Text>
+      {userDetails?.achievements && userDetails.achievements.length > 0 ? (
+        userDetails.achievements.map((item: string, index: number) => (
+          <Text key={index} style={styles.achievementItem}>• {item}</Text>
+        ))
+      ) : (
+        renderNoDataPlaceholder("No achievements recorded yet", "star")
+      )}
+    </View>
+  );
+
+  const renderRemarks = () => (
+    <View style={[styles.sectionContainer, styles.remarksContainer]}>
+      <Text style={styles.sectionTitle}>Remarks</Text>
+      {userDetails?.remarks ? (
+        <Text style={styles.remarksText}>{userDetails.remarks}</Text>
+      ) : (
+        renderNoDataPlaceholder("No remarks available", "message")
+      )}
     </View>
   );
 
@@ -347,19 +384,10 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
           )}
         </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          {userDetails?.achievements?.length ? userDetails?.achievements?.map((item: string, index: number) => {
-            return <Text key={index} style={styles.achievementItem}>• {item}</Text>;
-          }) : <Text>N/A</Text>}
-        </View>
+        {renderAchievements()}
+        {renderRemarks()}
 
-        <View style={[styles.sectionContainer, styles.remarksContainer]}>
-          <Text style={styles.sectionTitle}>Remarks</Text>
-          <Text style={styles.remarksText}>
-            {userDetails?.remarks ?? "N/A"}
-          </Text>
-        </View>
+        <View style={styles.bottomMargin} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -601,6 +629,49 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4a4a4a',
     marginTop: 4,
+    textAlign: 'center',
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    marginTop: 10,
+  },
+  noDataText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
+  },
+  bottomMargin: {
+    height: 40, // Adjust this value to increase or decrease the bottom margin
+  },
+  noChartDataContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 16,
+    padding: 20,
+    height: 220,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    marginTop: 10,
+  },
+  noChartDataText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#8c8c8c',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+  noChartDataSubText: {
+    fontSize: 14,
+    color: '#8c8c8c',
+    marginTop: 10,
     textAlign: 'center',
   },
 });

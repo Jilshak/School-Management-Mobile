@@ -1,3 +1,4 @@
+import { StudentAttendance } from "../../Screens/Attendance/ClassAttendanceDetails";
 import api from "../axios";
 import { AttendanceRecord, RegularizeAttendanceParams, Student, RegularizationRequest, RegularizationStatus } from "./IClassAttendance";
 
@@ -107,5 +108,17 @@ export const updateRegularizationRequest = async (
   } catch (error) {
     console.error('Error updating regularization request:', error);
     throw error;
+  }
+};
+
+export const fetchClassroomAttendanceByDate = async (
+  classId: string,
+  date: string
+): Promise<StudentAttendance[]> => {
+  try {
+    const response = await api.get(`/attendance/classroom/${classId}/date/${date}`);
+    return response.data.attendance;
+  } catch (error) {
+    return []
   }
 };

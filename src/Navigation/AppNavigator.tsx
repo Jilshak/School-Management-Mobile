@@ -37,6 +37,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import LeaveRequestListScreen from "../Screens/Attendance/LeaveRequestListScreen";
 import ChatScreen from "../Screens/Chat/ChatScreen";
 import ExamDetailsScreen from "../Screens/ExamDetails/ExamDetailsScreen";
+import ClassAttendanceDetails from "../Screens/Attendance/ClassAttendanceDetails";
 
 const Stack = createStackNavigator();
 
@@ -77,6 +78,10 @@ const AppNavigator: React.FC = () => {
               <Stack.Screen
                 name="AddAttendance"
                 component={AddAttendanceScreen}
+              />
+              <Stack.Screen
+                name="ClassAttendanceDetails"
+                component={ClassAttendanceDetails}
               />
               <Stack.Screen name="Payment" component={PaymentScreen} />
               <Stack.Screen name="Library" component={LibraryScreen} />

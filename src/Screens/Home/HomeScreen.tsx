@@ -75,6 +75,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       roles: [UserRole.TEACHER],
     },
     {
+      icon: "schedule",
+      text: "Attendance Details",
+      route: "ClassAttendanceDetails",
+      roles: [UserRole.TEACHER],
+    },
+    {
       icon: "dollar",
       text: "Payments",
       route: "Payment",
