@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "SchoolManagementMobile",
-    "slug": "School-Management-Mobile",
+    "name": "Q-School",
+    "slug": "Q-School",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "owner": "qumiq",
     "plugins": [
       [
         "expo-av",
@@ -27,11 +28,29 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.farisahmdali.SchoolManagementMobile"
+      "package": "com.farisahmdali.SchoolManagementMobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "displayName": "School Management Mobile"
+    "displayName": "Q School",
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/aebecdc1-cff0-4f93-a7b8-a47b58672c33"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "aebecdc1-cff0-4f93-a7b8-a47b58672c33"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
