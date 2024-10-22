@@ -38,6 +38,7 @@ import LeaveRequestListScreen from "../Screens/Attendance/LeaveRequestListScreen
 import ChatScreen from "../Screens/Chat/ChatScreen";
 import ExamDetailsScreen from "../Screens/ExamDetails/ExamDetailsScreen";
 import ClassAttendanceDetails from "../Screens/Attendance/ClassAttendanceDetails";
+import ClassSummaryScreen from "../Screens/ClassDetails/ClassSummaryScreen";
 
 const Stack = createStackNavigator();
 
@@ -83,6 +84,7 @@ const AppNavigator: React.FC = () => {
                 name="ClassAttendanceDetails"
                 component={ClassAttendanceDetails}
               />
+              <Stack.Screen name="ClassSummaryScreen" component={ClassSummaryScreen} />
               <Stack.Screen name="Payment" component={PaymentScreen} />
               <Stack.Screen name="Library" component={LibraryScreen} />
               <Stack.Screen name="Syllabus" component={SyllabusScreen} />

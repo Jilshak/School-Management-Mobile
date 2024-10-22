@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -35,11 +35,17 @@ type ClassAttendanceDetailsProps = {
   navigation: StackNavigationProp<any, "ClassAttendanceDetails">;
 };
 
-// Define the navigation type
 type NavigationProp = StackNavigationProp<any, 'StudentDetails'>;
 
 const ClassAttendanceDetails: React.FC<ClassAttendanceDetailsProps> = ({ navigation }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const getLocalDate = (date = new Date()) => {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+  };
+
+  const today = useMemo(() => getLocalDate(), []);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [attendanceDetails, setAttendanceDetails] = useState<StudentAttendance[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredAttendance, setFilteredAttendance] = useState<StudentAttendance[]>([]);
@@ -48,8 +54,6 @@ const ClassAttendanceDetails: React.FC<ClassAttendanceDetailsProps> = ({ navigat
   const { isVisible, toastProps, showToast, hideToast } = useToast();
   const { profile } = useProfileStore();
   const navigationHook = useNavigation<NavigationProp>();
-  const today = new Date().toISOString().split('T')[0];
-
 
   const handleToast = useCallback((message: string, type: "success" | "error") => {
     showToast({
@@ -170,7 +174,8 @@ const ClassAttendanceDetails: React.FC<ClassAttendanceDetailsProps> = ({ navigat
             markedDates={{
               [selectedDate]: { selected: true, selectedColor: "#001529" },
             }}
-            maxDate={today} // Add this line to set the maximum selectable date
+            maxDate={getLocalDate(new Date(today))}
+            minDate={'2021-01-01'}
             theme={{
               calendarBackground: "#ffffff",
               textSectionTitleColor: "#001529",
@@ -209,7 +214,7 @@ const ClassAttendanceDetails: React.FC<ClassAttendanceDetailsProps> = ({ navigat
       );
     }
     return null;
-  }, [selectedDate, searchQuery, renderAttendanceContent, today]); // Add 'today' to the dependency array
+  }, [selectedDate, searchQuery, renderAttendanceContent, today]);
 
   const getItemCount = useCallback(() => 3, []);
 

@@ -54,7 +54,8 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
   };
 
   const formatDate = (date: Date): string => {
-    return date.toISOString().split("T")[0];
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().split('T')[0];
   };
 
   const fetchStudents = async () => {
@@ -174,7 +175,7 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
     setSaveError(null);
 
     const attendanceData = {
-      attendanceDate: new Date().toISOString(),
+      attendanceDate: formatDate(new Date()),
       classId: classId,
       teacherId: profile?._id,
       studentsAttendance: studentDetails.map((student) => ({

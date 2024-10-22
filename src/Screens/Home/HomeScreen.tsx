@@ -21,7 +21,7 @@ import useEventStore from "../../store/eventStore";
 import { getEvents } from "../../Services/Event/eventServices";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 dayjs.extend(utc);
 
@@ -43,11 +43,20 @@ type HomeScreenProps = {
   navigation: StackNavigationProp<any, "Home">;
 };
 
+type Activity = {
+  id: string;
+  subject: string;
+  topic: string;
+  activity?: string;
+  homework?: string;
+};
+
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const scrollViewRef = useRef<typeof GestureHandlerScrollView>(null);
   const profile = useProfileStore((state: any) => state.profile);
   const { events, setEvents } = useEventStore();
+  const [todaysActivities, setTodaysActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -61,6 +70,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     loadEvents();
   }, []);
+
 
   const mainCards: {
     icon: IconName;
@@ -364,6 +374,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     </View>
   );
 
+  const renderActivityItem = ({ item }: { item: Activity }) => (
+    <View style={styles.activityItem}>
+      <View style={styles.activityHeader}>
+        <MaterialIcons name="subject" size={16} color="#001529" />
+        <Text style={styles.activitySubjectText}>{item.subject}</Text>
+      </View>
+      <Text style={styles.activityTopic} numberOfLines={1} ellipsizeMode="tail">{item.topic}</Text>
+      {item.activity && (
+        <Text style={styles.activityText} numberOfLines={1} ellipsizeMode="tail">
+          Activity: {item.activity}
+        </Text>
+      )}
+      {item.homework && (
+        <Text style={styles.activityText} numberOfLines={1} ellipsizeMode="tail">
+          Homework: {item.homework}
+        </Text>
+      )}
+    </View>
+  );
+
+  const renderTodaysActivitiesSection = () => (
+    <View style={styles.activitiesSection}>
+      <Text style={styles.sectionTitle}>Today's Class Summary</Text>
+      {todaysActivities.length > 0 ? (
+        <>
+          <FlatList
+            data={todaysActivities.slice(0, 2)} // Show only first 2 activities
+            renderItem={renderActivityItem}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+          />
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => navigation.navigate("ClassSummaryScreen")} // Update this screen name as well
+          >
+            <Text style={styles.viewAllButtonText}>View All Classes</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.noActivitiesContainer}>
+          <MaterialIcons name="event-busy" size={40} color="#95A5A6" />
+          <Text style={styles.noActivitiesText}>No classes scheduled for today</Text>
+        </View>
+      )}
+    </View>
+  );
+
   const renderItem = ({ item }: { item: string }) => {
     switch (item) {
       case "header":
@@ -374,6 +431,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return renderQuickActions();
       case "academics":
         return renderAcademicsSection();
+      case "todaysActivities":
+        return renderTodaysActivitiesSection();
       case "events":
         return renderEventsSection();
       default:
@@ -385,7 +444,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <FlatList
-          data={["header", "attendance", "quickActions", "academics", "events"]}
+          data={["header", "attendance", "quickActions", "academics", "todaysActivities", "events"]}
           renderItem={renderItem}
           keyExtractor={(item) => item}
           showsVerticalScrollIndicator={false}
@@ -622,17 +681,6 @@ const styles = StyleSheet.create({
     color: "#808080",
     fontSize: 14,
   },
-  viewAllButton: {
-    backgroundColor: "#001529",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  viewAllButtonText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
   eventList: {
     maxHeight: 200,
   },
@@ -664,6 +712,64 @@ const styles = StyleSheet.create({
   addEventButtonText: {
     color: "#ffffff",
     fontWeight: "bold",
+  },
+  activitiesSection: {
+    backgroundColor: '#f0f2f5',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+  },
+  activityItem: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  activitySubjectText: {
+    color: '#001529',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
+  activityTopic: {
+    color: '#001529',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  activityText: {
+    color: '#808080',
+    fontSize: 11,
+    marginBottom: 1,
+  },
+  viewAllButton: {
+    backgroundColor: '#001529',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  viewAllButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  noActivitiesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    borderRadius: 10,
+  },
+  noActivitiesText: {
+    fontSize: 14,
+    color: '#95A5A6',
+    fontStyle: 'italic',
+    marginTop: 10,
   },
 });
 

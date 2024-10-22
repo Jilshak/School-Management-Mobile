@@ -80,7 +80,7 @@ const LoginScreen: React.FC = () => {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder="Username"
                 placeholderTextColor="#4a4a4a"
                 value={email || ""}
                 onChangeText={setEmail}

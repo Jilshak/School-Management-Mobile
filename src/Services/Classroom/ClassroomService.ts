@@ -1,7 +1,6 @@
-import { logJSON } from '../../utils/logger';
 import api from '../axios';
 import { ServerResponse } from './Interfaces/IClassroomService';
-import { IClassroomService, FetchClassroomByIdResponse } from './Interfaces/IClassroomService';
+import { FetchClassroomByIdResponse } from './Interfaces/IClassroomService';
 
 export const fetchAllClassrooms = async (): Promise<ServerResponse> => {
   try {
