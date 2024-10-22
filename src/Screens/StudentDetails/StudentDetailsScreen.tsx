@@ -104,7 +104,7 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
         {examResults.length > 0 ? (
           <LineChart
             data={{
-              labels: examResults.map(exam => exam.examType),
+              // labels: examResults.map(exam => exam.examType),
               datasets: [
                 {
                   data: examResults.map(exam => exam.score),

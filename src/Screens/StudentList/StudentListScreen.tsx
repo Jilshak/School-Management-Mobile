@@ -160,7 +160,7 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
                 <View style={styles.filterOptions}>
                   {['Male', 'Female', 'Other'].map((gender) => (
                     <TouchableOpacity
-                      key={gender}
+                      key={gender.toLowerCase()}
                       style={[
                         styles.filterOption,
                         filterOptions.gender === gender && styles.filterOptionActive,
@@ -183,7 +183,7 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
                 <View style={styles.filterOptions}>
                   {['High', 'Medium', 'Low'].map((range) => (
                     <TouchableOpacity
-                      key={range}
+                      key={range.toLowerCase()}
                       style={[
                         styles.filterOption,
                         filterOptions.performanceRange === range.toLowerCase() && styles.filterOptionActive,
