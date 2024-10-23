@@ -21,27 +21,22 @@ import useEventStore from "../../store/eventStore";
 import { getEvents } from "../../Services/Event/eventServices";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { fetchClassDailyRecords } from "../../Services/ClassDailyRecord/ClassDailyRecord";
 import { Entry } from "../../Services/ClassDailyRecord/IClassDailyRecord";
 import { useIsFocused } from '@react-navigation/native';
 import { debounce } from 'lodash'; // Make sure to install lodash if not already present
+import { IconName } from "../../Constants/Icons";
+import { LinearGradient } from 'expo-linear-gradient';
+import { AnimatedCircularProgress } from 'react-native-circular-progress';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAttendancePercentage } from "../../Services/Attendance/Attendance";
 
 dayjs.extend(utc);
 
-type IconName =
-  | "file-text"
-  | "audit"
-  | "container"
-  | "bar-chart"
-  | "profile"
-  | "schedule"
-  | "book"
-  | "user-switch"
-  | "check-circle"
-  | "dollar"
-  | "test"
-  | "chat";
+// ... existing imports ...
+
+
 
 type HomeScreenProps = {
   navigation: StackNavigationProp<any, "Home">;
@@ -56,6 +51,21 @@ type Activity = {
   homework?: string[];
 };
 
+// Add this type definition
+type AttendanceData = {
+  percentage: number;
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  streak: number;
+  monthlyBreakdown: Array<{
+    month: string;
+    percentage: number;
+    totalDays: number;
+    presentDays: number;
+  }>;
+};
+
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const scrollViewRef = useRef<typeof GestureHandlerScrollView>(null);
@@ -64,7 +74,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [todaysActivities, setTodaysActivities] = useState<Entry[] | []>([]);
   const [expandedItems, setExpandedItems] = useState<{[key: string]: boolean}>({});
   const isFocused = useIsFocused();
-  const fetchCountRef = useRef(0);
+  const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null);
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -79,21 +89,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, []);
 
   const loadTodaysActivities = useCallback(async () => {
-    const fetchedActivities = await fetchClassDailyRecords(dayjs().format("YYYY-MM-DD"));
-    const allEntries = fetchedActivities.flatMap(record => record.entries);
-    setTodaysActivities(allEntries);
-  }, []);
+    if (profile.roles.includes(UserRole.STUDENT)) {
+      const fetchedActivities = await fetchClassDailyRecords(dayjs().format("YYYY-MM-DD"));
+      const allEntries = fetchedActivities.flatMap(record => record.entries);
+      setTodaysActivities(allEntries);
+    }
+  }, [profile.roles]);
 
   const debouncedLoadActivities = useCallback(
     debounce(loadTodaysActivities, 1000, { leading: true, trailing: false }),
-    []
+    [loadTodaysActivities]
   );
 
   useEffect(() => {
-    if (isFocused) {
+    if (isFocused && profile.roles.includes(UserRole.STUDENT)) {
       debouncedLoadActivities();
     }
-  }, [isFocused, debouncedLoadActivities]);
+  }, [isFocused, debouncedLoadActivities, profile.roles]);
 
   const mainCards: {
     icon: IconName;
@@ -177,9 +189,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       roles: [UserRole.TEACHER, UserRole.ADMIN],
     },
     {
-      icon: "file-text",
+      icon: "laptop",
       text: "Work Done Book",
       route: "WorkDoneBook",
+      roles: [UserRole.TEACHER, UserRole.ADMIN],
+    },
+    {
+      icon: "highlight",
+      text: "Class Summary",
+      route: "ClassSummaryScreen",
+      roles: [UserRole.STUDENT],
+    },
+    {
+      icon: "solution",
+      text: "Work Done Log",
+      route: "WorkDoneLog",
       roles: [UserRole.TEACHER, UserRole.ADMIN],
     },
     {
@@ -206,7 +230,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       route: "FlashCardScreen",
       roles: [UserRole.STUDENT],
     },
-    { icon: "chat", text: "Chat", route: "Chat", roles: [UserRole.STUDENT] },
+    // { icon: "chat", text: "Chat", route: "Chat", roles: [UserRole.STUDENT] },
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -280,24 +304,115 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     </View>
   );
 
-  const renderAttendanceSection = () => (
-    <View style={styles.attendanceSection}>
-      <Text style={styles.sectionTitle}>Attendance</Text>
-      <View style={styles.attendanceProgress}>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: "85%" }]} />
+  // Modify the fetchAttendanceData function
+  const fetchAttendanceData = useCallback(async () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const cachedData = await AsyncStorage.getItem('attendanceData');
+    const cachedUserId = await AsyncStorage.getItem('cachedUserId');
+    
+    if (cachedData && cachedUserId === profile._id) {
+      const { data, timestamp } = JSON.parse(cachedData);
+      const cachedDate = new Date(timestamp);
+      
+      // Check if the cached data is from today and before midnight
+      if (cachedDate.toISOString().split('T')[0] === today && cachedDate.getDate() === now.getDate()) {
+        setAttendanceData(data);
+        return;
+      }
+    }
+    
+    try {
+      const newData = await getAttendancePercentage();
+      setAttendanceData(newData);
+      await AsyncStorage.setItem('attendanceData', JSON.stringify({
+        data: newData,
+        timestamp: now.toISOString()
+      }));
+      await AsyncStorage.setItem('cachedUserId', profile._id);
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+    }
+  }, [profile._id]);
+
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [fetchAttendanceData]);
+
+  // Modify the renderAttendanceSection function
+  const renderAttendanceSection = () => {
+    const placeholderData = {
+      percentage: 0,
+      totalDays: 0,
+      presentDays: 0,
+      absentDays: 0,
+      streak: 0
+    };
+
+    const { percentage, totalDays, presentDays, absentDays, streak } = attendanceData || placeholderData;
+    const isStudent = profile.roles.includes(UserRole.STUDENT);
+
+    return (
+      <View style={styles.attendanceSection}>
+        <View style={styles.attendanceHeader}>
+          <Text style={styles.attendanceSectionTitle}>Attendance Overview</Text>
+          <View style={styles.streakBadge}>
+            <MaterialCommunityIcons name="fire" size={16} color="#FF9800" />
+            <Text style={styles.streakText}>{attendanceData ? streak : 'N/A'}</Text>
+          </View>
         </View>
-        <Text style={styles.attendanceText}>85% Present</Text>
+        <View style={styles.attendanceContent}>
+          <View style={styles.attendanceCircle}>
+            <AnimatedCircularProgress
+              size={100}
+              width={10}
+              fill={attendanceData ? percentage : 0}
+              tintColor="#ffffff"
+              backgroundColor="#1E3A5F"
+              rotation={0}
+              lineCap="round"
+            >
+              {(fill) => (
+                <View style={styles.attendancePercentageContainer}>
+                  <Text style={styles.attendancePercentageText}>
+                    {attendanceData ? `${Math.round(fill)}%` : 'N/A'}
+                  </Text>
+                  <Text style={styles.attendancePercentageLabel}>Present</Text>
+                </View>
+              )}
+            </AnimatedCircularProgress>
+          </View>
+          <View style={styles.attendanceStats}>
+            <View style={styles.attendanceStatItem}>
+              <MaterialIcons name="calendar-today" size={24} color="#ffffff" />
+              <Text style={styles.attendanceStatValue}>{attendanceData ? totalDays : 'N/A'}</Text>
+              <Text style={styles.attendanceStatLabel}>Total Days</Text>
+            </View>
+            <View style={styles.attendanceStatItem}>
+              <MaterialIcons name="check-circle" size={24} color="#ffffff" />
+              <Text style={styles.attendanceStatValue}>{attendanceData ? presentDays : 'N/A'}</Text>
+              <Text style={styles.attendanceStatLabel}>Present</Text>
+            </View>
+            <View style={styles.attendanceStatItem}>
+              <MaterialIcons name="cancel" size={24} color="#ffffff" />
+              <Text style={styles.attendanceStatValue}>{attendanceData ? absentDays : 'N/A'}</Text>
+              <Text style={styles.attendanceStatLabel}>Absent</Text>
+            </View>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={[styles.attendanceButton, !isStudent && styles.attendanceButtonDisabled]}
+          onPress={() => isStudent && navigation.navigate("Attendance")}
+          disabled={!isStudent}
+        >
+          <FontAwesome5 name="calendar-check" size={16} color={isStudent ? "#001529" : "#808080"} />
+          <Text style={[styles.attendanceButtonText, !isStudent && styles.attendanceButtonTextDisabled]}>
+            View Details
+          </Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={styles.attendanceButton}
-        onPress={() => navigation.navigate("Attendance")}
-      >
-        <AntIcon name="check-circle" size={24} color="#ffffff" />
-        <Text style={styles.attendanceButtonText}>View Attendance Details</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   const renderQuickActions = () => (
     <>
@@ -311,7 +426,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onScroll={handleScroll}
           scrollEventThrottle={16}
           decelerationRate="fast"
-          snapToInterval={Dimensions.get("window").width * 0.45 + 15}
+          snapToInterval={Dimensions.get("window").width * 0.4 + 15}
           snapToAlignment="center"
         >
           {mainCards
@@ -324,11 +439,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 style={styles.horizontalCard}
                 onPress={() => navigation.navigate(card.route)}
               >
-                <AntIcon name={card.icon as any} size={40} color="#ffffff" />
+                <View style={styles.cardIconContainer}>
+                  <AntIcon name={card.icon as any} size={28} color="#ffffff" />
+                </View>
                 <Text style={styles.cardText}>{card.text}</Text>
               </TouchableOpacity>
             ))}
-          <View style={{ width: Dimensions.get("window").width * 0.275 }} />
+          <View style={{ width: Dimensions.get("window").width * 0.2 }} />
         </GestureHandlerScrollView>
         <View style={styles.scrollIndicator}>
           {mainCards
@@ -533,6 +650,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   );
 
   const renderItem = ({ item }: { item: string }) => {
+    // Only include todaysActivities in the switch case if user is a student
+    if (item === "todaysActivities" && !profile.roles.includes(UserRole.STUDENT)) {
+      return null;
+    }
+
     switch (item) {
       case "header":
         return renderHeader();
@@ -555,7 +677,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <FlatList
-          data={["header", "attendance", "quickActions", "academics", "todaysActivities", "events"]}
+          data={[
+            "header",
+            "attendance",
+            "quickActions",
+            "academics",
+            "todaysActivities",
+            "events"
+          ].filter(item => 
+            item !== "todaysActivities" || profile.roles.includes(UserRole.STUDENT)
+          )}
           renderItem={renderItem}
           keyExtractor={(item) => item}
           showsVerticalScrollIndicator={false}
@@ -618,44 +749,96 @@ const styles = StyleSheet.create({
     borderColor: "#ffffff",
   },
   attendanceSection: {
-    backgroundColor: "#f0f2f5",
+    backgroundColor: "#001529",
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
   },
-  attendanceProgress: {
+  attendanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 15,
   },
-  progressBarContainer: {
-    height: 4,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 2,
-    marginBottom: 5,
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: "#001529",
-    borderRadius: 2,
-  },
-  attendanceText: {
-    color: "#001529",
-    fontSize: 16,
+  attendanceSectionTitle: {
+    color: "#ffffff",
+    fontSize: 18,
     fontWeight: "bold",
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E3A5F',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  streakText: {
+    color: '#FF9800',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 5,
+  },
+  attendanceContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  attendanceCircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attendancePercentageContainer: {
+    alignItems: 'center',
+  },
+  attendancePercentageText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  attendancePercentageLabel: {
+    fontSize: 12,
+    color: '#a0a0a0',
+  },
+  attendanceStats: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  attendanceStatItem: {
+    alignItems: 'center',
+  },
+  attendanceStatValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
     marginTop: 5,
   },
+  attendanceStatLabel: {
+    fontSize: 12,
+    color: '#a0a0a0',
+    marginTop: 2,
+  },
   attendanceButton: {
-    backgroundColor: "#001529",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 15,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
     borderRadius: 10,
   },
+  attendanceButtonDisabled: {
+    backgroundColor: '#e0e0e0',
+  },
   attendanceButtonText: {
-    color: "#ffffff",
-    marginLeft: 10,
-    fontWeight: "bold",
-    fontSize: 16,
+    color: '#001529',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  attendanceButtonTextDisabled: {
+    color: '#808080',
   },
   quickActionsContainer: {
     marginBottom: 20,
@@ -664,19 +847,40 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
   },
   horizontalCard: {
-    width: Dimensions.get("window").width * 0.45,
-    height: 150,
+    width: Dimensions.get("window").width * 0.4,
+    height: 140,
     borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 15,
     backgroundColor: "#001529",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    paddingHorizontal: 10,
   },
   scrollIndicator: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 15,
   },
   scrollDot: {
     width: 8,
@@ -688,12 +892,9 @@ const styles = StyleSheet.create({
   },
   activeScrollDot: {
     opacity: 1,
-  },
-  cardText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 10,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   academicsSection: {
     backgroundColor: "#ffffff",

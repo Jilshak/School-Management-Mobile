@@ -14,7 +14,16 @@ export const createWorkDoneBook = async (workDoneBooks: WorkDoneBookEntry[]) => 
     const response = await api.post(`/workdonebook`, workDoneBooks);
     return response.data;
   } catch (error) {
-    console.error('Error creating work done book:', error);
-    throw error;
+    return null;
+  }
+};
+
+
+export const fetchWorkDoneLogs = async (date: string) => {
+  try {
+    const response = await api.get(`/workdonebook/daily?date=${date}`);
+    return response.data;
+  } catch (error) {
+    return [];
   }
 };

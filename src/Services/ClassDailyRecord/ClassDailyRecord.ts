@@ -7,10 +7,8 @@ export const fetchClassDailyRecords = async (
 ): Promise<ClassDailyRecord[]> => {
   try {
     const response = await api.get(`/classdailyrecord/${date}`);
-    console.log(response.data);
     return response.data;
   } catch (error) {
-    console.error("Error fetching class daily records:", error);
     return [];
   }
 };

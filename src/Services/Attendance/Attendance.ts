@@ -9,3 +9,12 @@ export const getAttendanceDetails = async (classId: string, date: string) => {
     throw error;
   }
 };
+
+export const getAttendancePercentage = async () => {
+  try {
+    const response = await api.get(`/attendance/get-percentage`);
+    return response.data;
+  } catch (error) {
+    return [];
+  }
+};

@@ -39,11 +39,11 @@ import ChatScreen from "../Screens/Chat/ChatScreen";
 import ExamDetailsScreen from "../Screens/ExamDetails/ExamDetailsScreen";
 import ClassAttendanceDetails from "../Screens/Attendance/ClassAttendanceDetails";
 import ClassSummaryScreen from "../Screens/ClassDetails/ClassSummaryScreen";
+import WorkDoneLogScreen from "../Screens/Teacher/WorkDoneLogScreen";
 
 const Stack = createStackNavigator();
 
 const AppNavigator: React.FC = () => {
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleCheckAuth = async () => {
@@ -51,121 +51,112 @@ const AppNavigator: React.FC = () => {
     if (token) {
       setIsAuthenticated(true);
     }
-  }
+  };
 
   useEffect(() => {
     handleCheckAuth();
-  }, [])
+  }, []);
 
   return (
     <NavigationContainer>
       <ToastProvider>
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={isAuthenticated ? "Home" : "Login"}>
-         
-              <Stack.Screen name="Staff" component={StaffScreen} />
-              <Stack.Screen name="Marksheet" component={MarksheetScreen} />
-              <Stack.Screen name="Timetable" component={TimetableScreen} />
-              <Stack.Screen
-                name="TeacherTimetable"
-                component={TeacherTimetableScreen}
-              />
-              <Stack.Screen name="Attendance" component={AttendanceScreen} />
-              <Stack.Screen name="Calendar" component={CalendarScreen} />
-              <Stack.Screen
-                name="Notification"
-                component={NotificationScreen}
-              />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-              <Stack.Screen
-                name="AddAttendance"
-                component={AddAttendanceScreen}
-              />
-              <Stack.Screen
-                name="ClassAttendanceDetails"
-                component={ClassAttendanceDetails}
-              />
-              <Stack.Screen name="ClassSummaryScreen" component={ClassSummaryScreen} />
-              <Stack.Screen name="Payment" component={PaymentScreen} />
-              <Stack.Screen name="Library" component={LibraryScreen} />
-              <Stack.Screen name="Syllabus" component={SyllabusScreen} />
-              <Stack.Screen
-                name="LeaveRequest"
-                component={LeaveRequestScreen}
-              />
-              <Stack.Screen
-                name="LeaveRequestList"
-                component={LeaveRequestListScreen}
-              />
-              <Stack.Screen
-                name="LeaveApprove"
-                component={LeaveApproveScreen}
-              />
-              <Stack.Screen
-                name="WorkDoneBook"
-                component={WorkDoneBookScreen}
-              />
-              <Stack.Screen
-                name="SubjectDetail"
-                component={SubjectDetailScreen as React.ComponentType<any>}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="RevisionsOfTheWeek"
-                component={RevisionsOfTheWeekScreen}
-              />
-              <Stack.Screen
-                name="ClassDetails"
-                component={ClassDetailsScreen}
-              />
-              <Stack.Screen
-                name="StudentList"
-                component={StudentListScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen
-                name="StudentDetails"
-                component={StudentDetailsScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen
-                name="SubjectSelection"
-                component={SubjectSelectionScreen}
-              />
-              <Stack.Screen
-                name="ChapterSelection"
-                component={ChapterSelectionScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen
-                name="QuestionList"
-                component={QuestionListScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen
-                name="MCQ"
-                component={MCQScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen
-                name="MCQStats"
-                component={MCQStatsScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen
-                name="FlashCardScreen"
-                component={FlashCardScreen as React.ComponentType<any>}
-              />
-              <Stack.Screen name="Chat" component={ChatScreen as React.ComponentType<any>} />
-              <Stack.Screen name="FlashCards" component={FlashCardScreen} />
-              <Stack.Screen
-                name="FlashCardChapterList"
-                component={
-                  FlashCardChapterListScreen as React.ComponentType<any>
-                }
-              />
-              <Stack.Screen
-                name="FlashCardsLogic"
-                component={FlashCardsLogicScreen as React.ComponentType<any>}
-              />     
-            <Stack.Screen name="ExamDetails" component={ExamDetailsScreen as React.ComponentType<any>} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-         
-          <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Navigator
+          screenOptions={{ headerShown: false }}
+          initialRouteName={isAuthenticated ? "Home" : "Login"}
+        >
+          <Stack.Screen name="Staff" component={StaffScreen} />
+          <Stack.Screen name="Marksheet" component={MarksheetScreen} />
+          <Stack.Screen name="Timetable" component={TimetableScreen} />
+          <Stack.Screen
+            name="TeacherTimetable"
+            component={TeacherTimetableScreen}
+          />
+          <Stack.Screen name="Attendance" component={AttendanceScreen} />
+          <Stack.Screen name="Calendar" component={CalendarScreen} />
+          <Stack.Screen name="Notification" component={NotificationScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="AddAttendance" component={AddAttendanceScreen} />
+          <Stack.Screen
+            name="ClassAttendanceDetails"
+            component={ClassAttendanceDetails}
+          />
+          <Stack.Screen
+            name="ClassSummaryScreen"
+            component={ClassSummaryScreen}
+          />
+          <Stack.Screen name="Payment" component={PaymentScreen} />
+          <Stack.Screen name="Library" component={LibraryScreen} />
+          <Stack.Screen name="Syllabus" component={SyllabusScreen} />
+          <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
+          <Stack.Screen
+            name="LeaveRequestList"
+            component={LeaveRequestListScreen}
+          />
+          <Stack.Screen name="LeaveApprove" component={LeaveApproveScreen} />
+          <Stack.Screen name="WorkDoneBook" component={WorkDoneBookScreen} />
+          <Stack.Screen
+            name="SubjectDetail"
+            component={SubjectDetailScreen as React.ComponentType<any>}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="RevisionsOfTheWeek"
+            component={RevisionsOfTheWeekScreen}
+          />
+          <Stack.Screen name="ClassDetails" component={ClassDetailsScreen} />
+          <Stack.Screen
+            name="StudentList"
+            component={StudentListScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="StudentDetails"
+            component={StudentDetailsScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="SubjectSelection"
+            component={SubjectSelectionScreen}
+          />
+          <Stack.Screen
+            name="ChapterSelection"
+            component={ChapterSelectionScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="QuestionList"
+            component={QuestionListScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="MCQ"
+            component={MCQScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="MCQStats"
+            component={MCQStatsScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="FlashCardScreen"
+            component={FlashCardScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen name="FlashCards" component={FlashCardScreen} />
+          <Stack.Screen
+            name="FlashCardChapterList"
+            component={FlashCardChapterListScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen
+            name="FlashCardsLogic"
+            component={FlashCardsLogicScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen name="WorkDoneLog" component={WorkDoneLogScreen} />
+          <Stack.Screen
+            name="ExamDetails"
+            component={ExamDetailsScreen as React.ComponentType<any>}
+          />
+          <Stack.Screen name="Login" component={LoginScreen} />
 
+          <Stack.Screen name="Home" component={HomeScreen} />
         </Stack.Navigator>
       </ToastProvider>
     </NavigationContainer>

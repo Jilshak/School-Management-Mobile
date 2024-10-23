@@ -228,7 +228,39 @@ const ClassSummaryScreen: React.FC<ClassSummaryScreenProps> = ({ navigation }) =
           </View>
 
           <View style={styles.activitiesSection}>
-            <Text style={styles.sectionTitle}>Activities for {formatDate(selectedDate)}</Text>
+            <View style={styles.activitiesTitleContainer}>
+              <View style={styles.activitiesTitleMain}>
+                <View style={styles.activitiesHeaderTop}>
+                  <Text style={styles.activitiesHeaderDate}>
+                    {dayjs(selectedDate).format('dddd, MMMM DD')}
+                  </Text>
+                  <Icon name="calendar" size={20} color="#ffffff" />
+                </View>
+                <Text style={styles.activitiesTitle}>Daily Activities</Text>
+                <View style={styles.statsContainer}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{activities.length}</Text>
+                    <Text style={styles.statLabel}>SUBJECTS</Text>
+                  </View>
+                  <View style={styles.statBorder} />
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>
+                      {activities.reduce((total, activity) => 
+                        total + (activity.topics?.length || 0), 0)}
+                    </Text>
+                    <Text style={styles.statLabel}>TOPICS</Text>
+                  </View>
+                  <View style={styles.statBorder} />
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>
+                      {activities.reduce((total, activity) => 
+                        total + (activity.homework?.length || 0), 0)}
+                    </Text>
+                    <Text style={styles.statLabel}>HOMEWORK</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
             {activities.length > 0 ? (
               <FlatList
                 data={activities}
@@ -287,6 +319,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    width: '100%', // Ensure consistent width
   },
   sectionTitle: {
     fontSize: 20,
@@ -331,9 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activitiesSection: {
-    backgroundColor: '#ffffff',
-    borderRadius: 15,
-    padding: 16,
+    width: '100%', // Match parent width
     marginTop: 16,
   },
   activityItem: {
@@ -452,6 +483,60 @@ const styles = StyleSheet.create({
     color: '#4a4a4a',
     fontSize: 14,
     lineHeight: 20,
+  },
+  activitiesTitleContainer: {
+    width: '100%',
+    marginBottom: 20,
+    backgroundColor: '#001529',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  activitiesTitleMain: {
+    padding: 16,
+  },
+  activitiesHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  activitiesHeaderDate: {
+    color: '#ffffff',
+    fontSize: 14,
+    opacity: 0.9,
+  },
+  activitiesTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12, // Increased padding since we have more space now
+  },
+  statBorder: {
+    width: 1,
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  statValue: {
+    fontSize: 20, // Increased font size back since we have more space
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.8,
   },
 });
 
