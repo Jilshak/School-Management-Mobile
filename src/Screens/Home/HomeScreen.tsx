@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -21,7 +21,11 @@ import useEventStore from "../../store/eventStore";
 import { getEvents } from "../../Services/Event/eventServices";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { fetchClassDailyRecords } from "../../Services/ClassDailyRecord/ClassDailyRecord";
+import { Entry } from "../../Services/ClassDailyRecord/IClassDailyRecord";
+import { useIsFocused } from '@react-navigation/native';
+import { debounce } from 'lodash'; // Make sure to install lodash if not already present
 
 dayjs.extend(utc);
 
@@ -46,9 +50,10 @@ type HomeScreenProps = {
 type Activity = {
   id: string;
   subject: string;
-  topic: string;
-  activity?: string;
-  homework?: string;
+  teacherName: string;  // Add this
+  topics: string[];
+  activities?: string[];
+  homework?: string[];
 };
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
@@ -56,7 +61,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const scrollViewRef = useRef<typeof GestureHandlerScrollView>(null);
   const profile = useProfileStore((state: any) => state.profile);
   const { events, setEvents } = useEventStore();
-  const [todaysActivities, setTodaysActivities] = useState<Activity[]>([]);
+  const [todaysActivities, setTodaysActivities] = useState<Entry[] | []>([]);
+  const [expandedItems, setExpandedItems] = useState<{[key: string]: boolean}>({});
+  const isFocused = useIsFocused();
+  const fetchCountRef = useRef(0);
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -67,10 +75,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.error("Failed to fetch events:", error);
       }
     };
-
     loadEvents();
   }, []);
 
+  const loadTodaysActivities = useCallback(async () => {
+    const fetchedActivities = await fetchClassDailyRecords(dayjs().format("YYYY-MM-DD"));
+    const allEntries = fetchedActivities.flatMap(record => record.entries);
+    setTodaysActivities(allEntries);
+  }, []);
+
+  const debouncedLoadActivities = useCallback(
+    debounce(loadTodaysActivities, 1000, { leading: true, trailing: false }),
+    []
+  );
+
+  useEffect(() => {
+    if (isFocused) {
+      debouncedLoadActivities();
+    }
+  }, [isFocused, debouncedLoadActivities]);
 
   const mainCards: {
     icon: IconName;
@@ -204,6 +227,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   useEffect(() => {
     console.log(profile);
   }, [profile]);
+
+  const formatTeacherName = (name: string) => {
+    if (name.length <= 18) return name;
+    
+    const parts = name.split(' ');
+    if (parts.length <= 1) return name.slice(0, 18);
+    
+    // Return everything after the first space
+    return parts.slice(1).join(' ');
+  };
 
   const renderEventItem = ({ item }: { item: any }) => {
     const startDate = dayjs(item.startDate).utc();
@@ -374,25 +407,96 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     </View>
   );
 
-  const renderActivityItem = ({ item }: { item: Activity }) => (
-    <View style={styles.activityItem}>
-      <View style={styles.activityHeader}>
-        <MaterialIcons name="subject" size={16} color="#001529" />
-        <Text style={styles.activitySubjectText}>{item.subject}</Text>
-      </View>
-      <Text style={styles.activityTopic} numberOfLines={1} ellipsizeMode="tail">{item.topic}</Text>
-      {item.activity && (
-        <Text style={styles.activityText} numberOfLines={1} ellipsizeMode="tail">
-          Activity: {item.activity}
-        </Text>
-      )}
-      {item.homework && (
-        <Text style={styles.activityText} numberOfLines={1} ellipsizeMode="tail">
-          Homework: {item.homework}
-        </Text>
-      )}
-    </View>
-  );
+  const renderActivityItem = ({ item }: { item: Activity }) => {
+    const isExpanded = expandedItems[item.id] || false;
+
+    const toggleExpand = () => {
+      setExpandedItems(prev => ({
+        ...prev,
+        [item.id]: !prev[item.id]
+      }));
+    };
+
+    return (
+      <TouchableOpacity 
+        style={[styles.activityItem, isExpanded && styles.activityItemExpanded]} 
+        onPress={toggleExpand}
+        activeOpacity={0.7}
+      >
+        <View style={styles.activityHeader}>
+          <View style={styles.subjectBadge}>
+            <MaterialIcons name="subject" size={16} color="#ffffff" />
+            <Text style={styles.activitySubjectText}>{item.subject}</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <View style={styles.teacherBadge}>
+              <Text style={styles.teacherName}>{formatTeacherName(item.teacherName)}</Text>
+            </View>
+            <MaterialIcons 
+              name={isExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+              size={24} 
+              color="#001529" 
+            />
+          </View>
+        </View>
+        
+        {isExpanded && (
+          <View style={styles.contentSection}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoColumn}>
+                <View style={styles.sectionHeaderRow}>
+                  <MaterialCommunityIcons name="book-open-variant" size={12} color="#4a4a4a" />
+                  <Text style={styles.sectionLabel}>Topics</Text>
+                </View>
+                <View style={styles.contentList}>
+                  {(isExpanded ? item.topics : item.topics.slice(0, 1)).map((topic, index) => (
+                    <Text key={index} style={styles.contentText} numberOfLines={1}>• {topic}</Text>
+                  ))}
+                  {!isExpanded && item.topics.length > 1 && (
+                    <Text style={styles.moreText}>+{item.topics.length - 1} more</Text>
+                  )}
+                </View>
+              </View>
+
+              {item.activities && item.activities.length > 0 && (
+                <View style={styles.infoColumn}>
+                  <View style={styles.sectionHeaderRow}>
+                    <MaterialCommunityIcons name="clipboard-list" size={12} color="#4a4a4a" />
+                    <Text style={styles.sectionLabel}>Activities</Text>
+                  </View>
+                  <View style={styles.contentList}>
+                    {(isExpanded ? item.activities : item.activities.slice(0, 1)).map((activity, index) => (
+                      <Text key={index} style={styles.contentText} numberOfLines={1}>• {activity}</Text>
+                    ))}
+                    {!isExpanded && item.activities.length > 1 && (
+                      <Text style={styles.moreText}>+{item.activities.length - 1} more</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {item.homework && item.homework.length > 0 && (
+              <View style={styles.homeworkSection}>
+                <View style={styles.sectionHeaderRow}>
+                  <MaterialCommunityIcons name="notebook" size={12} color="#4a4a4a" />
+                  <Text style={styles.sectionLabel}>Homework</Text>
+                </View>
+                <View style={styles.contentList}>
+                  {(isExpanded ? item.homework : item.homework.slice(0, 1)).map((hw, index) => (
+                    <Text key={index} style={styles.contentText} numberOfLines={1}>• {hw}</Text>
+                  ))}
+                  {!isExpanded && item.homework.length > 1 && (
+                    <Text style={styles.moreText}>+{item.homework.length - 1} more</Text>
+                  )}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderTodaysActivitiesSection = () => (
     <View style={styles.activitiesSection}>
@@ -400,14 +504,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {todaysActivities.length > 0 ? (
         <>
           <FlatList
-            data={todaysActivities.slice(0, 2)} // Show only first 2 activities
+            data={todaysActivities.slice(0, 4).map((entry, index) => ({  // Changed from 2 to 4
+              id: `${entry.subjectId}-${index}`,
+              subject: entry.subjectName,
+              teacherName: entry.teacherName,
+              topics: entry.topics,
+              activities: entry.activities,
+              homework: entry.homework
+            }))}
             renderItem={renderActivityItem}
             keyExtractor={(item) => item.id}
             scrollEnabled={false}
           />
           <TouchableOpacity
             style={styles.viewAllButton}
-            onPress={() => navigation.navigate("ClassSummaryScreen")} // Update this screen name as well
+            onPress={() => navigation.navigate("ClassSummaryScreen")}
           >
             <Text style={styles.viewAllButtonText}>View All Classes</Text>
           </TouchableOpacity>
@@ -714,62 +825,139 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   activitiesSection: {
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#ffffff',
     borderRadius: 15,
     padding: 15,
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   activityItem: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8f9fa',
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
+    marginBottom: 10,
+    overflow: 'hidden',
+    height: 60, // Reduced height for collapsed view
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  activityItemExpanded: {
+    height: 'auto',
   },
   activityHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+    height: 60,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subjectBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#001529',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  teacherBadge: {
+    backgroundColor: '#e8f0fe',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
   activitySubjectText: {
-    color: '#001529',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  teacherName: {
+    fontSize: 11,
+    color: '#1a73e8',
+    fontWeight: '500',
+  },
+  contentSection: {
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  infoColumn: {
+    flex: 1,
+    marginRight: 8,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  sectionLabel: {
+    color: '#4a4a4a',
+    fontSize: 14,
+    fontWeight: '600',
     marginLeft: 6,
   },
-  activityTopic: {
-    color: '#001529',
-    fontSize: 12,
-    fontWeight: 'bold',
+  contentList: {
+    paddingLeft: 4,
+  },
+  contentText: {
+    color: '#4a4a4a',
+    fontSize: 13,
+    lineHeight: 20,
     marginBottom: 2,
   },
-  activityText: {
-    color: '#808080',
-    fontSize: 11,
-    marginBottom: 1,
+  moreText: {
+    color: '#6c757d',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginLeft: 12,
+  },
+  homeworkSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  noActivitiesContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  noActivitiesText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 8,
   },
   viewAllButton: {
     backgroundColor: '#001529',
-    padding: 10,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
   viewAllButtonText: {
     color: '#ffffff',
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 14,
-  },
-  noActivitiesContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 10,
-  },
-  noActivitiesText: {
-    fontSize: 14,
-    color: '#95A5A6',
-    fontStyle: 'italic',
-    marginTop: 10,
   },
 });
 

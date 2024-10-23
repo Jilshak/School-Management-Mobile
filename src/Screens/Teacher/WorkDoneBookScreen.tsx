@@ -6,6 +6,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import { fetchAllClassrooms } from '../../Services/Classroom/ClassroomService';
 import useProfileStore from '../../store/profileStore';
 import { createWorkDoneBook } from '../../Services/WorkDoneBook/WorkDoneBookService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type WorkDoneBookScreenProps = {
   navigation: StackNavigationProp<any, 'WorkDoneBook'>;
@@ -76,6 +77,9 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
   const [modalVisible, setModalVisible] = useState(false);
   const [activeSelection, setActiveSelection] = useState<'class' | 'subject' | null>(null);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [isCachedData, setIsCachedData] = useState(false);
+  const [showClassSubjectPairs, setShowClassSubjectPairs] = useState(false);
+  const [showWorkLogEntries, setShowWorkLogEntries] = useState(false);
 
   const { profile } = useProfileStore();
 
@@ -84,6 +88,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     setMarkedDates({
       [date]: { selected: true, selectedColor: '#001529' }
     });
+    loadCachedData();
   }, []);
 
   const fetchClassroomsData = async () => {
@@ -290,7 +295,6 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
         }))
       );
       
-      // Filter out pairs that already exist
       const uniqueNewPairs = newPairs.filter(newPair => 
         !classSubjectPairs.some(existingPair => 
           existingPair.class === newPair.class && existingPair.subject === newPair.subject
@@ -301,6 +305,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
         setClassSubjectPairs([...classSubjectPairs, ...uniqueNewPairs]);
       }
     }
+    setShowClassSubjectPairs(true);
   };
 
   const removeClassSubjectPair = (index: number) => {
@@ -308,7 +313,6 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     const updatedPairs = classSubjectPairs.filter((_, i) => i !== index);
     setClassSubjectPairs(updatedPairs);
 
-    // Remove corresponding work log entry
     const updatedWorkLogs = workLogs.filter(
       entry => !(entry.class === pairToRemove.class && entry.subject === pairToRemove.subject)
     );
@@ -341,6 +345,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     if (uniqueNewEntries.length > 0) {
       setWorkLogs([...workLogs, ...uniqueNewEntries]);
     }
+    setShowWorkLogEntries(true);
   };
 
   const updateWorkLogEntry = (index: number, field: keyof WorkLogEntry, value: any) => {
@@ -361,7 +366,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
   };
 
   const areAllWorkLogsValid = () => {
-    return workLogs.every(entry => 
+    return workLogs && workLogs.length > 0 && workLogs.every(entry => 
       entry.topics.length > 0 || entry.activities.length > 0 || entry.homework.length > 0
     );
   };
@@ -381,10 +386,60 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     return localDate.toISOString().split('T')[0];
   };
 
+  const loadCachedData = async () => {
+    try {
+      const cachedData = await AsyncStorage.getItem('workDoneBookCache');
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData);
+        const currentTime = new Date().getTime();
+        const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+
+        if (currentTime - parsedData.timestamp < oneDayInMilliseconds) {
+          setWorkLogs(parsedData.workLogs || []);
+          setClassSubjectPairs(parsedData.classSubjectPairs || []);
+          setDate(parsedData.date || new Date().toISOString().split('T')[0]);
+          setSelectedClasses(parsedData.selectedClasses || []);
+          setSelectedSubjects(parsedData.selectedSubjects || []);
+          setClasses(parsedData.classes || []);
+          setSubjects(parsedData.subjects || []);
+          setMarkedDates({
+            [parsedData.date]: { selected: true, selectedColor: '#001529' }
+          });
+          setIsCachedData(true);
+          // Don't set showClassSubjectPairs and showWorkLogEntries to true here
+        } else {
+          await AsyncStorage.removeItem('workDoneBookCache');
+          setIsCachedData(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cached data:', error);
+      setIsCachedData(false);
+    }
+  };
+
+  const cacheData = async () => {
+    try {
+      const dataToCache = {
+        workLogs,
+        classSubjectPairs,
+        date,
+        selectedClasses,
+        selectedSubjects,
+        classes,
+        subjects,
+        timestamp: new Date().getTime()
+      };
+      await AsyncStorage.setItem('workDoneBookCache', JSON.stringify(dataToCache));
+      console.log('Data cached successfully');
+    } catch (error) {
+      console.error('Error caching data:', error);
+    }
+  };
 
   const confirmSubmission = async () => {
     const formattedWorkLogs: WorkDoneBookEntry[] = workLogs
-      .filter(entry => entry.classroomId && entry.subjectId) // Ensure we only include entries with valid IDs
+      .filter(entry => entry.classroomId && entry.subjectId)
       .map(entry => ({
         classroomId: entry.classroomId!,
         subjectId: entry.subjectId!,
@@ -396,6 +451,8 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
 
     try {
       const response = await createWorkDoneBook(formattedWorkLogs);
+      await cacheData(); // Cache the data after successful submission
+      setIsCachedData(false); // Set this to false after successful submission
       setShowConfirmationModal(false);
       navigation.goBack();
     } catch (error) {
@@ -675,6 +732,20 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     ));
   };
 
+  const renderCachedDataWarning = () => {
+    if (isCachedData) {
+      return (
+        <View style={styles.cachedDataWarning}>
+          <Icon name="info-circle" size={20} color="#faad14" />
+          <Text style={styles.cachedDataWarningText}>
+            Showing cached work done data. Save to update.
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -690,6 +761,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
         </View>
 
         <ScrollView style={styles.contentContainer}>
+          {renderCachedDataWarning()}
           <View style={styles.formContainer}>
             <Text style={styles.sectionTitle}>Daily Work Log</Text>
 
@@ -759,29 +831,31 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
               </TouchableOpacity>
             </View>
 
-            {selectedClasses.length > 0 && selectedSubjects.length > 0 && (
-              <TouchableOpacity 
-                style={styles.addEntryButton}
-                onPress={addClassSubjectPair}
-              >
-                <Icon name="plus-circle" size={20} color="#ffffff" style={styles.buttonIcon} />
-                <Text style={styles.addEntryButtonText}>Add Class-Subject Pair</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={styles.addEntryButton}
+              onPress={addClassSubjectPair}
+            >
+              <Icon name="plus-circle" size={20} color="#ffffff" style={styles.buttonIcon} />
+              <Text style={styles.addEntryButtonText}>
+                {showClassSubjectPairs ? "Update Class-Subject Pairs" : "Add Class-Subject Pair"}
+              </Text>
+            </TouchableOpacity>
 
-            {renderClassSubjectPairs()}
+            {showClassSubjectPairs && renderClassSubjectPairs()}
 
-            {classSubjectPairs.length > 0 && (
+            {showClassSubjectPairs && (
               <TouchableOpacity 
                 style={styles.addEntryButton}
                 onPress={addWorkLogEntry}
               >
                 <Icon name="form" size={20} color="#ffffff" style={styles.buttonIcon} />
-                <Text style={styles.addEntryButtonText}>Generate Work Log Entries</Text>
+                <Text style={styles.addEntryButtonText}>
+                  {showWorkLogEntries ? "Update Work Log Entries" : "Generate Work Log Entries"}
+                </Text>
               </TouchableOpacity>
             )}
 
-            {renderWorkLogEntries()}
+            {showWorkLogEntries && renderWorkLogEntries()}
           </View>
         </ScrollView>
 
@@ -1192,6 +1266,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  cachedDataWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fffbe6",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 20,
+  },
+  cachedDataWarningText: {
+    flex: 1,
+    marginLeft: 10,
+    color: "#faad14",
+    fontSize: 14,
   },
 });
 
