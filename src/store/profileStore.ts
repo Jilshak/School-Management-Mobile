@@ -52,6 +52,7 @@ export interface ProfileState {
   state?: string;
   tcDocument?: string;
   tcNumber?: string;
+  profilePhoto?: string;
 }
 
 interface ProfileStore {

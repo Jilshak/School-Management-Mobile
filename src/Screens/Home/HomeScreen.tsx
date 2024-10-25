@@ -201,15 +201,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       roles: [UserRole.STUDENT],
     },
     {
-      icon: "solution",
-      text: "Work Done Log",
-      route: "WorkDoneLog",
+      icon: "book",
+      text: "Lesson Plan",
+      route: "LessonPlan",
       roles: [UserRole.TEACHER, UserRole.ADMIN],
     },
     {
-      icon: "book",
-      text: "Revisions of the Week",
-      route: "RevisionsOfTheWeek",
+      icon: "solution",
+      text: "Work Log",
+      route: "WorkDoneLog",
       roles: [UserRole.TEACHER, UserRole.ADMIN],
     },
     {
@@ -238,14 +238,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const viewSize = event.nativeEvent.layoutMeasurement.width;
     const contentSize = event.nativeEvent.contentSize.width;
 
-    const cardWidth = Dimensions.get("window").width * 0.45 + 15; // Card width + margin
-    const newIndex = Math.round(contentOffset / cardWidth);
+    const cardWidth = Dimensions.get("window").width * 0.4 + 20; // Card width + margin
+    const visibleCards = mainCards.filter((card) =>
+      card.roles.some((role: any) => profile.roles.includes(role))
+    );
+    const totalCards = visibleCards.length;
 
+    let newIndex = Math.round(contentOffset / cardWidth);
+
+    // Ensure the index is within bounds
+    newIndex = Math.max(0, Math.min(newIndex, totalCards - 1));
+
+    // Check if we're at the end of the scroll
     if (contentOffset + viewSize >= contentSize - 1) {
-      setActiveCardIndex(mainCards.length - 1);
-    } else {
-      setActiveCardIndex(Math.min(newIndex, mainCards.length - 1));
+      newIndex = totalCards - 1;
     }
+
+    setActiveCardIndex(newIndex);
   };
 
   useEffect(() => {
@@ -426,7 +435,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onScroll={handleScroll}
           scrollEventThrottle={16}
           decelerationRate="fast"
-          snapToInterval={Dimensions.get("window").width * 0.4 + 15}
+          snapToInterval={Dimensions.get("window").width * 0.4 + 20}
           snapToAlignment="center"
         >
           {mainCards
@@ -881,20 +890,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 15,
+    height: 10, // Add a fixed height
   },
   scrollDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: "#001529",
-    marginHorizontal: 4,
+    marginHorizontal: 3,
     opacity: 0.3,
   },
   activeScrollDot: {
     opacity: 1,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   academicsSection: {
     backgroundColor: "#ffffff",

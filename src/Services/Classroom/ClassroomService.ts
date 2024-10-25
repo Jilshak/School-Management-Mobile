@@ -5,7 +5,6 @@ import { FetchClassroomByIdResponse } from './Interfaces/IClassroomService';
 export const fetchAllClassrooms = async (): Promise<ServerResponse> => {
   try {
     const response = await api.get<ServerResponse>('/classroom/with-students');
-    console.log(response.data)
     return response.data;
   } catch (error) {
     console.error("Error fetching classrooms:", error);

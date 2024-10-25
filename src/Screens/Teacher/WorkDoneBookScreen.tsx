@@ -51,6 +51,12 @@ interface WorkDoneBookEntry {
   homework: string[];
 }
 
+// Add this component at the top level, after the interfaces
+const FallbackCard: React.FC<{ style?: any; children: React.ReactNode }> = ({
+  style,
+  children,
+}) => <View style={[styles.card, style]}>{children}</View>;
+
 const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
@@ -746,6 +752,46 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     return null;
   };
 
+  // Add this new function to render the date range with icon
+  const renderDateRangeWithIcon = () => {
+    const selectedDate = new Date(date);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    return (
+      <View style={styles.dateRangeContainer}>
+        <View style={styles.calendarIconContainer}>
+          <Icon name="calendar" size={24} color="#001529" />
+        </View>
+        <View style={styles.dateRangeContent}>
+          <View style={styles.dateColumn}>
+            <Text style={styles.dayText}>{dayNames[selectedDate.getDay()]}</Text>
+            <Text style={styles.dateText}>{selectedDate.getDate().toString().padStart(2, '0')}</Text>
+          </View>
+          <View style={styles.monthYearColumn}>
+            <Text style={styles.monthText}>{monthNames[selectedDate.getMonth()]}</Text>
+            <Text style={styles.yearText}>{selectedDate.getFullYear()}</Text>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.clearDateButton}
+          onPress={() => {
+            const currentDate = new Date().toISOString().split('T')[0];
+            setDate(currentDate);
+            setMarkedDates({
+              [currentDate]: { selected: true, selectedColor: '#001529' }
+            });
+          }}
+        >
+          <Icon name="close" size={16} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -763,9 +809,9 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
         <ScrollView style={styles.contentContainer}>
           {renderCachedDataWarning()}
           <View style={styles.formContainer}>
-            <Text style={styles.sectionTitle}>Daily Work Log</Text>
 
-            <View style={styles.dateContainer}>
+            <FallbackCard style={styles.calendarCard}>
+              <Text style={styles.sectionTitle}>Select Date</Text>
               <Calendar
                 style={styles.calendar}
                 onDayPress={handleDayPress}
@@ -789,25 +835,11 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
                   textDayHeaderFontWeight: '300',
                   textDayFontSize: 16,
                   textMonthFontSize: 16,
-                  textDayHeaderFontSize: 16
+                  textDayHeaderFontSize: 16,
                 }}
               />
-              <View style={styles.selectedDateContainer}>
-                <Text style={styles.selectedDateText}>Selected Date: {formatDate(date)}</Text>
-                <TouchableOpacity 
-                  style={styles.clearDateButton}
-                  onPress={() => {
-                    const currentDate = new Date().toISOString().split('T')[0];
-                    setDate(currentDate);
-                    setMarkedDates({
-                      [currentDate]: { selected: true, selectedColor: '#001529' }
-                    });
-                  }}
-                >
-                  <Icon name="reload" size={20} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            </View>
+              {date && renderDateRangeWithIcon()}
+            </FallbackCard>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Classes</Text>
@@ -964,9 +996,9 @@ const styles = StyleSheet.create({
   },
   clearDateButton: {
     backgroundColor: '#001529',
-    borderRadius: 20,
-    width: 30,
-    height: 30,
+    borderRadius: 15, // Reduced from 20
+    width: 24, // Reduced from 30
+    height: 24, // Reduced from 30
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1280,6 +1312,67 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     color: "#faad14",
     fontSize: 14,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  calendarCard: {
+    marginBottom: 20,
+  },
+  dateRangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 10,
+  },
+  calendarIconContainer: {
+    marginRight: 15,
+    borderRightWidth: 1,
+    borderRightColor: '#d9d9d9',
+    paddingRight: 15,
+  },
+  dateRangeContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateColumn: {
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  monthYearColumn: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  dayText: {
+    fontSize: 14,
+    color: "#4a4a4a",
+    fontWeight: "600",
+  },
+  dateText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#001529",
+  },
+  monthText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#001529",
+  },
+  yearText: {
+    fontSize: 14,
+    color: "#4a4a4a",
+    fontWeight: "500",
   },
 });
 

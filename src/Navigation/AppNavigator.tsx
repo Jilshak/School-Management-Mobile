@@ -20,7 +20,6 @@ import LeaveApproveScreen from "../Screens/Attendance/LeaveApproveScreen";
 import SyllabusScreen from "../Screens/Academics/SyllabusScreen";
 import SubjectDetailScreen from "../Screens/Academics/SubjectDetailScreen";
 import WorkDoneBookScreen from "../Screens/Teacher/WorkDoneBookScreen";
-import RevisionsOfTheWeekScreen from "../Screens/Teacher/RevisionsOfTheWeekScreen";
 import ClassDetailsScreen from "../Screens/ClassDetails/ClassDetailsScreen";
 import StudentListScreen from "../Screens/StudentList/StudentListScreen";
 import StudentDetailsScreen from "../Screens/StudentDetails/StudentDetailsScreen";
@@ -40,6 +39,7 @@ import ExamDetailsScreen from "../Screens/ExamDetails/ExamDetailsScreen";
 import ClassAttendanceDetails from "../Screens/Attendance/ClassAttendanceDetails";
 import ClassSummaryScreen from "../Screens/ClassDetails/ClassSummaryScreen";
 import WorkDoneLogScreen from "../Screens/Teacher/WorkDoneLogScreen";
+import LessonPlanScreen from "../Screens/Teacher/LessonPlanScreen";
 
 const Stack = createStackNavigator();
 
@@ -100,8 +100,8 @@ const AppNavigator: React.FC = () => {
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="RevisionsOfTheWeek"
-            component={RevisionsOfTheWeekScreen}
+            name="LessonPlan"
+            component={LessonPlanScreen}
           />
           <Stack.Screen name="ClassDetails" component={ClassDetailsScreen} />
           <Stack.Screen

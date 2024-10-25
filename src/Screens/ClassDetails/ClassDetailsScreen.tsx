@@ -48,6 +48,8 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
       setLoading(true);
       setError(null);
       const classrooms = await fetchAllClassrooms();
+
+      console.log(classrooms.classrooms)
       
       if (!classrooms.classrooms || !Array.isArray(classrooms.classrooms)) {
         throw new Error('Invalid response from server');
@@ -57,7 +59,7 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
         id: classroom._id,
         name: classroom.name,
         teacher: classroom.classTeacherDetails?.name,
-        studentCount: classroom.studentCount - 1,
+        studentCount: classroom.studentCount > 0 ? classroom.studentCount - 1 : 0,
         averagePerformance: 0,
       }));
       setClasses(formattedClasses);
@@ -162,7 +164,6 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Class Details</Text>
         <TouchableOpacity onPress={showErrorAlert}>
-          <Icon name="infocirlceo" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
 

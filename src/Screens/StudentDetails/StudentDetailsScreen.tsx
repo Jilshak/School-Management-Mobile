@@ -102,15 +102,15 @@ const StudentDetailsScreen: React.FC<StudentDetailsScreenProps> = ({
       <View style={styles.chartContainer}>
         <Text style={styles.sectionTitle}>Performance Trend</Text>
         {examResults.length > 0 ? (
-          <LineChart
-            data={{
-              // labels: examResults.map(exam => exam.examType),
-              datasets: [
-                {
-                  data: examResults.map(exam => exam.score),
-                },
-              ],
-            }}
+           <LineChart
+           data={{
+             labels: examResults.map(exam => exam.examType),
+             datasets: [
+               {
+                 data: examResults.map(exam => exam.score),
+               },
+             ],
+           }}
             width={Dimensions.get("window").width - 40}
             height={220}
             yAxisSuffix="%"

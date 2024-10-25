@@ -267,12 +267,7 @@ const AddAttendanceScreen: React.FC<AddAttendanceScreenProps> = ({
           )}
         </View>
         <View style={styles.studentActions}>
-          <TouchableOpacity
-            onPress={() => openCommentModal(item._id)}
-            style={styles.commentButton}
-          >
-            <Icon name="edit" size={20} color="#001529" />
-          </TouchableOpacity>
+          {/* Removed the TouchableOpacity for the edit icon */}
           <Icon name={icon.name} size={24} color={icon.color} />
         </View>
       </TouchableOpacity>

@@ -64,7 +64,9 @@ export const updateUserProfile = async (id:string, profile: UserProfile): Promis
 
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
   try {
+    console.log(username)
     const response = await api.get(`/user/check-username/${username}`);
+    console.log(response.data)
     return response.data.available;
   } catch (error) {
     console.error("Error checking username availability:", error);

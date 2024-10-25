@@ -115,6 +115,7 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
     return now.toISOString().split('T')[0];
   });
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("logs"); // Add this line
 
   const { profile } = useProfileStore();
 
@@ -573,6 +574,47 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
   // Memoize the calendar component
   const memoizedCalendar = useMemo(() => renderCalendar(), [selectedDate, fetchLogs]);
 
+  const renderTabBar = () => (
+    <View style={styles.tabBar}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "logs" && styles.activeTab]}
+        onPress={() => setActiveTab("logs")}
+      >
+        <Icon
+          name="profile"
+          size={20}
+          color={activeTab === "logs" ? "#ffffff" : "#001529"}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === "logs" && styles.activeTabText,
+          ]}
+        >
+          Logs
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "anotherTab" && styles.activeTab]}
+        onPress={() => setActiveTab("anotherTab")}
+      >
+        <Icon
+          name="clockcircleo"
+          size={20}
+          color={activeTab === "anotherTab" ? "#ffffff" : "#001529"}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === "anotherTab" && styles.activeTabText,
+          ]}
+        >
+          Another Tab
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -591,11 +633,18 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {memoizedCalendar}
+        {renderTabBar()}
 
-        <View style={styles.logsContainer}>
-          {memoizedLogCard}
-        </View>
+        {activeTab === "logs" ? (
+          <>
+            {memoizedCalendar}
+            <View style={styles.logsContainer}>{memoizedLogCard}</View>
+          </>
+        ) : (
+          <View style={styles.anotherTabContainer}>
+            <Text style={styles.anotherTabText}>Content for Another Tab</Text>
+          </View>
+        )}
       </ScrollView>
 
       {renderDetailsModal()}
@@ -998,6 +1047,42 @@ const styles = StyleSheet.create({
   },
   expandedLogCard: {
     marginBottom: 35, // Increased from 25 to 35
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    marginBottom: 20,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  activeTab: {
+    backgroundColor: "#001529",
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#001529",
+    marginLeft: 8,
+  },
+  activeTabText: {
+    color: "#ffffff",
+  },
+  anotherTabContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  anotherTabText: {
+    fontSize: 18,
+    color: "#001529",
   },
   ...additionalStyles,
   ...newStyles,

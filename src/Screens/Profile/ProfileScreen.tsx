@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -15,32 +15,15 @@ import BottomNavBar from "../../Components/BottomNavBar";
 import useAuthStore from "../../store/authStore";
 import useProfileStore from "../../store/profileStore";
 import { formatDate } from "../../utils/DateUtil";
-import { IconName } from "../../utils/IconUtils";
 import { checkUsernameAvailability, updateUserProfile } from "../../Services/Profile/ProfileServices";
 import debounce from 'lodash/debounce';
 import { updateUserCredentials } from "../../Services/Profile/PasswordResetService";
 import { TextInput as RNTextInput } from "react-native";
+import { IconNames } from "@ant-design/react-native/lib/icon";
 
 type ProfileScreenProps = {
   navigation: StackNavigationProp<any, "Profile">;
 };
-
-interface UserInfo {
-  name: string;
-  grade: string;
-  email: string;
-  phone: string;
-  address: string;
-  parentName: string;
-  parentPhone: string;
-  rollNumber: string;
-  dateOfBirth: string;
-  bloodGroup: string;
-  emergencyContact: string;
-  admissionDate: string;
-  extracurricularActivities: string[];
-  profileImage: string;
-}
 
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
@@ -70,7 +53,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const renderInfoItem = (
-    icon: IconName,
+    icon: IconNames,
     title: string,
     value: string | undefined
   ) => (
@@ -119,7 +102,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  const debouncedCheckUsername = debounce(checkUsername, 300);
+  const debouncedCheckUsername = debounce(checkUsername, 500);
 
   const handleUsernameChange = (text: string) => {
     setNewUsername(text);
@@ -174,6 +157,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
+  const renderNoDataPlaceholder = (message: string, iconName: string = "file-exclamation") => (
+    <View style={styles.noDataContainer}>
+      <Icon name={iconName as IconNames} size={40} color="#bfbfbf" />
+      <Text style={styles.noDataText}>{message}</Text>
+    </View>
+  );
+
   if (!profile) {
     return (
       <SafeAreaView style={styles.container}>
@@ -195,7 +185,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       <ScrollView style={styles.contentContainer}>
         <View style={styles.profileSection}>
           <Image
-            source={{ uri: profile.profileImage || "https://via.placeholder.com/150" }}
+            source={{ uri: profile.profilePhoto || "https://via.placeholder.com/150" }}
             style={styles.profileImage}
           />
           <Text style={styles.profileName}>
@@ -236,7 +226,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </>
           ) : (
             <>
-              {renderInfoItem("number", "Roll Number", profile?.enrollmentNumber)}
+              {renderInfoItem("number", "Enrollment Number", profile?.enrollmentNumber)}
               {renderInfoItem("book", "Grade", profile?.classroom?.name)}
             </>
           )}
@@ -252,31 +242,39 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <>
             <View style={styles.infoSection}>
               <Text style={styles.sectionHeader}>Qualifications</Text>
-              {profile?.qualifications.map((qual: any, index: number) => (
-                <View key={index} style={styles.qualificationItem}>
-                  <Text style={styles.qualificationTitle}>{qual.degree}</Text>
-                  <Text>
-                    {qual.fieldOfStudy} - {qual.yearOfPass}
-                  </Text>
-                  <Text>{qual.instituteName}</Text>
-                  <Text>Grade: {qual.gradePercentage}</Text>
-                </View>
-              ))}
+              {profile?.qualifications && profile.qualifications.length > 0 ? (
+                profile.qualifications.map((qual: any, index: number) => (
+                  <View key={index} style={styles.qualificationItem}>
+                    <Text style={styles.qualificationTitle}>{qual.degree}</Text>
+                    <Text>
+                      {qual.fieldOfStudy} - {qual.yearOfPass}
+                    </Text>
+                    <Text>{qual.instituteName}</Text>
+                    <Text>Grade: {qual.gradePercentage}</Text>
+                  </View>
+                ))
+              ) : (
+                renderNoDataPlaceholder("No qualifications recorded yet", "book")
+              )}
             </View>
 
             <View style={styles.infoSection}>
               <Text style={styles.sectionHeader}>Previous Employments</Text>
-              {profile?.previousEmployments.map((emp: any, index: number) => (
-                <View key={index} style={styles.employmentItem}>
-                  <Text style={styles.employmentTitle}>
-                    {emp?.instituteName}
-                  </Text>
-                  <Text>{emp?.role}</Text>
-                  <Text>{`${formatDate(emp?.joinedDate)} - ${formatDate(
-                    emp?.revealedDate
-                  )}`}</Text>
-                </View>
-              ))}
+              {profile?.previousEmployments && profile.previousEmployments.length > 0 ? (
+                profile.previousEmployments.map((emp: any, index: number) => (
+                  <View key={index} style={styles.employmentItem}>
+                    <Text style={styles.employmentTitle}>
+                      {emp?.instituteName}
+                    </Text>
+                    <Text>{emp?.role}</Text>
+                    <Text>{`${formatDate(emp?.joinedDate)} - ${formatDate(
+                      emp?.revealedDate
+                    )}`}</Text>
+                  </View>
+                ))
+              ) : (
+                renderNoDataPlaceholder("No previous employment history available", "solution")
+              )}
             </View>
           </>
         )}
@@ -750,6 +748,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#001529',
     fontWeight: '500',
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    marginTop: 10,
+  },
+  noDataText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#8c8c8c',
+    textAlign: 'center',
   },
 });
 
