@@ -9,6 +9,7 @@ import {
   ScrollView,
   Modal,
   TouchableWithoutFeedback,
+  Image,
 } from 'react-native';
 import { Text, Button } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -80,29 +81,32 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
     closeFilterModal();
   };
 
-  const renderStudentItem = ({ item }: { item: ClassroomStudent }) => {
+  const renderStudentCard = ({ item }: { item: ClassroomStudent }) => {
     if (!item.studentDetails) return null;
-    
-    const performance = item.studentDetails.performance || 0;
-    const attendance = item.studentDetails.attendance || 0;
     
     return (
       <TouchableOpacity
-        style={styles.studentItem}
+        style={styles.studentCard}
         onPress={() => navigation.navigate('StudentDetails', { studentId: item._id, classId: classId })}
       >
-        <View>
-          <Text style={styles.studentName}>{`${item.studentDetails.firstName} ${item.studentDetails.lastName}`}</Text>
-          <Text style={styles.studentRollNumber}>Roll No: {item.studentDetails.enrollmentNumber}</Text>
-        </View>
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Icon name="star" size={16} color="#000000" />
-            <Text style={styles.statText}>{performance}%</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Icon name="calendar" size={16} color="#000000" />
-            <Text style={styles.statText}>{attendance}%</Text>
+        <View style={styles.cardContent}>
+          {item.studentDetails.profilePicture ? (
+            <Image
+              source={{ uri: item.studentDetails.profilePicture }}
+              style={styles.studentAvatar}
+            />
+          ) : (
+            <View style={[styles.initialsContainer, { backgroundColor: '#001529' }]}>
+              <Text style={styles.initialsText}>
+                {item.studentDetails.firstName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          <View style={styles.studentInfo}>
+            <Text style={styles.studentName}>
+              {`${item.studentDetails.firstName} ${item.studentDetails.lastName}`}
+            </Text>
+            <Text style={styles.rollNumber}>Roll No: {item.studentDetails.enrollmentNumber}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -134,10 +138,9 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ navigation, route
 
       <ScrollView style={styles.contentContainer}>
         <View style={styles.studentListContainer}>
-          <Text style={styles.sectionTitle}>Students</Text>
           <FlatList
             data={filteredStudents}
-            renderItem={renderStudentItem}
+            renderItem={renderStudentCard}
             keyExtractor={(item) => item._id}
             scrollEnabled={false}
           />
@@ -278,37 +281,51 @@ const styles = StyleSheet.create({
     color: '#001529',
     marginBottom: 15,
   },
-  studentItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
+  studentCard: {
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  studentAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  initialsContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  studentInfo: {
+    flex: 1,
+    marginLeft: 15,
   },
   studentName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#001529',
   },
-  studentRollNumber: {
+  rollNumber: {
     fontSize: 14,
-    color: '#4a4a4a',
-  },
-  statsContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  statText: {
-    marginLeft: 5,
-    fontSize: 14,
-    color: '#4a4a4a',
+    color: '#666666',
+    marginTop: 4,
   },
   filterButton: {
     padding: 5,
@@ -376,6 +393,38 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: 'white',
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: '#666666',
+    marginLeft: 4,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    padding: 8,
+    marginLeft: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

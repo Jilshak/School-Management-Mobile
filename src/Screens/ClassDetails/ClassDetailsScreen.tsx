@@ -49,8 +49,6 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({ navigation }) =
       setError(null);
       const classrooms = await fetchAllClassrooms();
 
-      console.log(classrooms.classrooms)
-      
       if (!classrooms.classrooms || !Array.isArray(classrooms.classrooms)) {
         throw new Error('Invalid response from server');
       }

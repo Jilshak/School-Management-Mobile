@@ -50,6 +50,7 @@ export interface StudentDetails {
   performance: number;
   tcNumber: string;
   userId: string;
+  profilePicture?: string; // Add this line
 }
 
 export interface ClassDetails {
@@ -60,15 +61,7 @@ export interface ClassDetails {
 
 export interface ClassroomStudent {
   _id: string;
-  studentDetails: {
-    firstName: string;
-    lastName: string;
-    enrollmentNumber: string;
-    gender: string;
-    performance?: number;
-    attendance?: number;
-  };
-  // ... other fields
+  studentDetails: StudentDetails;
 }
 
 export interface FetchClassroomByIdResponse {
