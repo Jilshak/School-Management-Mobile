@@ -20,6 +20,8 @@ import { Calendar, DateData } from "react-native-calendars";
 import { fetchAllClassrooms } from "../../Services/Classroom/ClassroomService";
 import { createWorkDoneBook } from "../../Services/WorkDoneBook/WorkDoneBookService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createLessonPlan } from "../../Services/LessonPlan/LessonPlan";
+import { useToast } from '../../contexts/ToastContext';
 
 type LessonPlanScreenProps = {
   navigation: StackNavigationProp<any, "WorkDoneBook">;
@@ -32,17 +34,17 @@ interface WorkLogEntry {
   subject: string;
   topics: string[];
   activities: string[];
-  chapters: string[]; // New field
-  objectives: string[]; // New field
-  corePoints: string[]; // New field
-  evaluations: string[]; // New field
-  learningOutcomes: string[]; // New field
+  chapters: string[];
+  objectives: string[];
+  corePoints: string[];
+  evaluations: string[];
+  learningOutcomes: string[];
   showActivities: boolean;
-  showChapters: boolean; // New field
-  showObjectives: boolean; // New field
-  showCorePoints: boolean; // New field
-  showEvaluations: boolean; // New field
-  showLearningOutcomes: boolean; // New field
+  showChapters: boolean;
+  showObjectives: boolean;
+  showCorePoints: boolean;
+  showEvaluations: boolean;
+  showLearningOutcomes: boolean;
 }
 
 interface ClassSubjectPair {
@@ -62,19 +64,17 @@ interface Subject {
   code: string;
 }
 
-// Add these interfaces at the top of the file, after the existing interfaces
-interface WorkDoneBookEntry {
+// Update the WorkDoneBookEntry interface to match the new DTO structure
+interface LessonPlanEntry {
   classroomId: string;
   subjectId: string;
-  date: Date;
   topics: string[];
   activities: string[];
-  chapters: string[]; // New field
-  objectives: string[]; // New field
-  corePoints: string[]; // New field
-  evaluations: string[]; // New field
-  learningOutcomes: string[]; // New field
-  homework: string[]; // Add this line
+  chapters: string[];
+  objectives: string[];
+  corePoints: string[];
+  evaluations: string[];
+  learningOutcomes: string[];
 }
 
 const FallbackCard: React.FC<{ style?: any; children: React.ReactNode }> = ({
@@ -83,6 +83,8 @@ const FallbackCard: React.FC<{ style?: any; children: React.ReactNode }> = ({
 }) => <View style={[styles.card, style]}>{children}</View>;
 
 const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
+  const { showToast } = useToast();
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [markedDates, setMarkedDates] = useState<{ [key: string]: any }>({});
@@ -145,12 +147,10 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
     };
   }, [showCacheClearedMessage]);
 
-  // Add this useEffect to auto-select current week's range when component mounts
   useEffect(() => {
     selectCurrentWeek();
   }, []);
 
-  // Add this function to select the current week
   const selectCurrentWeek = () => {
     const currentDate = new Date();
     const currentDay = {
@@ -356,8 +356,8 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
       if (uniqueNewPairs.length > 0) {
         setClassSubjectPairs([...classSubjectPairs, ...uniqueNewPairs]);
       }
+      setShowClassSubjectPairs(true);
     }
-    setShowClassSubjectPairs(true);
   };
 
   const removeClassSubjectPair = (index: number) => {
@@ -453,14 +453,41 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (areAllWorkLogsValid()) {
       setShowConfirmationModal(true);
     } else {
-      // Show an error message or toast
-      console.log(
-        "Please ensure all work log entries have at least one topic, activity, or chapter."
-      );
+      showToast('Please ensure all work log entries have at least one topic, activity, or chapter.', 'error');
+    }
+  };
+
+  const confirmSubmission = async () => {
+    const lessonPlanData = {
+      startDate: new Date(startDate).toISOString(),
+      endDate: new Date(endDate).toISOString(),
+      entries: workLogs
+        .filter(entry => entry.classroomId && entry.subjectId)
+        .map(entry => ({
+          classroomId: entry.classroomId!,
+          subjectId: entry.subjectId!,
+          topics: entry.topics,
+          activities: entry.activities,
+          chapters: entry.chapters,
+          objectives: entry.objectives,
+          corePoints: entry.corePoints,
+          evaluations: entry.evaluations,
+          learningOutcomes: entry.learningOutcomes
+        }))
+    };
+
+    try {
+      await createLessonPlan([lessonPlanData]);
+      await cacheData();
+      setShowConfirmationModal(false);
+      showToast('Lesson plan submitted successfully', 'success');
+      navigation.goBack();
+    } catch (error) {
+      showToast('Failed to submit lesson plan', 'error');
     }
   };
 
@@ -542,34 +569,6 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
     }
   };
 
-  const confirmSubmission = async () => {
-    const formattedWorkLogs: WorkDoneBookEntry[] = workLogs
-      .filter((entry) => entry.classroomId && entry.subjectId)
-      .map((entry) => ({
-        classroomId: entry.classroomId!,
-        subjectId: entry.subjectId!,
-        date: new Date(formatDateToLocalTimeZone(startDate)),
-        topics: entry.topics,
-        activities: entry.activities,
-        chapters: entry.chapters, // New field
-        objectives: entry.objectives, // New field
-        corePoints: entry.corePoints, // New field
-        evaluations: entry.evaluations, // New field
-        learningOutcomes: entry.learningOutcomes, // New field
-        homework: [], // Add empty homework array or implement homework functionality
-      }));
-
-    try {
-      const response = await createWorkDoneBook(formattedWorkLogs);
-      await cacheData();
-      setIsCachedData(false);
-      setShowConfirmationModal(false);
-      navigation.goBack();
-    } catch (error) {
-      console.error("Error submitting work logs:", error);
-    }
-  };
-
   const renderConfirmationModal = () => (
     <Modal
       animationType="fade"
@@ -578,17 +577,18 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
       onRequestClose={() => setShowConfirmationModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { maxHeight: '90%' }]}>
           <Text style={styles.modalTitle}>Confirm Submission</Text>
           <ScrollView style={styles.confirmationScrollView}>
             <Text style={styles.confirmationDate}>
-              Date: {formatDate(startDate)} - {formatDate(endDate)}
+              Week: {formatDate(startDate)} - {formatDate(endDate)}
             </Text>
             {workLogs.map((entry, index) => (
               <View key={index} style={styles.confirmationEntry}>
                 <Text style={styles.confirmationHeader}>
                   {entry.class} - {entry.subject}
                 </Text>
+              
                 {entry.topics.length > 0 && (
                   <View style={styles.confirmationSection}>
                     <View style={styles.sectionHeaderContainer}>
@@ -597,43 +597,21 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
                     </View>
                     <View style={styles.itemsContainer}>
                       {entry.topics.map((topic, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {topic}
-                        </Text>
+                        <Text key={i} style={styles.confirmationItem}>• {topic}</Text>
                       ))}
                     </View>
                   </View>
                 )}
+
                 {entry.chapters.length > 0 && (
                   <View style={styles.confirmationSection}>
                     <View style={styles.sectionHeaderContainer}>
-                      <Icon name="book" size={16} color="#001529" />
-                      <Text style={styles.confirmationSubHeader}>
-                        Chapters:
-                      </Text>
+                      <Icon name="read" size={16} color="#001529" />
+                      <Text style={styles.confirmationSubHeader}>Chapters:</Text>
                     </View>
                     <View style={styles.itemsContainer}>
                       {entry.chapters.map((chapter, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {chapter}
-                        </Text>
-                      ))}
-                    </View>
-                  </View>
-                )}
-                {entry.activities.length > 0 && (
-                  <View style={styles.confirmationSection}>
-                    <View style={styles.sectionHeaderContainer}>
-                      <Icon name="experiment" size={16} color="#001529" />
-                      <Text style={styles.confirmationSubHeader}>
-                        Activities:
-                      </Text>
-                    </View>
-                    <View style={styles.itemsContainer}>
-                      {entry.activities.map((activity, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {activity}
-                        </Text>
+                        <Text key={i} style={styles.confirmationItem}>• {chapter}</Text>
                       ))}
                     </View>
                   </View>
@@ -642,67 +620,68 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
                 {entry.objectives.length > 0 && (
                   <View style={styles.confirmationSection}>
                     <View style={styles.sectionHeaderContainer}>
-                      <Icon name="book" size={16} color="#001529" />
-                      <Text style={styles.confirmationSubHeader}>
-                        Objectives:
-                      </Text>
+                      <Icon name="aim" size={16} color="#001529" />
+                      <Text style={styles.confirmationSubHeader}>Objectives:</Text>
                     </View>
                     <View style={styles.itemsContainer}>
                       {entry.objectives.map((objective, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {objective}
-                        </Text>
+                        <Text key={i} style={styles.confirmationItem}>• {objective}</Text>
                       ))}
                     </View>
                   </View>
                 )}
+
+                {entry.activities.length > 0 && (
+                  <View style={styles.confirmationSection}>
+                    <View style={styles.sectionHeaderContainer}>
+                      <Icon name="experiment" size={16} color="#001529" />
+                      <Text style={styles.confirmationSubHeader}>Activities:</Text>
+                    </View>
+                    <View style={styles.itemsContainer}>
+                      {entry.activities.map((activity, i) => (
+                        <Text key={i} style={styles.confirmationItem}>• {activity}</Text>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
                 {entry.corePoints.length > 0 && (
                   <View style={styles.confirmationSection}>
                     <View style={styles.sectionHeaderContainer}>
-                      <Icon name="book" size={16} color="#001529" />
-                      <Text style={styles.confirmationSubHeader}>
-                        Core Points:
-                      </Text>
+                      <Icon name="bulb" size={16} color="#001529" />
+                      <Text style={styles.confirmationSubHeader}>Core Points:</Text>
                     </View>
                     <View style={styles.itemsContainer}>
-                      {entry.corePoints.map((corePoint, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {corePoint}
-                        </Text>
+                      {entry.corePoints.map((point, i) => (
+                        <Text key={i} style={styles.confirmationItem}>• {point}</Text>
                       ))}
                     </View>
                   </View>
                 )}
+
                 {entry.evaluations.length > 0 && (
                   <View style={styles.confirmationSection}>
                     <View style={styles.sectionHeaderContainer}>
-                      <Icon name="book" size={16} color="#001529" />
-                      <Text style={styles.confirmationSubHeader}>
-                        Evaluations:
-                      </Text>
+                      <Icon name="check-square" size={16} color="#001529" />
+                      <Text style={styles.confirmationSubHeader}>Evaluations:</Text>
                     </View>
                     <View style={styles.itemsContainer}>
                       {entry.evaluations.map((evaluation, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {evaluation}
-                        </Text>
+                        <Text key={i} style={styles.confirmationItem}>• {evaluation}</Text>
                       ))}
                     </View>
                   </View>
                 )}
+
                 {entry.learningOutcomes.length > 0 && (
                   <View style={styles.confirmationSection}>
                     <View style={styles.sectionHeaderContainer}>
-                      <Icon name="book" size={16} color="#001529" />
-                      <Text style={styles.confirmationSubHeader}>
-                        Learning Outcomes:
-                      </Text>
+                      <Icon name="trophy" size={16} color="#001529" />
+                      <Text style={styles.confirmationSubHeader}>Learning Outcomes:</Text>
                     </View>
                     <View style={styles.itemsContainer}>
-                      {entry.learningOutcomes.map((learningOutcome, i) => (
-                        <Text key={i} style={styles.confirmationItem}>
-                          • {learningOutcome}
-                        </Text>
+                      {entry.learningOutcomes.map((outcome, i) => (
+                        <Text key={i} style={styles.confirmationItem}>• {outcome}</Text>
                       ))}
                     </View>
                   </View>
@@ -787,10 +766,10 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
                     <Icon name="plus" size={20} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
-                <View style={styles.chipsContainer}>
+                <View style={styles.topicsContainer}>
                   {entry.topics.map((topic, topicIndex) => (
-                    <View key={topicIndex} style={styles.chip}>
-                      <Text style={styles.chipText} numberOfLines={1}>
+                    <View key={topicIndex} style={styles.topicChip}>
+                      <Text style={styles.topicChipText}>
                         {topic}
                       </Text>
                       <TouchableOpacity
@@ -1009,22 +988,17 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
               <Icon name="plus" size={20} color="#ffffff" />
             </TouchableOpacity>
           </View>
-          <View style={styles.chipsContainer}>
+          <View style={styles.topicsContainer}>
             {items.map((item, itemIndex) => (
-              <View key={itemIndex} style={styles.chip}>
-                <Text style={styles.chipText} numberOfLines={1}>
+              <View key={itemIndex} style={styles.topicChip}>
+                <Text style={styles.topicChipText}>
                   {item}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const updatedItems = items.filter(
-                      (_, i) => i !== itemIndex
-                    );
-                    updateItems(updatedItems);
-                  }}
-                  style={styles.chipRemoveButton}
-                >
-                  <Icon name="close" size={16} color="#666666" />
+                <TouchableOpacity onPress={() => {
+                  const updatedItems = items.filter((_, i) => i !== itemIndex);
+                  updateItems(updatedItems);
+                }}>
+                  <Icon name="close" size={16} color="#001529" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -1170,7 +1144,7 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
           setMarkedDates({});
         }}
       >
-        <Icon name="close" size={20} color="#ffffff" />
+        <Icon name="close" size={16} color="#ffffff" />
       </TouchableOpacity>
     </View>
   );
@@ -1298,8 +1272,8 @@ const LessonPlanScreen: React.FC<LessonPlanScreenProps> = ({ navigation }) => {
                 />
                 <Text style={styles.addEntryButtonText}>
                   {showWorkLogEntries
-                    ? "Update Work Log Entries"
-                    : "Generate Work Log Entries"}
+                    ? "Update Lesson Entries"
+                    : "Generate Lesson Entries"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1413,9 +1387,9 @@ const styles = StyleSheet.create({
   },
   clearDateButton: {
     backgroundColor: "#001529",
-    borderRadius: 20,
-    width: 30,
-    height: 30,
+    borderRadius: 15, // Reduced from 20
+    width: 24, // Reduced from 30
+    height: 24, // Reduced from 30
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1534,37 +1508,36 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end", // Changed from 'center' to 'flex-end'
-    alignItems: "stretch", // Changed from 'center' to 'stretch'
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
   modalButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
   modalButton: {
     flex: 1,
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
-    alignItems: "center",
+    alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: '#f5f5f5',
     marginRight: 10,
   },
   confirmButton: {
-    backgroundColor: "#001529",
+    backgroundColor: '#001529',
   },
   cancelButtonText: {
-    color: "#001529",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#001529',
   },
   confirmButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
 
   // Card styles
@@ -1629,8 +1602,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionHeaderContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 5,
   },
   sectionInput: {
@@ -1684,7 +1657,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333333",
     marginRight: 6,
-    maxWidth: 150,
   },
   chipRemoveButton: {
     padding: 2,
@@ -1727,39 +1699,41 @@ const styles = StyleSheet.create({
 
   // Confirmation styles
   confirmationScrollView: {
-    maxHeight: "70%",
+    flexGrow: 1,
+    marginBottom: 10,
+    maxHeight: '90%',
+  },
+  confirmationDate: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#001529',
   },
   confirmationEntry: {
     marginBottom: 15,
-    backgroundColor: "#f0f2f5",
+    backgroundColor: '#f0f2f5',
     borderRadius: 10,
     padding: 15,
   },
   confirmationHeader: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 10,
-    color: "#001529",
+    color: '#001529',
   },
   confirmationSection: {
     marginBottom: 10,
   },
   confirmationSubHeader: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#001529",
+    fontWeight: 'bold',
+    color: '#001529',
     marginLeft: 5,
   },
   confirmationItem: {
     fontSize: 14,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     marginBottom: 3,
-  },
-  confirmationDate: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#001529",
   },
 
   // Date range styles
@@ -1893,7 +1867,7 @@ const styles = StyleSheet.create({
 
   // Items container
   itemsContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     borderRadius: 5,
     padding: 10,
   },
@@ -1905,6 +1879,27 @@ const styles = StyleSheet.create({
   
   dropdownTextDisabled: {
     color: '#d9d9d9',
+  },
+
+  topicsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+  },
+  topicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e6f7ff',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  topicChipText: {
+    color: '#001529',
+    marginRight: 5,
+    flexShrink: 1,
   },
 });
 

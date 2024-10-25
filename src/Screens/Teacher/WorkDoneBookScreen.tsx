@@ -7,6 +7,7 @@ import { fetchAllClassrooms } from '../../Services/Classroom/ClassroomService';
 import useProfileStore from '../../store/profileStore';
 import { createWorkDoneBook } from '../../Services/WorkDoneBook/WorkDoneBookService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useToast } from '../../contexts/ToastContext';
 
 type WorkDoneBookScreenProps = {
   navigation: StackNavigationProp<any, 'WorkDoneBook'>;
@@ -51,7 +52,7 @@ interface WorkDoneBookEntry {
   homework: string[];
 }
 
-// Add this component at the top level, after the interfaces
+// Add this component for consistent card styling
 const FallbackCard: React.FC<{ style?: any; children: React.ReactNode }> = ({
   style,
   children,
@@ -86,8 +87,10 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
   const [isCachedData, setIsCachedData] = useState(false);
   const [showClassSubjectPairs, setShowClassSubjectPairs] = useState(false);
   const [showWorkLogEntries, setShowWorkLogEntries] = useState(false);
+  const [showCacheClearedMessage, setShowCacheClearedMessage] = useState(false);
 
   const { profile } = useProfileStore();
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchClassroomsData();
@@ -381,8 +384,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     if (areAllWorkLogsValid()) {
       setShowConfirmationModal(true);
     } else {
-      // Show an error message or toast
-      console.log('Please ensure all work log entries have at least one topic, activity, or homework.');
+      showToast('Please ensure all work log entries have at least one topic, activity, or homework.', 'error');
     }
   };
 
@@ -457,12 +459,13 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
 
     try {
       const response = await createWorkDoneBook(formattedWorkLogs);
-      await cacheData(); // Cache the data after successful submission
-      setIsCachedData(false); // Set this to false after successful submission
+      await cacheData();
+      setIsCachedData(false);
       setShowConfirmationModal(false);
+      showToast('Work done book submitted successfully', 'success');
       navigation.goBack();
     } catch (error) {
-      console.error('Error submitting work logs:', error);
+      showToast('Failed to submit work done book', 'error');
     }
   };
 
@@ -738,68 +741,110 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
     ));
   };
 
+  // Update the renderCachedDataWarning function
   const renderCachedDataWarning = () => {
     if (isCachedData) {
       return (
-        <View style={styles.cachedDataWarning}>
-          <Icon name="info-circle" size={20} color="#faad14" />
-          <Text style={styles.cachedDataWarningText}>
-            Showing cached work done data. Save to update.
-          </Text>
+        <View style={styles.cacheContainer}>
+          <View style={styles.cacheIndicator}>
+            <Icon name="clock-circle" size={16} color="#8c8c8c" />
+            <Text style={styles.cacheText}>Viewing cached data</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.cacheClearButton}
+            onPress={clearCache}
+          >
+            <Text style={styles.cacheClearText}>Clear</Text>
+          </TouchableOpacity>
         </View>
       );
     }
     return null;
   };
 
-  // Add this new function to render the date range with icon
-  const renderDateRangeWithIcon = () => {
-    const selectedDate = new Date(date);
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const monthNames = [
+  // Add renderCacheClearedInfo function
+  const renderCacheClearedInfo = () => {
+    if (showCacheClearedMessage) {
+      return (
+        <View style={styles.cacheContainer}>
+          <View style={styles.cacheIndicator}>
+            <Icon name="check-circle" size={16} color="#52c41a" />
+            <Text style={styles.cacheText}>Cache cleared successfully</Text>
+          </View>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  // Add useEffect for cache cleared message timeout
+  useEffect(() => {
+    let timer: number;
+    if (showCacheClearedMessage) {
+      timer = setTimeout(() => {
+        setShowCacheClearedMessage(false);
+      }, 5000);
+    }
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [showCacheClearedMessage]);
+
+  // Update the clearCache function
+  const clearCache = async () => {
+    try {
+      await AsyncStorage.removeItem('workDoneBookCache');
+      setIsCachedData(false);
+      setShowCacheClearedMessage(true);
+      setWorkLogs([]);
+      setClassSubjectPairs([]);
+      setDate(new Date().toISOString().split('T')[0]);
+      setSelectedClasses([]);
+      setSelectedSubjects([]);
+      setMarkedDates({});
+      showToast('Cache cleared successfully', 'success');
+    } catch (error) {
+      showToast('Failed to clear cache', 'error');
+    }
+  };
+
+  // Add this helper function near your other formatting functions
+  const formatDateRange = (dateString: string) => {
+    if (!dateString) return {
+      startDay: '',
+      startDate: '',
+      month: '',
+      year: ''
+    };
+    
+    const date = new Date(dateString);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
-    return (
-      <View style={styles.dateRangeContainer}>
-        <View style={styles.calendarIconContainer}>
-          <Icon name="calendar" size={24} color="#001529" />
-        </View>
-        <View style={styles.dateRangeContent}>
-          <View style={styles.dateColumn}>
-            <Text style={styles.dayText}>{dayNames[selectedDate.getDay()]}</Text>
-            <Text style={styles.dateText}>{selectedDate.getDate().toString().padStart(2, '0')}</Text>
-          </View>
-          <View style={styles.monthYearColumn}>
-            <Text style={styles.monthText}>{monthNames[selectedDate.getMonth()]}</Text>
-            <Text style={styles.yearText}>{selectedDate.getFullYear()}</Text>
-          </View>
-        </View>
-        <TouchableOpacity 
-          style={styles.clearDateButton}
-          onPress={() => {
-            const currentDate = new Date().toISOString().split('T')[0];
-            setDate(currentDate);
-            setMarkedDates({
-              [currentDate]: { selected: true, selectedColor: '#001529' }
-            });
-          }}
-        >
-          <Icon name="close" size={16} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
-    );
+    return {
+      startDay: days[date.getDay()],
+      startDate: date.getDate().toString().padStart(2, '0'),
+      month: months[date.getMonth()],
+      year: date.getFullYear().toString()
+    };
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{flex: 1}}
+        style={{ flex: 1 }}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
             <Icon name="arrow-left" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Work Done Book</Text>
@@ -807,47 +852,85 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
         </View>
 
         <ScrollView style={styles.contentContainer}>
-          {renderCachedDataWarning()}
-          <View style={styles.formContainer}>
-
-            <FallbackCard style={styles.calendarCard}>
-              <Text style={styles.sectionTitle}>Select Date</Text>
-              <Calendar
-                style={styles.calendar}
-                onDayPress={handleDayPress}
-                markedDates={markedDates}
-                theme={{
-                  backgroundColor: '#ffffff',
-                  calendarBackground: '#ffffff',
-                  textSectionTitleColor: '#b6c1cd',
-                  selectedDayBackgroundColor: '#001529',
-                  selectedDayTextColor: '#ffffff',
-                  todayTextColor: '#001529',
-                  dayTextColor: '#2d4150',
-                  textDisabledColor: '#d9e1e8',
-                  dotColor: '#001529',
-                  selectedDotColor: '#ffffff',
-                  arrowColor: '#001529',
-                  monthTextColor: '#001529',
-                  indicatorColor: '#001529',
-                  textDayFontWeight: '300',
-                  textMonthFontWeight: 'bold',
-                  textDayHeaderFontWeight: '300',
-                  textDayFontSize: 16,
-                  textMonthFontSize: 16,
-                  textDayHeaderFontSize: 16,
+          {/* Calendar Card First */}
+          <FallbackCard style={styles.calendarCard}>
+            <Text style={styles.sectionTitle}>Select Date</Text>
+            <Calendar
+              style={styles.calendar}
+              onDayPress={handleDayPress}
+              markedDates={markedDates}
+              theme={{
+                backgroundColor: '#ffffff',
+                calendarBackground: '#ffffff',
+                textSectionTitleColor: '#b6c1cd',
+                selectedDayBackgroundColor: '#001529',
+                selectedDayTextColor: '#ffffff',
+                todayTextColor: '#001529',
+                dayTextColor: '#2d4150',
+                textDisabledColor: '#d9e1e8',
+                dotColor: '#001529',
+                selectedDotColor: '#ffffff',
+                arrowColor: '#001529',
+                monthTextColor: '#001529',
+                indicatorColor: '#001529',
+                textDayFontWeight: '300',
+                textMonthFontWeight: 'bold',
+                textDayHeaderFontWeight: '300',
+                textDayFontSize: 16,
+                textMonthFontSize: 16,
+                textDayHeaderFontSize: 16
+              }}
+            />
+            {date && (
+            <View style={styles.dateRangeContainer}>
+              <View style={styles.calendarIconContainer}>
+                <Icon name="calendar" size={24} color="#001529" />
+              </View>
+              <View style={styles.dateRangeContent}>
+                <View style={styles.dateColumn}>
+                  <Text style={styles.dayText}>{formatDateRange(date).startDay}</Text>
+                  <Text style={styles.dateText}>{formatDateRange(date).startDate}</Text>
+                </View>
+                <View style={styles.monthYearColumn}>
+                  <Text style={styles.monthText}>{formatDateRange(date).month}</Text>
+                  <Text style={styles.yearText}>{formatDateRange(date).year}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.clearDateButton}
+                onPress={() => {
+                  const currentDate = new Date().toISOString().split('T')[0];
+                  setDate(currentDate);
+                  setMarkedDates({
+                    [currentDate]: { selected: true, selectedColor: '#001529' }
+                  });
                 }}
-              />
-              {date && renderDateRangeWithIcon()}
-            </FallbackCard>
+              >
+                <Icon name="close" size={16} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+            )}
+          </FallbackCard>
+
+          {/* Cache warnings after calendar */}
+          {renderCachedDataWarning()}
+          {renderCacheClearedInfo()}
+          
+          {/* Form Card Last */}
+          <FallbackCard style={styles.lastCard}>
+            <Text style={styles.sectionTitle}>Work Done Book</Text>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Classes</Text>
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => openModal('class')}
+                onPress={() => openModal("class")}
               >
-                <Text>{selectedClasses.length > 0 ? selectedClasses.join(', ') : 'Select classes'}</Text>
+                <Text>
+                  {selectedClasses.length > 0
+                    ? selectedClasses.join(", ")
+                    : "Select classes"}
+                </Text>
                 <Icon name="down" size={16} color="#001529" />
               </TouchableOpacity>
             </View>
@@ -856,9 +939,13 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
               <Text style={styles.label}>Subjects</Text>
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => openModal('subject')}
+                onPress={() => openModal("subject")}
               >
-                <Text>{selectedSubjects.length > 0 ? selectedSubjects.join(', ') : 'Select subjects'}</Text>
+                <Text>
+                  {selectedSubjects.length > 0
+                    ? selectedSubjects.join(", ")
+                    : "Select subjects"}
+                </Text>
                 <Icon name="down" size={16} color="#001529" />
               </TouchableOpacity>
             </View>
@@ -888,7 +975,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
             )}
 
             {showWorkLogEntries && renderWorkLogEntries()}
-          </View>
+          </FallbackCard>
         </ScrollView>
 
         {renderSelectionModal()}
@@ -898,6 +985,7 @@ const WorkDoneBookScreen: React.FC<WorkDoneBookScreenProps> = ({ navigation }) =
   );
 };
 
+// Add/modify these styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -927,7 +1015,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   formContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 20,
     marginBottom: 20,
@@ -994,14 +1082,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#001529',
   },
-  clearDateButton: {
-    backgroundColor: '#001529',
-    borderRadius: 15, // Reduced from 20
-    width: 24, // Reduced from 30
-    height: 24, // Reduced from 30
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   selectedItem: {
     fontWeight: 'bold',
     color: '#001529',
@@ -1299,26 +1380,44 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  cachedDataWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fffbe6",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
+  cacheContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fafafa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
-  cachedDataWarningText: {
-    flex: 1,
-    marginLeft: 10,
-    color: "#faad14",
+  cacheIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cacheText: {
     fontSize: 14,
+    color: '#8c8c8c',
+  },
+  cacheClearButton: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#d9d9d9',
+  },
+  cacheClearText: {
+    fontSize: 13,
+    color: '#595959',
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1326,6 +1425,9 @@ const styles = StyleSheet.create({
   },
   calendarCard: {
     marginBottom: 20,
+  },
+  lastCard: {
+    marginBottom: 40, // Add extra margin at the bottom
   },
   dateRangeContainer: {
     flexDirection: 'row',
@@ -1335,44 +1437,62 @@ const styles = StyleSheet.create({
     padding: 15,
     marginTop: 10,
   },
+  
   calendarIconContainer: {
     marginRight: 15,
     borderRightWidth: 1,
     borderRightColor: '#d9d9d9',
     paddingRight: 15,
   },
+  
   dateRangeContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   dateColumn: {
     alignItems: 'center',
     marginHorizontal: 5,
   },
+  
   monthYearColumn: {
     flex: 1,
     marginLeft: 15,
   },
+  
   dayText: {
     fontSize: 14,
     color: "#4a4a4a",
     fontWeight: "600",
   },
+  
   dateText: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#001529",
   },
+  
   monthText: {
     fontSize: 18,
     fontWeight: "600",
     color: "#001529",
   },
+  
   yearText: {
     fontSize: 14,
     color: "#4a4a4a",
     fontWeight: "500",
+  },
+
+  // Update clearDateButton style
+  clearDateButton: {
+    backgroundColor: '#001529',
+    borderRadius: 15,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

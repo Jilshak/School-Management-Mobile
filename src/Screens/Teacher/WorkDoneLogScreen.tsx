@@ -14,11 +14,11 @@ import {
 } from "react-native";
 import { Text } from "@ant-design/react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { Calendar, DateData } from "react-native-calendars";
 import { fetchWorkDoneLogs } from "../../Services/WorkDoneBook/WorkDoneBookService";
 import useProfileStore from "../../store/profileStore";
-import { Calendar } from "react-native-calendars";
-import Icon from "react-native-vector-icons/AntDesign"; // Add this
-import { ViewStyle, TextStyle, ImageStyle } from "react-native";
+import Icon from "react-native-vector-icons/AntDesign";
+import { fetchLessonPlan } from "../../Services/LessonPlan/LessonPlan";
 
 type WorkDoneLogScreenProps = {
   navigation: StackNavigationProp<any, "WorkDoneLog">;
@@ -44,66 +44,83 @@ interface WorkDoneLog {
   entries: WorkDoneEntry[];
 }
 
-// Add this function after the interfaces and before the component
-const generateDummyData = (): WorkDoneLog[] => {
-  const dummyLogs: WorkDoneLog[] = [];
+// Add this interface at the top with other interfaces
+interface LessonPlanEntry {
+  classroomId: string;
+  classroomName: string;
+  subjectId: string;
+  subjectName: string;
+  topics: string[];
+  activities: string[];
+  chapters: string[];
+  objectives: string[];
+  corePoints: string[];
+  evaluations: string[];
+  learningOutcomes: string[];
+}
 
-  // Generate logs for the last 5 days
-  for (let i = 0; i < 5; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
+interface LessonPlan {
+  _id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName: string;
+  entries: LessonPlanEntry[];
+}
 
-    const log: WorkDoneLog = {
-      _id: `log_${i}`,
-      date: date.toISOString(),
-      teacherId: "teacher_123",
-      schoolId: "school_123",
-      teacherName: "Teacher Name",
-      entries: [
-        {
-          _id: `entry_${i}_1`,
-          classroomId: "class_1",
-          classroomName: "Class 10-A",
-          subjectId: "subject_1",
-          subjectName: "Mathematics",
-          topics: ["Quadratic Equations", "Algebraic Expressions"],
-          activities: ["Group Problem Solving", "Quiz"],
-          homework: ["Solve Exercise 5.1", "Practice Questions"],
-        },
-        {
-          _id: `entry_${i}_2`,
-          classroomId: "class_2",
-          classroomName: "Class 10-B",
-          subjectId: "subject_2",
-          subjectName: "Physics",
-          topics: ["Newton's Laws", "Force and Motion"],
-          activities: ["Lab Experiment: Measuring Force"],
-          homework: ["Complete Lab Report", "Read Chapter 3"],
-        },
-        {
-          _id: `entry_${i}_3`,
-          classroomId: "class_3",
-          classroomName: "Class 9-A",
-          subjectId: "subject_3",
-          subjectName: "Chemistry",
-          topics: ["Periodic Table"],
-          activities: ["Element Classification Activity"],
-          homework: ["Memorize First 20 Elements"],
-        },
-      ],
+// Add this near the top of the file, after the imports
+const FallbackCard: React.FC<{ style?: any; children: React.ReactNode }> = ({
+  style,
+  children,
+}) => (
+  <View style={[styles.card, style]}>
+    {children}
+  </View>
+);
+
+// Add this helper function near the top of the file
+const formatDateRange = (start: string, end: string) => {
+  if (!start || !end)
+    return {
+      startDay: "",
+      startDate: "",
+      endDay: "",
+      endDate: "",
+      month: "",
+      year: "",
     };
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
-    dummyLogs.push(log);
-  }
-
-  return dummyLogs;
+  return {
+    startDay: days[startDate.getDay()],
+    startDate: startDate.getDate().toString().padStart(2, "0"),
+    endDay: days[endDate.getDay()],
+    endDate: endDate.getDate().toString().padStart(2, "0"),
+    month: months[startDate.getMonth()],
+    year: startDate.getFullYear().toString(),
+  };
 };
 
 const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
   navigation,
 }) => {
   const [workDoneLogs, setWorkDoneLogs] = useState<WorkDoneLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed from true to false
   const [refreshing, setRefreshing] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState<WorkDoneLog | null>(null);
@@ -116,6 +133,13 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
   });
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("logs"); // Add this line
+  const [markedDates, setMarkedDates] = useState<{ [key: string]: any }>({});
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [weeklyLogs, setWeeklyLogs] = useState<WorkDoneLog[]>([]);
+  const [currentWeekDates, setCurrentWeekDates] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [lessonPlans, setLessonPlans] = useState<LessonPlanEntry[]>([]); // Add this line
+  const [expandedLessonPlanId, setExpandedLessonPlanId] = useState<string | null>(null);
 
   const { profile } = useProfileStore();
 
@@ -141,11 +165,71 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
       console.error("Error fetching work done logs:", error);
       setWorkDoneLogs([]);
     } finally {
-      if (isInitialLoad) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
+
+  const fetchWeeklyLessonPlans = useCallback(async (startDate: string, endDate: string) => {
+    try {
+      const response = await fetchLessonPlan(startDate, endDate);
+      if (Array.isArray(response) && response.length > 0) {
+        const lessonPlan = response[0];
+        setLessonPlans(lessonPlan.entries);
+      } else {
+        setLessonPlans([]);
+      }
+    } catch (error) {
+      console.error("Error fetching weekly lesson plans:", error);
+      setLessonPlans([]);
+    }
+  }, []);
+
+  const handleWeekSelection = useCallback((day: DateData) => {
+    const selectedDate = new Date(day.dateString);
+    const start = new Date(selectedDate);
+    // Get the first day of the week (Sunday)
+    start.setDate(selectedDate.getDate() - selectedDate.getDay());
+    const end = new Date(start);
+    // Get the last day of the week (Saturday)
+    end.setDate(start.getDate() + 6);
+
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+
+    setStartDate(startStr);
+    setEndDate(endStr);
+    setCurrentWeekDates({ start: startStr, end: endStr });
+
+    // Create marked dates object for the selected week
+    const marked: { [key: string]: any } = {};
+    const current = new Date(start);
+
+    while (current <= end) {
+      const dateStr = current.toISOString().split('T')[0];
+      if (current.getTime() === start.getTime()) {
+        marked[dateStr] = {
+          startingDay: true,
+          color: '#001529',
+          textColor: 'white',
+        };
+      } else if (current.getTime() === end.getTime()) {
+        marked[dateStr] = {
+          endingDay: true,
+          color: '#001529',
+          textColor: 'white',
+        };
+      } else {
+        marked[dateStr] = {
+          color: '#001529',
+          textColor: 'white',
+        };
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    setMarkedDates(marked);
+    fetchWeeklyLessonPlans(startStr, endStr);
+  }, [fetchWeeklyLessonPlans]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -153,9 +237,36 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
     setRefreshing(false);
   }, [selectedDate, fetchLogs]);
 
+  // Add this function before the useEffect
+  const selectCurrentWeek = useCallback(() => {
+    const currentDate = new Date();
+    const currentDay = {
+      dateString: currentDate.toISOString().split('T')[0],
+      day: currentDate.getDate(),
+      month: currentDate.getMonth() + 1,
+      year: currentDate.getFullYear(),
+      timestamp: currentDate.getTime()
+    };
+    handleWeekSelection(currentDay);
+  }, [handleWeekSelection]);
+
+  
+
+  // Update the useEffect
   useEffect(() => {
-    fetchLogs(undefined, true); // Pass true for isInitialLoad
-  }, [fetchLogs]);
+    if (activeTab === "logs") {
+      fetchLogs(undefined, true); // Pass true for initial load
+    } else if (activeTab === "anotherTab" && !startDate && !endDate) {
+      selectCurrentWeek();
+    }
+  }, [activeTab, fetchLogs, selectCurrentWeek]);
+
+  // Add a separate useEffect for fetching lesson plans
+  useEffect(() => {
+    if (activeTab === "anotherTab" && startDate && endDate) {
+      fetchWeeklyLessonPlans(startDate, endDate);
+    }
+  }, [activeTab, startDate, endDate, fetchWeeklyLessonPlans]);
 
   useEffect(() => {
     if (workDoneLogs.length > 0 && selectedDate) {
@@ -332,7 +443,7 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Icon name="arrowleft" size={24} color="#ffffff" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Work Done Logs</Text>
+      <Text style={styles.headerTitle}>Work Log</Text>
       <TouchableOpacity onPress={() => navigation.navigate("WorkDoneBook")}>
         <Icon name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
@@ -591,7 +702,7 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
             activeTab === "logs" && styles.activeTabText,
           ]}
         >
-          Logs
+          Work Done Log
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -609,17 +720,260 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
             activeTab === "anotherTab" && styles.activeTabText,
           ]}
         >
-          Another Tab
+          Lesson Plan Log
         </Text>
       </TouchableOpacity>
     </View>
   );
 
+  // First, define renderSection before renderLessonPlanCard
+  const renderSection = useCallback((title: string, items: string[]) => {
+    if (items.length === 0) return null;
+    return (
+      <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Icon name="book" size={20} color="#001529" />
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        {items.map((item, index) => (
+          <View key={`${title}-${index}`} style={styles.itemContainer}>
+            <Text style={styles.bulletPoint}>✓</Text>
+            <Text style={styles.itemText}>{item}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  }, []);
+
+  const renderLessonPlanCard = useCallback((entry: LessonPlanEntry, index: number) => {
+    const isExpanded = expandedLessonPlanId === `${entry.classroomId}-${entry.subjectId}-${index}`;
+    
+    return (
+      <View key={`${entry.classroomId}-${entry.subjectId}-${index}`} style={[styles.logCard, isExpanded && styles.expandedLogCard]}>
+        <TouchableOpacity
+          style={styles.logHeader}
+          onPress={() => setExpandedLessonPlanId(
+            isExpanded ? null : `${entry.classroomId}-${entry.subjectId}-${index}`
+          )}
+        >
+          <View style={styles.logHeaderContent}>
+            <View style={styles.dateContainer}>
+              <View style={styles.dateBox}>
+                <Text style={styles.dayName}>{entry.classroomName}</Text>
+                <Text style={styles.dayNumber}>{entry.subjectName}</Text>
+              </View>
+              <View style={styles.verticalDivider} />
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Icon name="book" size={16} color="#1890ff" />
+                  <Text style={styles.statText}>
+                    {entry.topics.length} Topics
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Icon name="solution1" size={16} color="#52c41a" />
+                  <Text style={styles.statText}>
+                    {entry.activities.length} Activities
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Icon name="profile" size={16} color="#faad14" />
+                  <Text style={styles.statText}>
+                    {entry.chapters.length} Chapters
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Icon name="book" size={16} color="#f5222d" />
+                  <Text style={styles.statText}>
+                    {entry.objectives.length} Objectives
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  // Add share functionality here
+                  Share.share({
+                    message: `Lesson Plan for ${entry.classroomName} - ${entry.subjectName}\n\n` +
+                      `Topics: ${entry.topics.join(', ')}\n` +
+                      `Activities: ${entry.activities.join(', ')}\n` +
+                      `Chapters: ${entry.chapters.join(', ')}\n` +
+                      `Objectives: ${entry.objectives.join(', ')}\n` +
+                      `Core Points: ${entry.corePoints.join(', ')}\n` +
+                      `Evaluations: ${entry.evaluations.join(', ')}\n` +
+                      `Learning Outcomes: ${entry.learningOutcomes.join(', ')}`
+                  });
+                }}
+              >
+                <Icon name="sharealt" size={20} color="#001529" />
+              </TouchableOpacity>
+              <Icon
+                name={isExpanded ? "up" : "down"}
+                size={20}
+                color="#001529"
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            {renderSection("Topics", entry.topics)}
+            {renderSection("Activities", entry.activities)}
+            {renderSection("Chapters", entry.chapters)}
+            {renderSection("Objectives", entry.objectives)}
+            {renderSection("Core Points", entry.corePoints)}
+            {renderSection("Evaluations", entry.evaluations)}
+            {renderSection("Learning Outcomes", entry.learningOutcomes)}
+          </View>
+        )}
+      </View>
+    );
+  }, [expandedLessonPlanId, renderSection]);
+
+  // Update the renderDateRangeWithIcon function to use the correct icon name
+  const renderDateRangeWithIcon = useCallback(() => (
+    <View style={styles.dateRangeContainer}>
+      <View style={styles.calendarIconContainer}>
+        <Icon name="calendar" size={24} color="#001529" />
+      </View>
+      <View style={styles.dateRangeContent}>
+        <View style={styles.dateColumn}>
+          <Text style={styles.dayText}>
+            {formatDateRange(startDate, endDate).startDay}
+          </Text>
+          <Text style={styles.dateText}>
+            {formatDateRange(startDate, endDate).startDate}
+          </Text>
+        </View>
+        <View style={styles.dateSeperator}>
+          <Icon name="arrowright" size={20} color="#001529" />
+        </View>
+        <View style={styles.dateColumn}>
+          <Text style={styles.dayText}>
+            {formatDateRange(startDate, endDate).endDay}
+          </Text>
+          <Text style={styles.dateText}>
+            {formatDateRange(startDate, endDate).endDate}
+          </Text>
+        </View>
+        <View style={styles.monthYearColumn}>
+          <Text style={styles.monthText}>
+            {formatDateRange(startDate, endDate).month}
+          </Text>
+          <Text style={styles.yearText}>
+            {formatDateRange(startDate, endDate).year}
+          </Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={styles.clearDateButton}
+        onPress={() => {
+          setStartDate("");
+          setEndDate("");
+          setMarkedDates({});
+        }}
+      >
+        <Icon name="close" size={16} color="#ffffff" />
+      </TouchableOpacity>
+    </View>
+  ), [startDate, endDate]);
+
+  const renderWeeklyLogs = useCallback(() => {
+    return (
+      <>
+        <View style={styles.calendarContainer}>
+          <Calendar
+            current={currentWeekDates.start || undefined}
+            initialDate={currentWeekDates.start || undefined}
+            onDayPress={handleWeekSelection}
+            markedDates={markedDates}
+            markingType="period"
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#001529',
+              selectedDayBackgroundColor: '#001529',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#001529',
+              dayTextColor: '#2d4150',
+              textDisabledColor: '#d9e1e8',
+              dotColor: '#001529',
+              selectedDotColor: '#ffffff',
+              arrowColor: '#001529',
+              monthTextColor: '#001529',
+              textDayFontWeight: '300',
+              textMonthFontWeight: 'bold',
+              textDayHeaderFontWeight: '300',
+              textDayFontSize: 16,
+              textMonthFontSize: 16,
+              textDayHeaderFontSize: 16,
+              'stylesheet.calendar.period': {
+                base: {
+                  overflow: 'hidden',
+                  height: 34,
+                  alignItems: 'center',
+                  width: 38,
+                },
+                fillers: {
+                  backgroundColor: '#001529',
+                  height: 34,
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                },
+                text: {
+                  color: '#ffffff',
+                  marginTop: 7,
+                  fontSize: 16,
+                }
+              }
+            }}
+            enableSwipeMonths={true}
+            disableAllTouchEventsForDisabledDays={false}
+          />
+          {startDate && endDate && renderDateRangeWithIcon()}
+        </View>
+
+        <View style={styles.logsContainer}>
+          {lessonPlans.length > 0 ? (
+            lessonPlans.map((entry, index) => renderLessonPlanCard(entry, index))
+          ) : (
+            <View style={styles.emptyLogCard}>
+              <Icon name="profile" size={40} color="#bfbfbf" />
+              <Text style={styles.emptyLogTitle}>No Lesson Plan</Text>
+              <Text style={styles.emptyLogText}>
+                No lesson plan has been created for this week
+              </Text>
+              <TouchableOpacity
+                style={styles.addLogButton}
+                onPress={() => navigation.navigate("LessonPlan")}
+              >
+                <Icon name="plus" size={20} color="#ffffff" />
+                <Text style={styles.addLogButtonText}>Add Lesson Plan</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </>
+    );
+  }, [lessonPlans, currentWeekDates, markedDates, navigation, handleWeekSelection, renderLessonPlanCard, startDate, endDate]);
+
+  // Add this function before the useEffect hook
+  
+
+  // Update the loading condition in the render
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#001529" />
-      </View>
+      <SafeAreaView style={styles.container}>
+        {renderHeader()}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#001529" />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -641,9 +995,7 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
             <View style={styles.logsContainer}>{memoizedLogCard}</View>
           </>
         ) : (
-          <View style={styles.anotherTabContainer}>
-            <Text style={styles.anotherTabText}>Content for Another Tab</Text>
-          </View>
+          renderWeeklyLogs()
         )}
       </ScrollView>
 
@@ -651,77 +1003,6 @@ const WorkDoneLogScreen: React.FC<WorkDoneLogScreenProps> = ({
     </SafeAreaView>
   );
 };
-
-const additionalStyles = StyleSheet.create({
-  entryContainer: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
-  dateSelectorContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 12,
-  },
-  dateCard: {
-    backgroundColor: "#e6f7ff",
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#91d5ff",
-  },
-  dateCardText: {
-    color: "#001529",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-});
-
-const newStyles = StyleSheet.create({
-  emptyLogCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center" as const,
-    marginTop: 20,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  emptyLogTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#001529",
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  emptyLogText: {
-    fontSize: 14,
-    color: "#8c8c8c",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  addLogButton: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    backgroundColor: "#001529",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  addLogButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "500",
-    marginLeft: 8,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -1011,12 +1292,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  calendarContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
+
   summaryContainer: {
     backgroundColor: "#ffffff",
     borderRadius: 10,
@@ -1084,8 +1360,202 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#001529",
   },
-  ...additionalStyles,
-  ...newStyles,
+  dateRangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 10,
+  },
+  calendarIconContainer: {
+    marginRight: 15,
+    borderRightWidth: 1,
+    borderRightColor: '#d9d9d9',
+    paddingRight: 15,
+  },
+  dateRangeContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateColumn: {
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  dateSeperator: {
+    marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthYearColumn: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  dayText: {
+    fontSize: 14,
+    color: "#4a4a4a",
+    fontWeight: "600",
+  },
+  dateText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#001529",
+  },
+  monthText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#001529",
+  },
+  yearText: {
+    fontSize: 14,
+    color: "#4a4a4a",
+    fontWeight: "500",
+  },
+  clearDateButton: {
+    backgroundColor: "#001529",
+    borderRadius: 15,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  lessonPlanTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#001529',
+  },
+  lessonPlanDate: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 4,
+  },
+  entryContainer: {
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+  },
+  dateSelectorContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 12,
+  },
+  dateCard: {
+    backgroundColor: "#e6f7ff",
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#91d5ff",
+  },
+  dateCardText: {
+    color: "#001529",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  weeklyLogsContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  weeklyLogsContent: {
+    marginTop: 20,
+  },
+  calendarCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  calendar: {
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  formContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 20,
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyLogCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 50, // Add this line
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  emptyLogTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#001529",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  emptyLogText: {
+    fontSize: 14,
+    color: "#8c8c8c",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  addLogButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: "#001529",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  addLogButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  calendarContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  lessonPlanCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    marginBottom: 15,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
 });
 
 export default React.memo(WorkDoneLogScreen);

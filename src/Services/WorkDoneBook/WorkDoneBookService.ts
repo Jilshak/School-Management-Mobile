@@ -1,13 +1,5 @@
 import api from '../axios';
-
-interface WorkDoneBookEntry {
-  classroomId: string;
-  subjectId: string;
-  date: Date;
-  topics: string[];
-  activities: string[];
-  homework: string[];
-}
+import { WorkDoneBookEntry } from './IWorkDoneBookService';
 
 export const createWorkDoneBook = async (workDoneBooks: WorkDoneBookEntry[]) => {
   try {
@@ -19,9 +11,13 @@ export const createWorkDoneBook = async (workDoneBooks: WorkDoneBookEntry[]) => 
 };
 
 
-export const fetchWorkDoneLogs = async (date: string) => {
+export const fetchWorkDoneLogs = async (startDate: string, endDate?: string) => {
   try {
-    const response = await api.get(`/workdonebook/daily?date=${date}`);
+    let url = `/workdonebook/daily?date=${startDate}`;
+    if (endDate) {
+      url = `/workdonebook/weekly?startDate=${startDate}&endDate=${endDate}`;
+    }
+    const response = await api.get(url);
     return response.data;
   } catch (error) {
     return [];
