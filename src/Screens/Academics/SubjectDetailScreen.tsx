@@ -4,250 +4,253 @@ import { Text, Icon, Card } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 
+interface Chapter {
+    chapterId: string;
+    chapterName: string;
+    chapterDescription: string;
+    filePath: string;
+    _id: string;
+    completed?: boolean;
+    estimatedHours?: number;
+    resources?: Resource[];  // Changed from topics to resources
+}
+
 type SubjectDetailScreenProps = {
   navigation: StackNavigationProp<any, 'SubjectDetail'>;
-  route: RouteProp<{ SubjectDetail: { subject: string } }, 'SubjectDetail'>;
-};
-
-type SyllabusItem = {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  estimatedHours: number;
+  route: RouteProp<{
+    SubjectDetail: {
+      subject: string;
+      subjectId: string;
+      chapters: Chapter[];
+    }
+  }, 'SubjectDetail'>;
 };
 
 type Resource = {
-  id: string;
-  title: string;
-  type: 'pdf' | 'ppt' | 'video';
-  url: string;
-  fileSize: string;
-  uploadDate: string;
+    resourceId: string;
+    resourceName: string;
+    resourceType: string;  // e.g., 'pdf', 'video', 'link'
+    resourceUrl: string;
 };
 
-type Assignment = {
-  id: string;
-  title: string;
-  dueDate: string;
-  status: 'Pending' | 'Submitted' | 'Graded';
-  grade?: string;
-  totalPoints: number;
-  submissionMethod: string;
+type SyllabusItem = {
+    id: string;
+    title: string;
+    chapterDescription: string;
+    completed: boolean;
+    estimatedHours: number;
+    resources: Resource[];  // Changed from topics to resources
 };
 
 const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, route }) => {
-  const { subject } = route.params;
-  const [activeTab, setActiveTab] = useState<'syllabus' | 'resources' | 'assignments'>('syllabus');
+  const { subject, chapters } = route.params;
+  const [activeTab, setActiveTab] = useState<'chapters' | 'resources'>('chapters'); // Changed from 'syllabus'
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('All');
-  const [isLoading, setIsLoading] = useState(true);
-  const [syllabus, setSyllabus] = useState<SyllabusItem[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [highlightedResourceId, setHighlightedResourceId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Simulating API call
-    setTimeout(() => {
-      setSyllabus([
-        { id: '1', title: 'Unit 1: Introduction', description: 'Overview of the subject', completed: true, estimatedHours: 10 },
-        { id: '2', title: 'Unit 2: Core Concepts', description: 'Fundamental principles and theories', completed: true, estimatedHours: 15 },
-        { id: '3', title: 'Unit 3: Advanced Topics', description: 'In-depth exploration of complex ideas', completed: false, estimatedHours: 20 },
-        { id: '4', title: 'Unit 4: Practical Applications', description: 'Real-world use cases and examples', completed: false, estimatedHours: 25 },
-        { id: '5', title: 'Unit 5: Review and Assessment', description: 'Recap and evaluation of learning', completed: false, estimatedHours: 12 },
-      ]);
-      setResources([
-        { id: '1', title: 'Textbook PDF', type: 'pdf', url: 'https://example.com/textbook.pdf', fileSize: '15.2 MB', uploadDate: '2023-05-01' },
-        { id: '2', title: 'Lecture Slides', type: 'ppt', url: 'https://example.com/slides.ppt', fileSize: '5.7 MB', uploadDate: '2023-05-15' },
-        { id: '3', title: 'Video Tutorial', type: 'video', url: 'https://example.com/tutorial.mp4', fileSize: '102.8 MB', uploadDate: '2023-05-20' },
-      ]);
-      setAssignments([
-        { id: '1', title: 'Assignment 1', dueDate: '2023-06-15', status: 'Submitted', grade: 'A', totalPoints: 100, submissionMethod: 'Online' },
-        { id: '2', title: 'Assignment 2', dueDate: '2023-06-30', status: 'Pending', totalPoints: 50, submissionMethod: 'In-class' },
-        { id: '3', title: 'Assignment 3', dueDate: '2023-07-15', status: 'Graded', grade: 'B+', totalPoints: 75, submissionMethod: 'Online' },
-      ]);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
 
-  const closeFilterModal = () => {
-    setShowFilterModal(false);
+  // Transform chapters data to match your syllabus structure
+  const formattedSyllabus: SyllabusItem[] = chapters.map((chapter) => ({
+    id: chapter._id,  // Use _id instead of chapterId
+    title: chapter.chapterName,
+    chapterDescription: chapter.chapterDescription || 'No description available',
+    completed: chapter.completed || false,
+    estimatedHours: chapter.estimatedHours || 2,
+    resources: [
+        {
+            resourceId: chapter._id,
+            resourceName: `${chapter.chapterName} PDF`,
+            resourceType: 'pdf',
+            resourceUrl: chapter.filePath
+        },
+        ...(chapter.resources || [])
+    ]
+  }));
+
+  const renderSyllabusItem = ({ item }: { item: SyllabusItem }) => {
+    if (!item) return null;
+
+    const isExpanded = expandedId === item.id;
+
+    const toggleExpand = () => {
+      setExpandedId(isExpanded ? null : item.id);
+    };
+
+    const handleResourceClick = (resource: Resource) => {
+      setActiveTab('resources');
+      setHighlightedResourceId(resource.resourceId);
+      
+      // Remove highlight after 2 seconds
+      setTimeout(() => {
+        setHighlightedResourceId(null);
+      }, 2000);
+    };
+
+    return (
+      <TouchableOpacity 
+        style={styles.syllabusItem} 
+        onPress={toggleExpand}
+        activeOpacity={0.7}
+      >
+        <View style={styles.syllabusContent}>
+          <View style={[
+            styles.syllabusHeader,
+            isExpanded && styles.syllabusHeaderExpanded
+          ]}>
+            <View style={styles.titleContainer}>
+              <View style={styles.chapterIconContainer}>
+                <Icon name="read" size={24} color="#001529" />
+              </View>
+              <View style={styles.titleTextContainer}>
+                <Text style={styles.chapterTitle}>{item.title}</Text>
+                {!isExpanded && (
+                  <Text style={styles.resourcesCount}>
+                    {item.resources.length} {item.resources.length === 1 ? 'Resource' : 'Resources'}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Icon 
+              name={isExpanded ? "up" : "down"} 
+              size={20} 
+              color="#001529" 
+            />
+          </View>
+
+          {isExpanded && (
+            <>
+              <View style={styles.descriptionContainer}>
+                <View style={styles.descriptionHeader}>
+                  <Icon 
+                    name="info-circle" 
+                    size={16} 
+                    color="#001529" 
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.descriptionTitle}>Description</Text>
+                </View>
+                <Text style={styles.chapterDescription}>{item.chapterDescription}</Text>
+              </View>
+
+              {item.resources && item.resources.length > 0 && (
+                <View style={styles.resourcesContainer}>
+                  <View style={styles.resourcesHeader}>
+                    <View style={styles.resourcesIconContainer}>
+                      <Icon name="folder" size={16} color="#001529" />
+                    </View>
+                    <Text style={styles.resourcesHeaderText}>
+                      Resources ({item.resources.length})
+                    </Text>
+                  </View>
+                  <View style={styles.resourcesList}>
+                    {item.resources.map((resource) => (
+                      <TouchableOpacity 
+                        key={resource.resourceId} 
+                        style={styles.resourceItem}
+                        onPress={() => handleResourceClick(resource)}
+                      >
+                        <Icon 
+                          name="file-pdf"
+                          size={20} 
+                          color="#001529" 
+                          style={styles.resourceIcon} 
+                        />
+                        <Text style={styles.resourceText}>
+                          {resource.resourceName}
+                        </Text>
+                        <Icon name="right" size={16} color="#001529" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
   };
-
-  const renderSyllabusItem = ({ item }: { item: SyllabusItem }) => (
-    <Card style={styles.syllabusCard}>
-      <View style={styles.syllabusItemHeader}>
-        <Text style={styles.syllabusItemTitle}>{item.title}</Text>
-        <Icon name={item.completed ? 'check-circle' : 'clock-circle'} size={20} color={item.completed ? '#52c41a' : '#faad14'} />
-      </View>
-      <Text style={styles.syllabusItemDescription}>{item.description}</Text>
-      <Text style={styles.syllabusItemHours}>Estimated study time: {item.estimatedHours} hours</Text>
-    </Card>
-  );
-
-  const renderResourceItem = ({ item }: { item: Resource }) => (
-    <TouchableOpacity style={styles.resourceItem} onPress={() => console.log(`Opening ${item.url}`)}>
-      <Icon name={item.type === 'pdf' ? 'file-pdf' : item.type === 'ppt' ? 'file-ppt' : 'video-camera'} size={24} color="#1890ff" />
-      <View style={styles.resourceInfo}>
-        <Text style={styles.resourceTitle}>{item.title}</Text>
-        <Text style={styles.resourceDetails}>{`${item.fileSize} • Uploaded: ${item.uploadDate}`}</Text>
-      </View>
-      <Icon name="download" size={24} color="#1890ff" />
-    </TouchableOpacity>
-  );
-
-  const renderAssignmentItem = ({ item }: { item: Assignment }) => (
-    <Card style={styles.assignmentCard}>
-      <Text style={styles.assignmentTitle}>{item.title}</Text>
-      <Text style={styles.assignmentDueDate}>Due: {item.dueDate}</Text>
-      <Text style=
-      {styles.assignmentDetails}>{`Total Points: ${item.totalPoints} • Submit via: ${item.submissionMethod}`}</Text>
-      <View style={styles.assignmentFooter}>
-        <Text style={[styles.assignmentStatus, { color: item.status === 'Submitted' ? '#52c41a' : item.status === 'Graded' ? '#1890ff' : '#faad14' }]}>{item.status}</Text>
-        {item.grade && <Text style={styles.assignmentGrade}>Grade: {item.grade}</Text>}
-      </View>
-    </Card>
-  );
 
   const filteredContent = () => {
-    let content = [];
-    switch (activeTab) {
-      case 'syllabus':
-        content = syllabus;
-        if (selectedFilter === 'Completed') content = content.filter(item => item.completed);
-        if (selectedFilter === 'Incomplete') content = content.filter(item => !item.completed);
-        break;
-      case 'resources':
-        content = resources;
-        if (selectedFilter !== 'All') content = content.filter(item => item.type === selectedFilter.toLowerCase());
-        break;
-      case 'assignments':
-        content = assignments;
-        if (selectedFilter !== 'All') content = content.filter(item => item.status === selectedFilter);
-        break;
-    }
-    return content.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    let content = formattedSyllabus;
+    if (selectedFilter === 'Completed') content = content.filter(item => item.completed);
+    if (selectedFilter === 'Incomplete') content = content.filter(item => !item.completed);
+    
+    return content.filter(item => 
+      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   };
 
-  const renderFilterModal = () => (
-    <Modal
-      visible={showFilterModal}
-      transparent
-      animationType="slide"
-      onRequestClose={closeFilterModal}
-    >
-      <TouchableWithoutFeedback onPress={closeFilterModal}>
-        <View style={styles.modalContainer}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Filter {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</Text>
-              <View style={styles.filterOptions}>
-                {getFilterOptions().map((filter) => (
-                  <TouchableOpacity
-                    key={filter}
-                    style={[
-                      styles.filterOption,
-                      selectedFilter === filter && styles.filterOptionActive
-                    ]}
-                    onPress={() => {
-                      setSelectedFilter(filter);
-                      closeFilterModal();
-                    }}
-                  >
-                    <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextActive]}>
-                      {filter}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TouchableOpacity style={styles.closeButton} onPress={closeFilterModal}>
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
+  const getFilterOptions = () => ['All', 'Completed', 'Incomplete'];
+
+  const renderResourcesContent = () => {
+    // Group resources by chapter
+    const resourcesByChapter = formattedSyllabus.map(chapter => ({
+        chapterName: chapter.title,
+        resources: chapter.resources
+    }));
+    
+    if (resourcesByChapter.every(chapter => chapter.resources.length === 0)) {
+        return (
+            <View style={styles.emptyStateContainer}>
+                <Icon name="file-text" size={80} color="#001529" />
+                <Text style={styles.emptyStateTitle}>No Resources Available</Text>
+                <Text style={styles.emptyStateDescription}>
+                    There are no learning resources available for this subject at this time.
+                </Text>
             </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-
-  const getFilterOptions = () => {
-    switch (activeTab) {
-      case 'syllabus':
-        return ['All', 'Completed', 'Incomplete'];
-      case 'resources':
-        return ['All', 'PDF', 'PPT', 'Video'];
-      case 'assignments':
-        return ['All', 'Pending', 'Submitted', 'Graded'];
-      default:
-        return ['All'];
+        );
     }
+
+    const handleResourcePress = (resource: Resource) => {
+        console.log('Opening resource:', resource.resourceUrl);
+    };
+
+    return (
+        <FlatList
+            data={resourcesByChapter}
+            keyExtractor={(item, index) => `chapter-${index}`}
+            renderItem={({ item: chapter }) => (
+                chapter.resources.length > 0 ? (
+                    <View style={styles.chapterResourcesContainer}>
+                        <Text style={styles.chapterResourcesTitle}>{chapter.chapterName}</Text>
+                        {chapter.resources.map(resource => (
+                            <TouchableOpacity 
+                                key={resource.resourceId}
+                                style={[
+                                    styles.resourceListItem,
+                                    highlightedResourceId === resource.resourceId && styles.highlightedResource
+                                ]}
+                                onPress={() => handleResourcePress(resource)}
+                            >
+                                <View style={styles.resourceIconContainer}>
+                                    <Icon 
+                                        name={resource.resourceType === 'pdf' ? 'file-pdf' : 'file-text'} 
+                                        size={24} 
+                                        color="#001529" 
+                                    />
+                                </View>
+                                <View style={styles.resourceItemContent}>
+                                    <Text style={styles.resourceItemTitle}>{resource.resourceName}</Text>
+                                    <Text style={styles.resourceItemType}>
+                                        {resource.resourceType.toUpperCase()}
+                                    </Text>
+                                </View>
+                                <Icon name="right" size={16} color="#001529" />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                ) : null
+            )}
+            contentContainerStyle={styles.resourcesList}
+            ItemSeparatorComponent={() => <View style={styles.resourceSeparator} />}
+        />
+    );
   };
-
-  const renderSkeletonLoader = () => (
-    <View style={styles.skeletonContainer}>
-      <View style={styles.skeletonSearchBar} />
-      <View style={styles.skeletonTabContainer}>
-        {[...Array(3)].map((_, index) => (
-          <View key={index} style={styles.skeletonTab} />
-        ))}
-      </View>
-      {[...Array(5)].map((_, index) => (
-        <View key={index} style={styles.skeletonCard}>
-          <View style={styles.skeletonCardHeader}>
-            <View style={styles.skeletonTitle} />
-            <View style={styles.skeletonIcon} />
-          </View>
-          <View style={styles.skeletonDescription} />
-          <View style={styles.skeletonDetails} />
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <Icon name="file-unknown" size={80} color="#001529" />
-      <Text style={styles.emptyStateTitle}>No Content Available</Text>
-      <Text style={styles.emptyStateDescription}>There is no content to display for this subject at this time. Check back later for updates.</Text>
-    </View>
-  );
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{subject}</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.contentContainer}>
-          {renderSkeletonLoader()}
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const currentContent = activeTab === 'syllabus' ? syllabus : activeTab === 'resources' ? resources : assignments;
-
-  if (currentContent.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{subject}</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.contentContainer}>
-          {renderEmptyState()}
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -273,13 +276,20 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
           </TouchableOpacity>
         </View>
 
+        {/* Add back the tab container */}
         <View style={styles.tabContainer}>
-          {['syllabus', 'resources', 'assignments'].map((tab) => (
+          {['chapters', 'resources'].map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab as any)}
+              onPress={() => setActiveTab(tab as 'chapters' | 'resources')}
             >
+              <Icon 
+                name={tab === 'chapters' ? 'book' : 'folder'} 
+                size={18} 
+                color={activeTab === tab ? '#ffffff' : '#8c8c8c'} 
+                style={styles.tabIcon}
+              />
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
@@ -287,27 +297,73 @@ const SubjectDetailScreen: React.FC<SubjectDetailScreenProps> = ({ navigation, r
           ))}
         </View>
 
-        <FlatList
-          data={filteredContent()}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            switch (activeTab) {
-              case 'syllabus':
-                return renderSyllabusItem({ item: item as SyllabusItem });
-              case 'resources':
-                return renderResourceItem({ item: item as Resource });
-              case 'assignments':
-                return renderAssignmentItem({ item: item as Assignment });
-              default:
-                return null;
-            }
-          }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
+        {activeTab === 'chapters' ? (
+          <FlatList
+            data={filteredContent()}
+            extraData={expandedId}
+            keyExtractor={(item) => item.id}
+            renderItem={renderSyllabusItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyStateContainer}>
+                <Icon name="file-unknown" size={80} color="#001529" />
+                <Text style={styles.emptyStateTitle}>No Chapters Available</Text>
+                <Text style={styles.emptyStateDescription}>
+                  There are no chapters available for this subject at this time.
+                </Text>
+              </View>
+            )}
+          />
+        ) : (
+          renderResourcesContent()
+        )}
       </View>
 
-      {renderFilterModal()}
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowFilterModal(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filter Syllabus</Text>
+                <View style={styles.filterOptions}>
+                  {getFilterOptions().map((filter) => (
+                    <TouchableOpacity
+                      key={filter}
+                      style={[
+                        styles.filterOption,
+                        selectedFilter === filter && styles.filterOptionActive
+                      ]}
+                      onPress={() => {
+                        setSelectedFilter(filter);
+                        setShowFilterModal(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.filterOptionText,
+                        selectedFilter === filter && styles.filterOptionTextActive
+                      ]}>
+                        {filter}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TouchableOpacity 
+                  style={styles.closeButton} 
+                  onPress={() => setShowFilterModal(false)}
+                >
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -338,80 +394,173 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginTop: 80,
-    padding: 20,
+    marginTop: 90,
+    paddingHorizontal: 15,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 15,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
-    marginRight: 10,
-    fontSize: 16,
+    fontSize: 15,
   },
   tabContainer: {
     flexDirection: 'row',
     marginBottom: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 5,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
   },
   activeTab: {
-    borderBottomColor: '#001529',
+    backgroundColor: '#001529', // Changed to header color
+  },
+  tabIcon: {
+    marginRight: 4,
   },
   tabText: {
-    fontSize: 16,
-    color: '#4a4a4a',
+    fontSize: 15,
+    color: '#8c8c8c',
+    fontWeight: '500',
   },
   activeTabText: {
-    color: '#001529',
-    fontWeight: 'bold',
+    color: '#ffffff', // Changed to white for contrast
+    fontWeight: '600',
   },
   listContent: {
     paddingBottom: 20,
   },
-  syllabusCard: {
+  syllabusItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
     marginBottom: 15,
-    borderRadius: 10,
-    padding: 15,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  syllabusItemHeader: {
+  syllabusContent: {
+    padding: 12,
+  },
+  syllabusHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    paddingVertical: 2,
   },
-  syllabusItemTitle: {
+  syllabusHeaderExpanded: {
+    marginBottom: 12,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  chapterIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0', // Lighter background for black icons
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  chapterTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#001529',
+    flex: 1,
+  },
+  descriptionContainer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  descriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  descriptionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#001529',
+    marginLeft: 8,
+  },
+  chapterDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    paddingLeft: 24, // Aligns with the description title
+  },
+  resourcesContainer: {
+    backgroundColor: '#fafafa',
+    borderRadius: 8,
+    padding: 12,
+  },
+  resourcesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  resourcesIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f0f0f0', // Lighter background for black icons
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  resourcesHeaderText: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#001529',
   },
-  syllabusItemDescription: {
-    fontSize: 14,
-    color: '#4a4a4a',
-  },
-  syllabusItemHours: {
-    fontSize: 14,
-    color: '#4a4a4a',
-    marginTop: 5,
+  resourcesList: {
+    paddingLeft: 4,
   },
   resourceItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    backgroundColor: '#f0f5ff',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 8,
+    paddingRight: 12, // Added to give some space for the arrow
+  },
+  resourceIcon: {
+    marginRight: 8,
+  },
+  resourceText: {
+    fontSize: 14,
+    color: '#001529',
+    flex: 1,
+    marginLeft: 8,
+    marginRight: 8, // Added to give space between text and arrow
   },
   resourceInfo: {
     flex: 1,
@@ -590,6 +739,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8c8c8c',
     textAlign: 'center',
+  },
+  titleTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  resourcesCount: {
+    fontSize: 12,
+    color: '#8c8c8c',
+    marginTop: 2,
+  },
+  rightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resourceListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    marginHorizontal: 16,
+  },
+  resourceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0', // Lighter background for black icons
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  resourceItemContent: {
+    flex: 1,
+  },
+  resourceItemTitle: {
+    fontSize: 16,
+    color: '#001529',
+    fontWeight: '500',
+  },
+  resourceItemType: {
+    fontSize: 12,
+    color: '#8c8c8c',
+    marginTop: 4,
+  },
+  resourceSeparator: {
+    height: 16,
+  },
+
+  highlightedResource: {
+    backgroundColor: '#f8f9fa',
+    borderLeftWidth: 4,
+    borderLeftColor: '#001529',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  chapterResourcesContainer: {
+    marginBottom: 20,
+  },
+  chapterResourcesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#001529',
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
 });
 

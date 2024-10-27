@@ -186,7 +186,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       icon: "book",
       text: "Syllabus",
       route: "Syllabus",
-      roles: [UserRole.TEACHER, UserRole.ADMIN],
+      roles: [UserRole.TEACHER, UserRole.STUDENT, UserRole.ADMIN],
     },
     {
       icon: "laptop",

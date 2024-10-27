@@ -2,42 +2,80 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, TextInput, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Text, Icon, Card } from '@ant-design/react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import BottomNavBar from '../../Components/BottomNavBar';
+import { fetchSyllabus } from '../../Services/Syllabus/Syllabus';
+import { ISyllabus } from '../../Services/Syllabus/ISyllabus';
 
 type SyllabusScreenProps = {
   navigation: StackNavigationProp<any, 'Syllabus'>;
 };
 
-type Subject = 'Mathematics' | 'Science' | 'English' | 'Social Studies' | 'Physical Education' | 'Computer Science';
-
 type SubjectInfo = {
-  subject: Subject;
-  icon: string;
+  subject: string;
   color: string;
   unitsCount: number;
-  progress: number;
+  resourceCount: number;
+  subjectId: string;
 };
 
 const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<'All' | 'In Progress' | 'Completed'>('All');
+  const [selectedFilter, setSelectedFilter] = useState<'All'>('All');
   const [isLoading, setIsLoading] = useState(true);
   const [subjects, setSubjects] = useState<SubjectInfo[]>([]);
+  const [syllabusData, setSyllabusData] = useState<ISyllabus[]>([]);
 
   useEffect(() => {
-    // Simulating API call
-    setTimeout(() => {
-      setSubjects([
-        { subject: 'Mathematics', icon: 'calculator', color: '#FFFFFF', unitsCount: 5, progress: 75 },
-        { subject: 'Science', icon: 'experiment', color: '#FFFFFF', unitsCount: 4, progress: 60 },
-        { subject: 'English', icon: 'read', color: '#FFFFFF', unitsCount: 6, progress: 80 },
-        { subject: 'Social Studies', icon: 'global', color: '#FFFFFF', unitsCount: 3, progress: 45 },
-        { subject: 'Physical Education', icon: 'trophy', color: '#FFFFFF', unitsCount: 2, progress: 90 },
-        { subject: 'Computer Science', icon: 'laptop', color: '#FFFFFF', unitsCount: 4, progress: 30 },
-      ]);
-      setIsLoading(false);
-    }, 1000);
+    const fetchSyllabuses = async () => {
+      try {
+        // Replace with your actual API endpoint
+        const response = await fetchSyllabus();
+        const data: ISyllabus[] = response;
+        
+        if (data.length > 0) {
+          // Map the subjects to the required format
+          const mappedSubjects: SubjectInfo[] = data[0].subjects.map(subject => {
+            // Generate a consistent color based on subject name
+            const getSubjectColor = (name: string): string => {
+              // Using different shades of light gray/black
+              const colors = [
+                '#f0f2f5', // same as tag background
+                '#e6e8eb',
+                '#dcdfe3',
+                '#d2d6db',
+                '#c8ccd3',
+                '#bec3cb',
+                '#b4b9c2',
+                '#aaafba',
+                '#a0a5b1',
+                '#969ba8'
+              ];
+              
+              const sum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+              return colors[sum % colors.length];
+            };
+
+            return {
+              subject: subject.subjectName,
+              color: getSubjectColor(subject.subjectName),
+              unitsCount: subject.chapters.length,
+              resourceCount: subject.chapters.reduce((total, chapter) => 
+                total + (chapter.filePath ? 1 : 0), 0),
+              subjectId: subject.subjectId
+            };
+          });
+
+          setSubjects(mappedSubjects);
+          setSyllabusData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching syllabus:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSyllabuses();
   }, []);
 
   const closeFilterModal = () => {
@@ -45,31 +83,49 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
   };
 
   const filteredSubjects = subjects.filter(subject =>
-    subject.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (selectedFilter === 'All' || 
-     (selectedFilter === 'In Progress' && subject.progress < 100) ||
-     (selectedFilter === 'Completed' && subject.progress === 100))
+    subject.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderSubjectCard = ({ item }: { item: SubjectInfo }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('SubjectDetail', { subject: item.subject })}>
-      <Card style={styles.subjectCard}>
-        <View style={styles.subjectCardContent}>
-          <View style={styles.subjectIconContainer}>
-            <Icon name={item.icon as any} size={30} color="#001529" />
-          </View>
-          <View style={styles.subjectInfo}>
-            <Text style={styles.subjectName}>{item.subject}</Text>
-            <Text style={styles.unitCount}>{`${item.unitsCount} Units`}</Text>
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${item.progress}%` }]} />
+  const renderSubjectCard = ({ item }: { item: SubjectInfo }) => {
+    const subjectData = syllabusData[0].subjects.find(
+      (subject) => subject.subjectId === item.subjectId
+    );
+
+    return (
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('SubjectDetail', { 
+          subject: item.subject,
+          subjectId: item.subjectId,
+          chapters: subjectData?.chapters || []
+        })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.subjectCard}>
+          <View style={styles.subjectCardContent}>
+            <View style={[styles.subjectIconContainer, { backgroundColor: item.color }]}>
+              <Text style={styles.subjectInitial}>
+                {item.subject.charAt(0).toUpperCase()}
+              </Text>
             </View>
-            <Text style={styles.progressText}>{`${item.progress}% Completed`}</Text>
+            <View style={styles.subjectInfo}>
+              <Text style={styles.subjectName}>{item.subject}</Text>
+              <View style={styles.tagsContainer}>
+                <View style={styles.tag}>
+                  <Icon name="book" size={14} color="#001529" />
+                  <Text style={styles.tagText}>{item.unitsCount} Chapters</Text>
+                </View>
+                <View style={styles.tag}>
+                  <Icon name="file-text" size={14} color="#001529" />
+                  <Text style={styles.tagText}>{item.resourceCount} Resources</Text>
+                </View>
+              </View>
+            </View>
+            <Icon name="right" size={20} color="#8c8c8c" />
           </View>
         </View>
-      </Card>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderFilterModal = () => (
     <Modal
@@ -84,23 +140,14 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Filter Subjects</Text>
               <View style={styles.filterOptions}>
-                {['All', 'In Progress', 'Completed'].map((filter) => (
-                  <TouchableOpacity
-                    key={filter}
-                    style={[
-                      styles.filterOption,
-                      selectedFilter === filter && styles.filterOptionActive
-                    ]}
-                    onPress={() => {
-                      setSelectedFilter(filter as 'All' | 'In Progress' | 'Completed');
-                      closeFilterModal();
-                    }}
-                  >
-                    <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextActive]}>
-                      {filter}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <TouchableOpacity
+                  style={[styles.filterOption, styles.filterOptionActive]}
+                  onPress={closeFilterModal}
+                >
+                  <Text style={[styles.filterOptionText, styles.filterOptionTextActive]}>
+                    All Subjects
+                  </Text>
+                </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={closeFilterModal}>
                 <Text style={styles.closeButtonText}>Close</Text>
@@ -122,10 +169,6 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
             <View style={styles.skeletonInfo}>
               <View style={styles.skeletonSubjectName} />
               <View style={styles.skeletonUnitCount} />
-              <View style={styles.skeletonProgressBarContainer}>
-                <View style={styles.skeletonProgressBar} />
-              </View>
-              <View style={styles.skeletonProgressText} />
             </View>
           </View>
         </View>
@@ -138,6 +181,21 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
       <Icon name="book" size={80} color="#001529" />
       <Text style={styles.emptyStateTitle}>No Subjects Available</Text>
       <Text style={styles.emptyStateDescription}>There are no subjects to display at this time. Check back later for updates.</Text>
+    </View>
+  );
+
+  const renderSearchBar = () => (
+    <View style={styles.searchWrapper}>
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={20} color="#8C8C8C" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search subjects..."
+          placeholderTextColor="#8C8C8C"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
     </View>
   );
 
@@ -186,19 +244,7 @@ const SyllabusScreen: React.FC<SyllabusScreenProps> = ({ navigation }) => {
       </View>
 
       <View style={styles.contentContainer}>
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#001529" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search subjects..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.filterButton}>
-            <Icon name="filter" size={24} color="#001529" />
-          </TouchableOpacity>
-        </View>
-
+        {renderSearchBar()}
         <FlatList
           data={filteredSubjects}
           keyExtractor={(item) => item.subject}
@@ -243,75 +289,86 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     marginTop: 80,
-    padding: 20,
+    paddingHorizontal: 16,
+  },
+  searchWrapper: {
+    paddingVertical: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 12,
     fontSize: 16,
-  },
-  filterButton: {
-    padding: 5,
-  },
-  scrollContent: {
-    paddingBottom: 80,
+    color: '#001529',
   },
   subjectCard: {
-    marginBottom: 15,
-    borderRadius: 10,
-    overflow: 'hidden',
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden', // Add this to prevent shadow bleeding
   },
   subjectCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
   },
   subjectIconContainer: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: '#001529',
-  },
-  progressBarContainer: {
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
-    marginBottom: 4,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#001529',
-    borderRadius: 2,
+    borderRadius: 25,
+    marginRight: 16,
   },
   subjectInfo: {
     flex: 1,
   },
   subjectName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#001529',
-    marginBottom: 4,
-  },
-  unitCount: {
-    fontSize: 14,
-    color: '#4a4a4a',
     marginBottom: 8,
   },
-  progressText: {
+  tagsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f2f5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6, // Add space between icon and text
+  },
+  tagText: {
     fontSize: 12,
-    color: '#4a4a4a',
+    color: '#001529',
+    fontWeight: '500',
+    marginLeft: 4, // Add some space after the icon
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   emptyListText: {
     textAlign: 'center',
@@ -452,6 +509,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8c8c8c',
     textAlign: 'center',
+  },
+  subjectInitial: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#001529', // Changed to dark color to match tag text
   },
 });
 
